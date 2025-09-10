@@ -1,0 +1,36 @@
+# Docker Development
+docker-compose up -d
+docker-compose down
+docker-compose logs -f
+docker-compose ps
+docker-compose build
+
+# Servicios individuales
+docker-compose up user-service
+docker-compose logs -f user-service
+docker-compose exec user-service bash
+
+# Base de datos
+docker-compose exec postgres-db psql -U postgres
+docker-compose exec postgres-db psql -U user_service -d user_db
+docker-compose exec postgres-db psql -U tax_service -d tax_db
+docker-compose exec postgres-db psql -U audit_service -d audit_db
+
+# Desarrollo local (para cada servicio)
+cd user-service
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8001
+
+cd ../tax-service  
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8002
+
+cd ../audit-service
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8003
