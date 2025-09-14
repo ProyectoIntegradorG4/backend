@@ -1,4 +1,3 @@
-# validator/models.py
 from sqlalchemy import Column, Integer, String, Text, Boolean, DECIMAL, Date, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
@@ -30,7 +29,10 @@ class ProductStaging(Base):
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow)
     created_by = Column(String(50))
-    validation_status = Column(String(20), default='PENDING')  # Nuevo campo
+    validation_status = Column(String(20), default='PENDING')  # PENDING / VALID / INVALID
+    validation_errors = Column(Text, default=None)
+    validated_at = Column(TIMESTAMP, default=None)
+
 
 class ProductStagingErrors(Base):
     __tablename__ = "products_stg_errors"
@@ -40,5 +42,7 @@ class ProductStagingErrors(Base):
     import_id = Column(String(36), nullable=False)
     error_message = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow)
+
+
 
 
