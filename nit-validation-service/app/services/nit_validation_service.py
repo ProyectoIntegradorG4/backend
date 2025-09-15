@@ -86,8 +86,9 @@ class NITValidationService:
     def _query_database(self, db: Session, nit: str, pais: Optional[str]) -> Optional[InstitucionAsociada]:
         """Consultar la base de datos por NIT"""
         try:
+            # Buscar por NIT exacto (conservando formato con guiones)
             query = db.query(InstitucionAsociada).filter(
-                InstitucionAsociada.nit == nit.upper()
+                InstitucionAsociada.nit == nit
             )
             
             if pais:
@@ -141,10 +142,12 @@ class NITValidationService:
                     mensaje=f"Formato de NIT inválido: {format_error}"
                 )
             
-            nit_clean = nit.replace(" ", "").replace("-", "").upper()
+            # Normalizar NIT para caché (sin guiones) pero conservar original para DB
+            nit_normalized = nit.replace(" ", "").replace("-", "").upper()
+            nit_original = nit.strip()
             
             # 2. Verificar caché Redis
-            cache_key = self._generate_cache_key(nit_clean, pais)
+            cache_key = self._generate_cache_key(nit_normalized, pais)
             cached_result = self._get_from_cache(cache_key)
             
             if cached_result:
@@ -152,9 +155,9 @@ class NITValidationService:
                 logger.info(f"NIT validation from cache completed in {processing_time:.2f}ms")
                 return NITValidationResponse(**cached_result)
             
-            # 3. Consultar base de datos
-            logger.info(f"Cache miss, querying database for NIT: {nit_clean}")
-            institucion = self._query_database(db, nit_clean, pais)
+            # 3. Consultar base de datos con formato original
+            logger.info(f"Cache miss, querying database for NIT: {nit_original}")
+            institucion = self._query_database(db, nit_original, pais)
             
             # 4. Verificar estado de la institución
             mensaje = None
