@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DECIMAL, Date, TIMESTAMP
+from sqlalchemy import Column, Integer, Numeric, String, Text, Boolean, DECIMAL, Date, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
 
@@ -21,7 +21,7 @@ class ProductStaging(Base):
     certifications = Column(Text)
     commercialization_auth = Column(String(100))
     country_regulations = Column(Text)
-    unit_price = Column(DECIMAL(12,2))
+    unit_price = Column(DECIMAL(12,2), nullable=True)
     purchase_conditions = Column(Text)
     delivery_time_hours = Column(Integer)
     external_code = Column(String(100))
@@ -32,6 +32,7 @@ class ProductStaging(Base):
     validation_status = Column(String(20), default='PENDING')  # PENDING / VALID / INVALID
     validation_errors = Column(Text, default=None)
     validated_at = Column(TIMESTAMP, default=None)
+    processed = Column(Boolean, default=False) 
 
 
 class ProductStagingErrors(Base):

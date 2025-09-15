@@ -10,7 +10,6 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Validator Definitivo")
 
-# --- SESIÓN DE DB ---
 def get_db():
     db = SessionLocal()
     try:
@@ -18,7 +17,6 @@ def get_db():
     finally:
         db.close()
 
-# --- ENDPOINT: Validar todos los productos pendientes ---
 @app.post("/validate")
 def validate_all(db: Session = Depends(get_db)):
     pending_products = db.query(ProductStaging).filter(
@@ -38,7 +36,7 @@ def validate_all(db: Session = Depends(get_db)):
         }
     }
 
-# --- ENDPOINT: Listar errores ---
+
 @app.get("/errors")
 def list_errors(db: Session = Depends(get_db)):
     errores = db.query(ProductStagingErrors).all()
@@ -54,7 +52,7 @@ def list_errors(db: Session = Depends(get_db)):
         ]
     }
 
-# --- ENDPOINT: Health check ---
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

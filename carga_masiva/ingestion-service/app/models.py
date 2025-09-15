@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DECIMAL, Date, TIMESTAMP
+from sqlalchemy import Column, Integer, Numeric, String, Text, Boolean, DECIMAL, Date, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID
 import datetime
@@ -23,7 +23,7 @@ class ProductStaging(Base):
     certifications = Column(Text)
     commercialization_auth = Column(String(100))
     country_regulations = Column(Text)
-    unit_price = Column(DECIMAL(12,2))
+    unit_price = Column(DECIMAL(12,2), nullable=True)
     purchase_conditions = Column(Text)
     delivery_time_hours = Column(Integer)
     external_code = Column(String(100))
@@ -34,3 +34,4 @@ class ProductStaging(Base):
     validation_status = Column(String(10), default="PENDING")
     validation_errors = Column(Text, nullable=True)
     validated_at = Column(TIMESTAMP, nullable=True)
+    processed = Column(Boolean, default=False) 

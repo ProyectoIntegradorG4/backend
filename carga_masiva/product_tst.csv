@@ -1,4 +1,31 @@
 sku,name,description,category,manufacturer,storage_type,min_shelf_life_months,expiration_date,batch_number,cold_chain_required,certifications,commercialization_auth,country_regulations,unit_price,purchase_conditions,delivery_time_hours,external_code
-SKU001,Producto A,Descripción del producto A,Alimentos,Empresa A,Refrigerado,12,2026-12-31,BATCH001,TRUE,ISO9001,Autorización A,Regulación Colombia,15000.50,Condiciones A,48,EXT001
-SKU002,Producto B,Descripción del producto B,Bebidas,Empresa B,Ambiente,24,2025-06-30,BATCH002,FALSE,ISO22000,Autorización B,Regulación Colombia,8000.00,Condiciones B,24,EXT002
-SKU003,Producto C,Descripción del producto C,Medicamentos,Empresa C,Refrigerado,6,2025-03-15,BATCH003,TRUE,ISO13485,Autorización C,Regulación Colombia,12000.75,Condiciones C,72,EXT003
+SKU001,Producto Alpha,Producto de prueba,Categoria_A,Manuf_A,Cold,24,2026-09-01,BATCH001,TRUE,CertA,AuthA,RegA,120.50,CondA,48,EXT001
+SKU002,Producto Beta,Producto expirado,Categoria_B,Manuf_B,RoomTemp,12,2022-05-01,BATCH002,FALSE,CertB,AuthB,RegB,50.00,CondB,72,EXT002
+SKU003,Producto Gamma,Producto sin cadena de frio,Categoria_C,Manuf_C,RoomTemp,6,2025-12-01,BATCH003,TRUE,CertC,AuthC,RegC,75.00,CondC,24,EXT003
+SKU004,Producto Delta,Producto valido,Categoria_B,Manuf_D,Refrigerated,12,2026-01-15,BATCH004,FALSE,CertD,AuthD,RegD,60.00,CondD,36,EXT004
+SKU005,Producto Epsilon,Producto con vida util corta,Categoria_A,Manuf_E,Cold,12,2025-11-01,BATCH005,TRUE,CertE,AuthE,RegE,130.00,CondE,24,EXT005
+SKU006,Producto Zeta,Producto valido,Categoria_C,Manuf_F,RoomTemp,6,2026-02-01,BATCH006,FALSE,CertF,AuthF,RegF,80.00,CondF,48,EXT006
+SKU007,Producto Eta,Producto expirado,Categoria_A,Manuf_G,Cold,24,2021-12-31,BATCH007,TRUE,CertG,AuthG,RegG,110.00,CondG,72,EXT007
+SKU008,Producto Theta,Producto valido,Categoria_B,Manuf_H,Refrigerated,12,2026-07-10,BATCH008,FALSE,CertH,AuthH,RegH,95.00,CondH,24,EXT008
+SKU009,Producto Iota,Producto sin precio,Categoria_C,Manuf_I,RoomTemp,6,2026-03-15,BATCH009,FALSE,CertI,AuthI,RegI,,CondI,48,EXT009
+SKU010,Producto Kappa,Producto valido,Categoria_A,Manuf_J,Cold,24,2026-08-20,BATCH010,TRUE,CertJ,AuthJ,RegJ,140.00,CondJ,36,EXT010
+SKU011,Producto Lambda,Producto expirado,Categoria_B,Manuf_K,RoomTemp,6,2022-01-01,BATCH011,FALSE,CertK,AuthK,RegK,55.00,CondK,24,EXT011
+SKU012,Producto Mu,Producto con cadena de frio,Categoria_C,Manuf_L,RoomTemp,6,2025-12-20,BATCH012,TRUE,CertL,AuthL,RegL,70.00,CondL,48,EXT012
+SKU013,Producto Nu,Producto valido,Categoria_A,Manuf_M,Cold,24,2026-06-15,BATCH013,TRUE,CertM,AuthM,RegM,125.00,CondM,36,EXT013
+SKU014,Producto Xi,Producto valido,Categoria_B,Manuf_N,Refrigerated,12,2026-09-01,BATCH014,FALSE,CertN,AuthN,RegN,85.00,CondN,24,EXT014
+SKU015,Producto Omicron,Producto expirado,Categoria_C,Manuf_O,RoomTemp,6,2023-05-01,BATCH015,FALSE,CertO,AuthO,RegO,65.00,CondO,48,EXT015
+SKU016,Producto Pi,Producto valido,Categoria_A,Manuf_P,Cold,24,2026-12-31,BATCH016,TRUE,CertP,AuthP,RegP,135.00,CondP,72,EXT016
+SKU017,Producto Rho,Producto sin cadena de frio,Categoria_B,Manuf_Q,RoomTemp,12,2026-01-01,BATCH017,FALSE,CertQ,AuthQ,RegQ,90.00,CondQ,36,EXT017
+SKU018,Producto Sigma,Producto valido,Categoria_C,Manuf_R,Refrigerated,6,2026-05-15,BATCH018,FALSE,CertR,AuthR,RegR,78.00,CondR,24,EXT018
+SKU019,Producto Tau,Producto con precio negativo,Categoria_A,Manuf_S,Cold,24,2026-03-01,BATCH019,TRUE,CertS,AuthS,RegS,-50.00,CondS,48,EXT019
+SKU020,Producto Upsilon,Producto valido,Categoria_B,Manuf_T,RoomTemp,12,2026-07-10,BATCH020,FALSE,CertT,AuthT,RegT,92.00,CondT,36,EXT020
+SKU021,Producto Phi,Producto expirado,Categoria_C,Manuf_U,RoomTemp,6,2022-11-01,BATCH021,FALSE,CertU,AuthU,RegU,68.00,CondU,24,EXT021
+SKU022,Producto Chi,Producto valido,Categoria_A,Manuf_V,Cold,24,2026-09-05,BATCH022,TRUE,CertV,AuthV,RegV,145.00,CondV,48,EXT022
+SKU023,Producto Psi,Producto valido,Categoria_B,Manuf_W,Refrigerated,12,2026-04-20,BATCH023,FALSE,CertW,AuthW,RegW,87.00,CondW,36,EXT023
+SKU024,Producto Omega,Producto expirado,Categoria_C,Manuf_X,RoomTemp,6,2023-01-01,BATCH024,FALSE,CertX,AuthX,RegX,60.00,CondX,24,EXT024
+SKU025,Producto Alpha2,Producto valido,Categoria_A,Manuf_Y,Cold,24,2026-11-11,BATCH025,TRUE,CertY,AuthY,RegY,138.00,CondY,72,EXT025
+SKU026,Producto Beta2,Producto sin precio,Categoria_B,Manuf_Z,RoomTemp,12,2026-08-01,BATCH026,FALSE,CertZ,AuthZ,RegZ,,CondZ,36,EXT026
+SKU027,Producto Gamma2,Producto valido,Categoria_C,Manuf_AA,Refrigerated,6,2026-02-20,BATCH027,FALSE,CertAA,AuthAA,RegAA,75.00,CondAA,24,EXT027
+SKU028,Producto Delta2,Producto expirado,Categoria_A,Manuf_BB,Cold,24,2021-09-01,BATCH028,TRUE,CertBB,AuthBB,RegBB,120.00,CondBB,48,EXT028
+SKU029,Producto Epsilon2,Producto valido,Categoria_B,Manuf_CC,RoomTemp,12,2026-06-15,BATCH029,FALSE,CertCC,AuthCC,RegCC,95.00,CondCC,36,EXT029
+SKU030,Producto Zeta2,Producto con cadena de frio,Categoria_C,Manuf_DD,RoomTemp,6,2025-12-01,BATCH030,TRUE,CertDD,AuthDD,RegDD,80.00,CondDD,24,EXT030
