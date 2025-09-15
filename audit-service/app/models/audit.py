@@ -1,70 +1,49 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON
+from sqlalchemy import Column, String, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from datetime import datetime, timezone
+from pydantic import BaseModel, Field
+from typing import Dict, Any
 from enum import Enum
+import uuid
 
 Base = declarative_base()
 
+class OutcomeType(str, Enum):
+    SUCCESS = "success"
+    FAIL = "fail"
+
 class ActionType(str, Enum):
-    CREATE = "CREATE"
-    READ = "READ"
-    UPDATE = "UPDATE"
-    DELETE = "DELETE"
-    LOGIN = "LOGIN"
-    LOGOUT = "LOGOUT"
-    ERROR = "ERROR"
+    EMAIL = "email"
+    NIT = "nit"
+    OTHER = "other"
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)  # ID del usuario que realizó la acción
-    service_name = Column(String, index=True)  # Nombre del servicio (user-service, nit-validation-service, etc.)
-    action_type = Column(String, index=True)  # CREATE, READ, UPDATE, DELETE, etc.
-    resource_type = Column(String, index=True)  # Tipo de recurso (User, Tax, etc.)
-    resource_id = Column(String, index=True)  # ID del recurso afectado
-    details = Column(JSON)  # Detalles adicionales en formato JSON
-    ip_address = Column(String)
-    user_agent = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
-    request_path = Column(String)
-    http_method = Column(String)
-    status_code = Column(Integer)
-    response_time_ms = Column(Integer)  # Tiempo de respuesta en milisegundos
+    id = Column(String, primary_key=True, index=True)  # UUID como string
+    event = Column(String, nullable=False, index=True)
+    request = Column(JSON, nullable=False)  # JSON con los datos del request
+    outcome = Column(String, nullable=False, index=True)  # success | fail
+    action = Column(String, nullable=False, index=True)  # email | nit | other
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    auditid = Column(String, nullable=False, unique=True, index=True)  # UUID del audit
 
 # Pydantic models para validación
-class AuditLogBase(BaseModel):
-    user_id: Optional[int] = None
-    service_name: str
-    action_type: ActionType
-    resource_type: str
-    resource_id: Optional[str] = None
-    details: Optional[Dict[str, Any]] = None
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
-    request_path: Optional[str] = None
-    http_method: Optional[str] = None
-    status_code: Optional[int] = None
-    response_time_ms: Optional[int] = None
+class RequestData(BaseModel):
+    nombreusuario: str
+    useremail: str
+    nit: str
 
-class AuditLogCreate(AuditLogBase):
-    pass
-
-class AuditLogResponse(AuditLogBase):
-    id: int
+class AuditLogCreate(BaseModel):
+    event: str
+    request: RequestData
+    outcome: OutcomeType
+    action: ActionType
     timestamp: datetime
+    auditid: str = Field(..., description="UUID del evento de auditoría")
+
+class AuditLogResponse(BaseModel):
+    logged: bool
 
     class Config:
         from_attributes = True
-
-class AuditLogFilter(BaseModel):
-    user_id: Optional[int] = None
-    service_name: Optional[str] = None
-    action_type: Optional[ActionType] = None
-    resource_type: Optional[str] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    skip: int = 0
-    limit: int = 100

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-# from app.routes import audits
+from app.routes import audits
 from app.database.connection import init_db
 
 app = FastAPI(
@@ -8,8 +8,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Solo incluir health check por ahora
-# app.include_router(audits.router, prefix="/api/v1", tags=["audits"])
+# Incluir rutas de auditoría
+app.include_router(audits.router, tags=["audits"])
 
 @app.on_event("startup")
 async def startup_event():
