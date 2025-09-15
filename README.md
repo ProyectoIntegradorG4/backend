@@ -6,13 +6,13 @@ Este proyecto implementa una arquitectura de microservicios usando FastAPI y Pos
 
 ```
 backend/
-├── user-service/           # Microservicio de gestión de usuarios
-├── tax-service/            # Microservicio de cálculo de impuestos
-├── audit-service/          # Microservicio de auditoría y logs
-├── docker-compose.yml      # Orquestación de servicios
-├── nginx.conf             # Configuración del API Gateway
-├── .env                   # Variables de entorno
-└── README.md              # Este archivo
+├── user-service/              # Microservicio de gestión de usuarios
+├── nit-validation-service/    # Microservicio de validación de NIT
+├── audit-service/             # Microservicio de auditoría y logs
+├── docker-compose.yml         # Orquestación de servicios
+├── nginx.conf                # Configuración del API Gateway
+├── .env                      # Variables de entorno
+└── README.md                 # Este archivo
 ```
 
 ## Microservicios
@@ -27,14 +27,15 @@ backend/
   - `PUT /api/v1/users/{id}` - Actualizar usuario
   - `DELETE /api/v1/users/{id}` - Eliminar usuario
 
-### 2. Tax Service (Puerto 8002)
-- **Propósito**: Cálculo y gestión de impuestos
-- **Base de datos**: PostgreSQL (puerto 5433)
+### 2. NIT Validation Service (Puerto 8002)
+- **Propósito**: Validación de NIT contra instituciones asociadas
+- **Base de datos**: PostgreSQL + Redis para caché
 - **Endpoints principales**:
-  - `POST /api/v1/taxes/` - Crear tipo de impuesto
-  - `GET /api/v1/taxes/` - Listar impuestos
-  - `POST /api/v1/taxes/calculate/` - Calcular impuesto
-  - `GET /api/v1/taxes/calculations/{user_id}` - Historial de cálculos
+  - `POST /api/v1/validate` - Validar NIT
+  - `GET /api/v1/validate/{nit}` - Validar NIT (GET)
+  - `GET /api/v1/institution/{nit}` - Detalles de institución
+  - `GET /api/v1/cache/stats` - Estadísticas de caché
+  - `DELETE /api/v1/cache/{nit}` - Limpiar caché
 
 ### 3. Audit Service (Puerto 8003)
 - **Propósito**: Auditoría, logs y trazabilidad del sistema
@@ -67,6 +68,16 @@ backend/
 git clone <url-del-repo>
 cd backend
 
+# (Opcional pero recomendado) Configurar variables de entorno
+# Copiar archivo de ejemplo y ajustar si el puerto 5432 está ocupado
+# Windows PowerShell:
+Copy-Item -Path .env.example -Destination .env -Force
+# macOS/Linux:
+cp .env.example .env
+
+# Si tienes PostgreSQL local u otro servicio usando 5432,
+# edita el archivo `.env` y cambia `POSTGRES_PORT` (por ejemplo 5440).
+
 # Levantar todos los servicios
 docker-compose up -d
 
@@ -81,7 +92,7 @@ docker-compose ps
 
 - **API Gateway**: http://localhost
 - **User Service**: http://localhost:8001
-- **Tax Service**: http://localhost:8002
+- **NIT Validation Service**: http://localhost:8002
 - **Audit Service**: http://localhost:8003
 
 ### Documentación de APIs
@@ -89,7 +100,7 @@ docker-compose ps
 Cada servicio tiene documentación automática de Swagger:
 
 - User Service: http://localhost:8001/docs
-- Tax Service: http://localhost:8002/docs
+- NIT Validation Service: http://localhost:8002/docs
 - Audit Service: http://localhost:8003/docs
 
 ## Desarrollo Local
@@ -103,7 +114,7 @@ python -m venv venv
 source venv/bin/activate  # En Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Repetir para tax-service y audit-service
+# Repetir para nit-validation-service y audit-service
 ```
 
 ### Variables de entorno
@@ -111,8 +122,12 @@ pip install -r requirements.txt
 Copiar `.env` y ajustar las variables según tu entorno:
 
 ```bash
-cp .env .env.local
-# Editar .env.local con tus configuraciones
+# Crear desde el ejemplo y editar según tu entorno
+# Windows PowerShell:
+Copy-Item -Path .env.example -Destination .env -Force
+# macOS/Linux:
+cp .env.example .env
+# Editar .env con tus configuraciones (p. ej. POSTGRES_PORT)
 ```
 
 ## Base de Datos
@@ -121,8 +136,9 @@ Los 3 microservicios comparten una sola instancia de PostgreSQL con bases de dat
 
 - **PostgreSQL Server**: Puerto 5432
   - `user_db` - Base de datos del User Service
-  - `tax_db` - Base de datos del Tax Service  
+  - `nit_db` - Base de datos del NIT Validation Service  
   - `audit_db` - Base de datos del Audit Service
+- **Redis Server**: Puerto 6379 (usado por NIT Validation Service para caché)
 
 ### Conexiones de base de datos
 
@@ -132,7 +148,7 @@ psql -h localhost -p 5432 -U postgres
 
 # Conectar a bases de datos específicas
 psql -h localhost -p 5432 -U user_service -d user_db
-psql -h localhost -p 5432 -U tax_service -d tax_db
+psql -h localhost -p 5432 -U nit_service -d nit_db
 psql -h localhost -p 5432 -U audit_service -d audit_db
 ```
 
@@ -143,7 +159,7 @@ psql -h localhost -p 5432 -U audit_service -d audit_db
 docker-compose build
 
 # Levantar servicios específicos
-docker-compose up user-service tax-service
+docker-compose up user-service nit-validation-service
 
 # Ver logs de un servicio específico
 docker-compose logs -f user-service
@@ -208,4 +224,108 @@ docker-compose down -v
 ## Documentación Adicional
 
 - [Migración a psycopg3](./PSYCOPG3_MIGRATION.md) - Detalles sobre el uso de psycopg3
-Backend for 
+
+---
+
+## Metodología de Desarrollo - Git Flow
+
+### Estrategia de Ramas
+
+Este proyecto utiliza una estrategia de ramas Git Flow simplificada:
+
+- **`main`**: Rama de producción - contiene código estable y releases
+- **`develop`**: Rama de desarrollo - integración de features antes de release
+- **`feature/*`**: Ramas de funcionalidades - se crean desde `develop` y se mergean de vuelta
+
+### Crear una Nueva Feature
+
+Sigue estos pasos para desarrollar una nueva funcionalidad siguiendo las mejores prácticas de Git Flow:
+
+#### 1. Sincronizar la rama de desarrollo
+```bash
+# Cambiar a la rama develop
+git checkout develop
+
+# Si no tienes develop local, créala desde la remota
+git checkout -b develop origin/develop
+
+# Obtener los últimos cambios del repositorio remoto
+git pull origin develop
+```
+
+#### 2. Crear una nueva rama para la feature
+```bash
+# Crear y cambiar a una nueva rama desde develop
+git checkout -b feature/nombre-de-la-feature
+
+# Ejemplo: git checkout -b feature/add-user-authentication
+```
+
+#### 3. Desarrollar la funcionalidad
+- Implementa los cambios necesarios
+- Asegúrate de seguir las convenciones de código del proyecto
+- Realiza commits frecuentes con mensajes descriptivos
+
+#### 4. Realizar commits
+```bash
+# Agregar archivos modificados
+git add .
+
+# Realizar commit con mensaje descriptivo
+git commit -m "feat: descripción clara de lo implementado"
+
+# Ejemplos de buenos mensajes:
+# git commit -m "feat: add user authentication endpoint"
+# git commit -m "fix: resolve database connection timeout"
+# git commit -m "docs: update API documentation"
+```
+
+#### 5. Subir la rama al repositorio remoto
+```bash
+# Primera vez - crear rama remota
+git push -u origin feature/nombre-de-la-feature
+
+# Siguientes commits
+git push origin feature/nombre-de-la-feature
+```
+
+#### 6. Crear Pull Request
+1. Ve a GitHub y navega al repositorio
+2. Haz clic en "Compare & pull request" o "New pull request"
+3. Selecciona la rama base (**develop**) y tu rama feature
+4. Completa el título y descripción del PR:
+   - **Título**: Resumen conciso de la funcionalidad
+   - **Descripción**: Detalla qué se implementó, por qué y cómo probarlo
+
+#### 7. Revisión y Merge
+- Espera la revisión del código por parte del equipo
+- Realiza los cambios solicitados si es necesario
+- Una vez aprobado, el PR será mergeado a develop
+
+#### 8. Limpiar rama local
+```bash
+# Cambiar a develop y actualizar
+git checkout develop
+git pull origin develop
+
+# Eliminar rama local (opcional)
+git branch -d feature/nombre-de-la-feature
+```
+
+### Convenciones de Nombres de Ramas
+- `feature/descripcion-funcionalidad` - Para nuevas funcionalidades
+- `fix/descripcion-problema` - Para corrección de bugs
+- `hotfix/descripcion-urgente` - Para fixes críticos en producción
+- `docs/descripcion-documentacion` - Para cambios en documentación
+
+### Tipos de Commits (Conventional Commits)
+- `feat:` - Nueva funcionalidad
+- `fix:` - Corrección de bug
+- `docs:` - Cambios en documentación
+- `style:` - Cambios de formato (sin afectar funcionalidad)
+- `refactor:` - Refactorización de código
+- `test:` - Agregar o modificar tests
+- `chore:` - Tareas de mantenimiento
+
+---
+
