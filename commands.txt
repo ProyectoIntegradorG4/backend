@@ -13,8 +13,8 @@ docker-compose exec user-service bash
 # Base de datos
 docker-compose exec postgres-db psql -U postgres
 docker-compose exec postgres-db psql -U user_service -d user_db
-docker-compose exec postgres-db psql -U tax_service -d tax_db
 docker-compose exec postgres-db psql -U audit_service -d audit_db
+docker-compose exec postgres-db psql -U nit_service -d nit_db
 
 # Desarrollo local (para cada servicio)
 cd user-service
@@ -23,7 +23,7 @@ venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8001
 
-cd ../tax-service  
+cd ../nit-validation-service  
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt

@@ -21,7 +21,7 @@ class AuditLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, index=True)  # ID del usuario que realizó la acción
-    service_name = Column(String, index=True)  # Nombre del servicio (user-service, tax-service, etc.)
+    service_name = Column(String, index=True)  # Nombre del servicio (user-service, nit-validation-service, etc.)
     action_type = Column(String, index=True)  # CREATE, READ, UPDATE, DELETE, etc.
     resource_type = Column(String, index=True)  # Tipo de recurso (User, Tax, etc.)
     resource_id = Column(String, index=True)  # ID del recurso afectado
