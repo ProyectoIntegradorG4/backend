@@ -1,9 +1,10 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, timezone
-from pydantic import BaseModel, EmailStr
-from typing import Optional
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, Dict, Any
 from enum import Enum
+import uuid
 
 Base = declarative_base()
 
@@ -37,3 +38,24 @@ class UserResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Modelos de respuesta del orquestador
+class RegisterSuccessResponse(BaseModel):
+    userId: int
+    institucionId: int
+    rol: str = "usuario_institucional"
+    token: str
+    mensaje: str = "Registro exitoso"
+
+class ErrorDetail(BaseModel):
+    error: str
+    detalles: Dict[str, Any]
+    traceId: Optional[str] = None
+
+    @classmethod
+    def create_with_trace(cls, error: str, detalles: Dict[str, Any]) -> "ErrorDetail":
+        return cls(
+            error=error,
+            detalles=detalles,
+            traceId=str(uuid.uuid4())
+        )
