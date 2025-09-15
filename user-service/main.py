@@ -9,7 +9,7 @@ app = FastAPI(
 )
 
 # Incluir rutas
-app.include_router(users.router, prefix="/api/v1", tags=["users"])
+app.include_router(users.router, tags=["users"])
 
 @app.on_event("startup")
 async def startup_event():

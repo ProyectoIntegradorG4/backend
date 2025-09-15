@@ -1,60 +1,39 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from enum import Enum
-import uuid
 
 Base = declarative_base()
 
-# Enums
-class RolEnum(str, Enum):
-    ADMIN = "ADMIN"
-    USER = "USER"
-    MODERATOR = "MODERATOR"
-
-class EstadoEnum(str, Enum):
-    ACTIVO = "ACTIVO"
-    INACTIVO = "INACTIVO"
-    SUSPENDIDO = "SUSPENDIDO"
-
-class PaisEnum(str, Enum):
-    COLOMBIA = "COLOMBIA"
-    PERU = "PERU"
-    ECUADOR = "ECUADOR"
-    VENEZUELA = "VENEZUELA"
-    PANAMA = "PANAMA"
-
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "usuarios"
 
-    usuarioId = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    email = Column(String, unique=True, index=True, nullable=False)
-    passwordHash = Column(String, nullable=False)
-    rol = Column(SQLEnum(RolEnum), default=RolEnum.USER)
-    estado = Column(SQLEnum(EstadoEnum), default=EstadoEnum.ACTIVO)
-    pais = Column(SQLEnum(PaisEnum), nullable=False)
-    creadoEn = Column(DateTime, default=datetime.utcnow)
-    actualizadoEn = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    version = Column(Integer, default=1)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nombre = Column(String(255), nullable=False)
+    correo_electronico = Column(String(255), unique=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    nit = Column(Integer, nullable=False)
+    rol = Column(String(50), default='usuario_institucional')
+    fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    activo = Column(Boolean, default=True)
 
 # Pydantic models para validación
 class UserRegister(BaseModel):
+    nombre: str
     email: EmailStr
+    nit: int
     password: str
-    pais: PaisEnum
-    rol: Optional[RolEnum] = RolEnum.USER
 
 class UserResponse(BaseModel):
-    usuarioId: str
-    email: str
-    rol: RolEnum
-    estado: EstadoEnum
-    pais: PaisEnum
-    creadoEn: datetime
-    actualizadoEn: datetime
-    version: int
+    id: int
+    nombre: str
+    correo_electronico: str
+    nit: int
+    rol: str
+    fecha_registro: datetime
+    activo: bool
 
     class Config:
         from_attributes = True
