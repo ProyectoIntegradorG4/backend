@@ -6,6 +6,8 @@ from .models import Base, ProductStaging, Products
 from typing import List
 from pydantic import BaseModel
 from datetime import datetime
+from mangum import Mangum
+
 
 # Crear tablas si no existen
 Base.metadata.create_all(bind=engine)
@@ -88,3 +90,4 @@ def upsert_products(db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"{inserted_count} productos insertados correctamente"}
 
+handler = Mangum(app)

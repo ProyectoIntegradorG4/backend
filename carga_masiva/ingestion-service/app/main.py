@@ -6,6 +6,7 @@ from .database import SessionLocal, engine
 from .models import Base, ProductStaging
 from .utils import read_csv
 import uuid
+from mangum import Mangum
 
 
 Base.metadata.create_all(bind=engine)
@@ -163,6 +164,9 @@ def list_staging_products(limit: int = 100, offset: int = 0, db: Session = Depen
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+handler = Mangum(app)
 
 
 

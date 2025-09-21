@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from .models import ProductStaging, ProductStagingErrors
 from .validator import process_pending_products
 from .database import SessionLocal, engine
+from mangum import Mangum
+
 
 # Crear tablas si no existen
 from .models import Base
@@ -56,3 +58,6 @@ def list_errors(db: Session = Depends(get_db)):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+handler = Mangum(app)
+
