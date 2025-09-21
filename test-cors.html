@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CORS - Backend Microservices</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test CORS - Backend Microservices</h1>
+        
+        <div class="test-section">
+            <h3>1. Health Check - User Service</h3>
+            <button onclick="testUserHealth()">Test User Health</button>
+            <div id="user-health-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Health Check - Audit Service</h3>
+            <button onclick="testAuditHealth()">Test Audit Health</button>
+            <div id="audit-health-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Health Check - NIT Validation Service</h3>
+            <button onclick="testNitHealth()">Test NIT Health</button>
+            <div id="nit-health-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. User Registration Test</h3>
+            <button onclick="testUserRegistration()">Test User Registration</button>
+            <div id="user-registration-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. NIT Validation Test</h3>
+            <button onclick="testNitValidation()">Test NIT Validation</button>
+            <div id="nit-validation-result"></div>
+        </div>
+    </div>
+
+    <script>
+        async function testRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                
+                const data = await response.json();
+                return {
+                    success: true,
+                    status: response.status,
+                    data: data
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        function displayResult(elementId, result) {
+            const element = document.getElementById(elementId);
+            const isSuccess = result.success && (result.status < 400);
+            
+            element.className = isSuccess ? 'success' : 'error';
+            element.innerHTML = `
+                <h4>${isSuccess ? '✅ SUCCESS' : '❌ ERROR'}</h4>
+                <pre>${JSON.stringify(result, null, 2)}</pre>
+            `;
+        }
+
+        async function testUserHealth() {
+            const result = await testRequest('http://localhost:8001/health');
+            displayResult('user-health-result', result);
+        }
+
+        async function testAuditHealth() {
+            const result = await testRequest('http://localhost:8003/health');
+            displayResult('audit-health-result', result);
+        }
+
+        async function testNitHealth() {
+            const result = await testRequest('http://localhost:8002/health');
+            displayResult('nit-health-result', result);
+        }
+
+        async function testUserRegistration() {
+            const userData = {
+                nombre: "Test Hospital CORS",
+                email: "cors.test@hospital.com",
+                nit: "901234567",
+                password: "S3gura!2025"
+            };
+
+            const result = await testRequest('http://localhost:8001/register', {
+                method: 'POST',
+                body: JSON.stringify(userData)
+            });
+            displayResult('user-registration-result', result);
+        }
+
+        async function testNitValidation() {
+            const result = await testRequest('http://localhost:8002/api/v1/validate/901234567');
+            displayResult('nit-validation-result', result);
+        }
+
+        // Auto-test all services on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testUserHealth();
+                testAuditHealth();
+                testNitHealth();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
