@@ -1,24 +1,39 @@
 from sqlalchemy.orm import Session
-from .models import Product
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert
+from datetime import datetime
+from .models import ProductsStg, Products
 
-def upsert_products(db: Session, products: list):
-    inserted, updated = 0, 0
-    for p in products:
-        existing = db.query(Product).filter(Product.sku == p["sku"]).first()
-        if existing:
-            existing.name = p["name"]
-            existing.description = p.get("description")
-            existing.category = p.get("category")
-            existing.manufacturer = p.get("manufacturer")
-            existing.storage_type = p.get("storage_type")
-            existing.expiration_date = p.get("expiration_date")
-            existing.batch_number = p.get("batch_number")
-            existing.unit_price = p.get("unit_price")
-            updated += 1
-        else:
-            new_product = Product(**p)
-            db.add(new_product)
-            inserted += 1
+def upsert_valid_products(db: Session, processed_by="upserter_service"):
+
+    products_to_insert = db.query(ProductsStg).filter(
+        ProductsStg.validation_status == "VALID",
+        ProductsStg.processed_at.is_(None)
+    ).all()
+
+    if not products_to_insert:
+        return {"message": "No hay productos nuevos para insertar."}
+
+    for prod_stg in products_to_insert:
+        stmt = insert(Products).values(
+            sku=prod_stg.sku,
+            name=prod_stg.name,
+            description=prod_stg.description,
+            category=prod_stg.category,
+            manufacturer=prod_stg.manufacturer,
+            storage_type=prod_stg.storage_type,
+            expiration_date=prod_stg.expiration_date,
+            batch_number=prod_stg.batch_number,
+            unit_price=prod_stg.unit_price,
+            created_at=datetime.utcnow()
+        ).on_conflict_do_nothing(
+            index_elements=['sku']  # evita duplicados
+        )
+        db.execute(stmt)
+
+        # Marcamos staging como procesado
+        prod_stg.processed_at = datetime.utcnow()
+        prod_stg.processed_by = processed_by
+
     db.commit()
-    return {"inserted": inserted, "updated": updated}
+    return {"message": f"UPSERT completado: {len(products_to_insert)} productos procesados."}
+

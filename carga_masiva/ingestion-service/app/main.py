@@ -1,11 +1,14 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from decimal import Decimal
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from sqlalchemy.orm import Session
+from tempfile import NamedTemporaryFile
 from .database import SessionLocal, engine
 from .models import Base, ProductStaging
 from .utils import read_csv
 import uuid
+from mangum import Mangum
 
-# Crear tablas
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Ingestion Service")
@@ -17,22 +20,69 @@ def get_db():
     finally:
         db.close()
 
-@app.post("/upload-csv")
-async def upload_csv(file: UploadFile = File(...), created_by: str = "system"):
+
+import math
+
+def safe_float(value):
+    if value is None:
+        return None
     try:
-        # Guardar temporalmente el archivo
-        tmp_file_path = f"/tmp/{file.filename}"
-        content = await file.read()
-        with open(tmp_file_path, "wb") as f:
-            f.write(content)
+        f = float(value)
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return f
+    except (ValueError, TypeError):
+        return None
+
+def safe_int(value):
+    if value is None:
+        return None
+    try:
+        i = int(float(value))
+        return i
+    except (ValueError, TypeError):
+        return None
+
+def safe_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() in ['true', '1', 'yes']
+    return bool(value)
+
+
+@app.post("/upload-csv")
+async def upload_csv(file: UploadFile = File(...), created_by: str = "system", db: Session = Depends(get_db)):
+    try:
+        # Guardar archivo temporal con nombre único
+        with NamedTemporaryFile(delete=False, suffix=f"_{uuid.uuid4()}.csv") as tmp_file:
+            tmp_file.write(await file.read())
+            tmp_file_path = tmp_file.name
 
         # Leer CSV
         df = read_csv(tmp_file_path)
+
+        # Validar columnas requeridas
+        required_columns = [
+            "sku", "name", "description", "category", "manufacturer",
+            "storage_type", "min_shelf_life_months", "expiration_date",
+            "batch_number", "cold_chain_required", "certifications",
+            "commercialization_auth", "country_regulations", "unit_price",
+            "purchase_conditions", "delivery_time_hours", "external_code",
+            "import_id"
+        ]
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        if missing_cols:
+            raise HTTPException(status_code=400, detail=f"Faltan columnas en el CSV: {missing_cols}")
+
+        # Convertir cold_chain_required a boolean
+        if "cold_chain_required" in df.columns:
+            df["cold_chain_required"] = df["cold_chain_required"].apply(safe_bool)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al procesar el CSV: {str(e)}")
 
     # Insertar en la base de datos
-    db: Session = next(get_db())
     try:
         for _, row in df.iterrows():
             product = ProductStaging(
@@ -42,18 +92,18 @@ async def upload_csv(file: UploadFile = File(...), created_by: str = "system"):
                 category=row.get("category"),
                 manufacturer=row.get("manufacturer"),
                 storage_type=row.get("storage_type"),
-                min_shelf_life_months=row.get("min_shelf_life_months"),
+                min_shelf_life_months=safe_int(row.get("min_shelf_life_months")),
                 expiration_date=row.get("expiration_date"),
                 batch_number=row.get("batch_number"),
                 cold_chain_required=row.get("cold_chain_required"),
                 certifications=row.get("certifications"),
                 commercialization_auth=row.get("commercialization_auth"),
                 country_regulations=row.get("country_regulations"),
-                unit_price=row.get("unit_price"),
+                unit_price=safe_float(row.get("unit_price")),
                 purchase_conditions=row.get("purchase_conditions"),
-                delivery_time_hours=row.get("delivery_time_hours"),
+                delivery_time_hours=safe_int(row.get("delivery_time_hours")),
                 external_code=row.get("external_code"),
-                import_id=row.get("import_id"),  
+                import_id=row.get("import_id"),
                 created_by=created_by
             )
             db.add(product)
@@ -63,23 +113,22 @@ async def upload_csv(file: UploadFile = File(...), created_by: str = "system"):
         raise HTTPException(status_code=500, detail=f"Error al insertar los datos: {str(e)}")
 
     total_products = len(df)
-    categories_count = df['category'].value_counts().to_dict() 
-    cold_chain_count = df['cold_chain_required'].sum()  
-    avg_unit_price = df['unit_price'].mean()  
+    categories_count = df['category'].value_counts().to_dict()
+    cold_chain_count = int(df['cold_chain_required'].sum())
+    avg_unit_price = round(float(df['unit_price'].mean()) if not df['unit_price'].isna().all() else 0, 2)
 
     return {
-        "message": f"{total_products} productor ingresados",
+        "message": f"{total_products} productos ingresados",
         "summary": {
-            "total productos": total_products,
-            "cantidad de categorias": categories_count,
-            "Cantidad que requieren cadena de frio": int(cold_chain_count),
-            "Precio promedio": round(float(avg_unit_price), 2)
+            "total_products": total_products,
+            "categories_count": categories_count,
+            "cold_chain_required_count": cold_chain_count,
+            "avg_unit_price": avg_unit_price
         }
     }
 
 @app.get("/staging-products")
-def list_staging_products(limit: int = 100, offset: int = 0):
-    db: Session = next(get_db())
+def list_staging_products(limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
     products = db.query(ProductStaging).offset(offset).limit(limit).all()
     return [
         {
@@ -90,16 +139,16 @@ def list_staging_products(limit: int = 100, offset: int = 0):
             "category": p.category,
             "manufacturer": p.manufacturer,
             "storage_type": p.storage_type,
-            "min_shelf_life_months": p.min_shelf_life_months,
+            "min_shelf_life_months": safe_int(p.min_shelf_life_months),
             "expiration_date": p.expiration_date,
             "batch_number": p.batch_number,
             "cold_chain_required": p.cold_chain_required,
             "certifications": p.certifications,
             "commercialization_auth": p.commercialization_auth,
             "country_regulations": p.country_regulations,
-            "unit_price": p.unit_price,
+            "unit_price": safe_float(p.unit_price),
             "purchase_conditions": p.purchase_conditions,
-            "delivery_time_hours": p.delivery_time_hours,
+            "delivery_time_hours": safe_int(p.delivery_time_hours),
             "external_code": p.external_code,
             "import_id": str(p.import_id),
             "created_at": p.created_at,
@@ -107,14 +156,17 @@ def list_staging_products(limit: int = 100, offset: int = 0):
             "created_by": p.created_by,
             "validation_status": p.validation_status,
             "validation_errors": p.validation_errors,
-            "validated_at": p.validated_at
+            "validated_at": p.validated_at,
+            "processed": p.processed              
         } for p in products
     ]
-
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+handler = Mangum(app)
 
 
 

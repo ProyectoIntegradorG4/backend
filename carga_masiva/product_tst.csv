@@ -1,4 +1,0 @@
-sku,name,description,category,manufacturer,storage_type,min_shelf_life_months,expiration_date,batch_number,cold_chain_required,certifications,commercialization_auth,country_regulations,unit_price,purchase_conditions,delivery_time_hours,external_code
-SKU001,Producto A,Descripción del producto A,Alimentos,Empresa A,Refrigerado,12,2026-12-31,BATCH001,TRUE,ISO9001,Autorización A,Regulación Colombia,15000.50,Condiciones A,48,EXT001
-SKU002,Producto B,Descripción del producto B,Bebidas,Empresa B,Ambiente,24,2025-06-30,BATCH002,FALSE,ISO22000,Autorización B,Regulación Colombia,8000.00,Condiciones B,24,EXT002
-SKU003,Producto C,Descripción del producto C,Medicamentos,Empresa C,Refrigerado,6,2025-03-15,BATCH003,TRUE,ISO13485,Autorización C,Regulación Colombia,12000.75,Condiciones C,72,EXT003
