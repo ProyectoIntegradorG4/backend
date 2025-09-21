@@ -4,14 +4,14 @@ services:
     image: postgres:16
     container_name: postgres-db
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: grupo4
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/001-init.sql
+      - ./001-init.sql:/docker-entrypoint-initdb.d/001-init.sql
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT}:5432"
     networks:
       - microservices-network
     healthcheck:
@@ -45,14 +45,17 @@ services:
       dockerfile: Dockerfile
     container_name: nit-validation-service
     environment:
-      POSTGRES_DB: nit_db
-      POSTGRES_USER: nit_service  
-      POSTGRES_PASSWORD: nit_password
-      DATABASE_URL: postgresql+psycopg://nit_service:nit_password@postgres-db:5432/nit_db
-      REDIS_URL: redis://redis-cache:6379/0
-      REDIS_TTL: 3600
+      POSTGRES_DB: ${NIT_DB_NAME}
+      POSTGRES_USER: ${NIT_DB_USER}
+      POSTGRES_PASSWORD: ${NIT_DB_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      # Permite override completo si se desea
+      DATABASE_URL: ${NIT_DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      REDIS_TTL: ${REDIS_TTL}
     ports:
-      - "8002:8002"
+      - "${NIT_SERVICE_PORT}:8002"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -76,9 +79,9 @@ services:
       dockerfile: Dockerfile
     container_name: user-service
     environment:
-      DATABASE_URL: postgresql+psycopg://user_service:user_password@postgres-db:5432/user_db
+      DATABASE_URL: ${USER_DATABASE_URL}
     ports:
-      - "8001:8001"
+      - "${USER_SERVICE_PORT}:8001"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -100,9 +103,9 @@ services:
       dockerfile: Dockerfile
     container_name: audit-service
     environment:
-      DATABASE_URL: postgresql+psycopg://audit_service:audit_password@postgres-db:5432/audit_db
+      DATABASE_URL: ${AUDIT_DATABASE_URL}
     ports:
-      - "8003:8003"
+      - "${AUDIT_SERVICE_PORT}:8003"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -122,7 +125,7 @@ services:
     image: nginx:alpine
     container_name: api-gateway
     ports:
-      - "80:80"
+      - "${NGINX_PORT}:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
