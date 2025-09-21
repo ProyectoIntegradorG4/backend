@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: grupo4
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./001-init.sql:/docker-entrypoint-initdb.d/001-init.sql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/001-init.sql
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     networks:
@@ -48,7 +48,8 @@ services:
       POSTGRES_DB: nit_db
       POSTGRES_USER: nit_service  
       POSTGRES_PASSWORD: nit_password
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+psycopg://nit_service:nit_password@postgres-db:5432/nit_db
+      REDIS_URL: redis://redis-cache:6379/0
       REDIS_TTL: 3600
     ports:
       - "8002:8002"

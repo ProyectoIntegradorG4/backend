@@ -1,0 +1,492 @@
+{
+	"info": {
+		"_postman_id": "backend-microservices-collection-v2",
+		"name": "Backend Microservices - User & Audit Services v2",
+		"description": "Colección completa de Postman para los microservicios de usuarios y auditoría con variables configurables",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "User Service",
+			"item": [
+				{
+					"name": "Registrar Usuario - Prueba Exitosa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"{{nombre_exitoso}}\",\n  \"email\": \"{{email_exitoso}}\",\n  \"nit\": \"{{nit_valido}}\",\n  \"password\": \"{{password_valido}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						},
+						"description": "Prueba de registro exitoso con datos válidos"
+					}
+				},
+				{
+					"name": "Registrar Usuario - NIT Inválido",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"{{nombre_test}}\",\n  \"email\": \"{{email_test}}\",\n  \"nit\": \"{{nit_invalido}}\",\n  \"password\": \"{{password_valido}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						},
+						"description": "Prueba con NIT no autorizado - debe retornar 404"
+					}
+				},
+				{
+					"name": "Registrar Usuario - Email Duplicado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"{{nombre_exitoso}}\",\n  \"email\": \"{{email_duplicado}}\",\n  \"nit\": \"{{nit_valido}}\",\n  \"password\": \"{{password_valido}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						},
+						"description": "Prueba con email ya existente - debe retornar 409"
+					}
+				},
+				{
+					"name": "Registrar Usuario - Password Débil",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"{{nombre_test}}\",\n  \"email\": \"{{email_test}}\",\n  \"nit\": \"{{nit_valido}}\",\n  \"password\": \"{{password_debil}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						},
+						"description": "Prueba con password que no cumple complejidad - debe retornar 422"
+					}
+				},
+				{
+					"name": "Registrar Usuario - Datos Inválidos",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"\",\n  \"email\": \"{{email_invalido}}\",\n  \"nit\": \"{{nit_valido}}\",\n  \"password\": \"{{password_valido}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"register"
+							]
+						},
+						"description": "Prueba con datos que fallan validación de formato - debe retornar 400"
+					}
+				},
+				{
+					"name": "Health Check User Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verifica el estado de salud del microservicio de usuarios"
+					}
+				}
+			]
+		},
+		{
+			"name": "Audit Service",
+			"item": [
+				{
+					"name": "Registrar Evento - Registro Exitoso",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event\": \"{{audit_event}}\",\n  \"request\": {\n    \"nombreusuario\": \"{{audit_nombre}}\",\n    \"useremail\": \"{{audit_email}}\",\n    \"nit\": \"{{audit_nit}}\"\n  },\n  \"outcome\": \"{{audit_outcome_success}}\",\n  \"action\": \"{{audit_action}}\",\n  \"timestamp\": \"{{$isoTimestamp}}\",\n  \"auditid\": \"{{$guid}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{audit_url}}/audit/register",
+							"host": [
+								"{{audit_url}}"
+							],
+							"path": [
+								"audit",
+								"register"
+							]
+						},
+						"description": "Registra un evento de auditoría de registro exitoso"
+					}
+				},
+				{
+					"name": "Registrar Evento - Registro Fallido",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event\": \"{{audit_event}}\",\n  \"request\": {\n    \"nombreusuario\": \"{{audit_nombre}}\",\n    \"useremail\": \"{{audit_email}}\",\n    \"nit\": \"{{audit_nit}}\"\n  },\n  \"outcome\": \"{{audit_outcome_fail}}\",\n  \"action\": \"{{audit_action}}\",\n  \"timestamp\": \"{{$isoTimestamp}}\",\n  \"auditid\": \"{{$guid}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{audit_url}}/audit/register",
+							"host": [
+								"{{audit_url}}"
+							],
+							"path": [
+								"audit",
+								"register"
+							]
+						},
+						"description": "Registra un evento de auditoría de registro fallido"
+					}
+				},
+				{
+					"name": "Health Check Audit Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{audit_url}}/health",
+							"host": [
+								"{{audit_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verifica el estado de salud del microservicio de auditoría"
+					}
+				}
+			]
+		},
+		{
+			"name": "NIT Validation Service",
+			"item": [
+				{
+					"name": "Validar NIT Existente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{nit_url}}/api/v1/validate/{{nit_valido}}",
+							"host": [
+								"{{nit_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"validate",
+								"{{nit_valido}}"
+							]
+						},
+						"description": "Valida que un NIT existe en la base de instituciones asociadas"
+					}
+				},
+				{
+					"name": "Validar NIT No Existente",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{nit_url}}/api/v1/validate/{{nit_invalido}}",
+							"host": [
+								"{{nit_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"validate",
+								"{{nit_invalido}}"
+							]
+						},
+						"description": "Intenta validar un NIT que no existe - debe retornar 404"
+					}
+				},
+				{
+					"name": "Health Check NIT Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{nit_url}}/health",
+							"host": [
+								"{{nit_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verifica el estado de salud del microservicio de validación de NIT"
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Script para generar valores dinámicos si es necesario",
+					"console.log('Ejecutando pruebas de microservicios...');"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Tests automáticos que se pueden añadir",
+					"pm.test('Response time is less than 2000ms', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+					"});",
+					"",
+					"pm.test('Content-Type header is present', function () {",
+					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8001",
+			"type": "string",
+			"description": "URL base del User Service"
+		},
+		{
+			"key": "audit_url",
+			"value": "http://localhost:8003",
+			"type": "string",
+			"description": "URL base del Audit Service"
+		},
+		{
+			"key": "nit_url",
+			"value": "http://localhost:8002",
+			"type": "string",
+			"description": "URL base del NIT Validation Service"
+		},
+		{
+			"key": "nombre_exitoso",
+			"value": "Clínica Central",
+			"type": "string",
+			"description": "Nombre para prueba exitosa"
+		},
+		{
+			"key": "email_exitoso",
+			"value": "admin@clinicacentral.org",
+			"type": "string",
+			"description": "Email para prueba exitosa"
+		},
+		{
+			"key": "email_duplicado",
+			"value": "admin@clinicacentral.org",
+			"type": "string",
+			"description": "Email ya existente para prueba de duplicados"
+		},
+		{
+			"key": "nombre_test",
+			"value": "Hospital Test",
+			"type": "string",
+			"description": "Nombre para pruebas generales"
+		},
+		{
+			"key": "email_test",
+			"value": "test@hospitaltest.com",
+			"type": "string",
+			"description": "Email para pruebas generales"
+		},
+		{
+			"key": "email_invalido",
+			"value": "email-sin-formato-valido",
+			"type": "string",
+			"description": "Email con formato inválido"
+		},
+		{
+			"key": "nit_valido",
+			"value": "901234567",
+			"type": "string",
+			"description": "NIT que existe en la base de datos"
+		},
+		{
+			"key": "nit_invalido",
+			"value": "999999999",
+			"type": "string",
+			"description": "NIT que no existe en la base de datos"
+		},
+		{
+			"key": "password_valido",
+			"value": "S3gura!2025",
+			"type": "string",
+			"description": "Password que cumple política de complejidad"
+		},
+		{
+			"key": "password_debil",
+			"value": "123",
+			"type": "string",
+			"description": "Password que no cumple política de complejidad"
+		},
+		{
+			"key": "audit_event",
+			"value": "user_register",
+			"type": "string",
+			"description": "Tipo de evento para auditoría"
+		},
+		{
+			"key": "audit_nombre",
+			"value": "Usuario de Prueba",
+			"type": "string",
+			"description": "Nombre para evento de auditoría"
+		},
+		{
+			"key": "audit_email",
+			"value": "audit@test.com",
+			"type": "string",
+			"description": "Email para evento de auditoría"
+		},
+		{
+			"key": "audit_nit",
+			"value": "123456789",
+			"type": "string",
+			"description": "NIT para evento de auditoría"
+		},
+		{
+			"key": "audit_outcome_success",
+			"value": "success",
+			"type": "string",
+			"description": "Resultado exitoso para auditoría"
+		},
+		{
+			"key": "audit_outcome_fail",
+			"value": "fail",
+			"type": "string",
+			"description": "Resultado fallido para auditoría"
+		},
+		{
+			"key": "audit_action",
+			"value": "email",
+			"type": "string",
+			"description": "Tipo de acción para auditoría"
+		}
+	]
+}

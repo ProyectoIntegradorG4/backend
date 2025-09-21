@@ -52,7 +52,7 @@ class UserService:
         
         return True
 
-    async def validate_nit_exists(self, nit: int) -> Tuple[bool, Optional[int]]:
+    async def validate_nit_exists(self, nit: str) -> Tuple[bool, Optional[int]]:
         """
         Valida que el NIT exista en InstitucionesAsociadas.
         Returns: (existe, institucion_id)
