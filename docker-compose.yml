@@ -7,6 +7,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./001-init.sql:/docker-entrypoint-initdb.d/001-init.sql
@@ -16,17 +17,41 @@ services:
       - microservices-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
-      timeout: 10s
+      interval: 10s  # Reducido de 30s
+      timeout: 5s    # Reducido de 10s
       retries: 5
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '1.0'
+          memory: 512M
+    command: >
+      postgres 
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
 
-  # Redis para caché
+  # Redis para caché optimizado
   redis:
     image: redis:7-alpine
     container_name: redis-cache
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    command: >
+      redis-server 
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --timeout 300
     volumes:
       - redis_data:/data
     networks:
@@ -36,6 +61,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
     restart: unless-stopped
 
   # NIT Validation Service
@@ -72,7 +102,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # User Service
+  # User Service optimizado
   user-service:
     build: 
       context: ./user-service
@@ -80,10 +110,17 @@ services:
     container_name: user-service
     environment:
       DATABASE_URL: ${USER_DATABASE_URL}
+      REDIS_URL: "redis://redis-cache:6379"
     ports:
       - "${USER_SERVICE_PORT}:8001"
     depends_on:
       postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nit-validation-service:
+        condition: service_healthy
+      audit-service:
         condition: service_healthy
     networks:
       - microservices-network
@@ -92,9 +129,18 @@ services:
       - ./user-service:/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
+      interval: 10s  # Reducido de 30s
+      timeout: 5s    # Reducido de 10s
       retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   # Audit Service
   audit-service:

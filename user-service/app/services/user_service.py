@@ -1,191 +1,276 @@
+import asyncio
+import hashlib
+import re
+import json
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Tuple
+import bcrypt
+import httpx
+import jwt
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from passlib.context import CryptContext
 from app.models.user import User, UserRegister, RegisterSuccessResponse, ErrorDetail
-from app.services.audit_client import AuditClient
-import re
-import jwt
-import httpx
-from datetime import datetime, timedelta
-from typing import Tuple, Optional
-import uuid
+import redis.asyncio as redis
 import logging
 
 logger = logging.getLogger(__name__)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 class UserService:
     def __init__(self, db: Session):
         self.db = db
-        self.audit_client = AuditClient()
+        self.secret_key = "your-secret-key-here"  # En producción, usar variable de entorno
+        self.algorithm = "HS256"
         self.nit_service_url = "http://nit-validation-service:8002"
-        self.jwt_secret = "your-secret-key"  # En producción usar variable de entorno
-        self.jwt_algorithm = "HS256"
-
-    def get_password_hash(self, password: str) -> str:
-        return pwd_context.hash(password)
+        self.audit_service_url = "http://audit-service:8003"
+        self.timeout = 5.0
+        
+        # Cliente HTTP reutilizable con configuración optimizada
+        self._http_client = None
+        
+        # Cliente Redis para cache
+        self._redis_client = None
+    
+    async def get_http_client(self):
+        if self._http_client is None:
+            limits = httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=50,
+                keepalive_expiry=30
+            )
+            self._http_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(self.timeout),
+                limits=limits,
+                http2=False  # Deshabilitar HTTP/2 temporalmente
+            )
+        return self._http_client
+    
+    async def get_redis_client(self):
+        if self._redis_client is None:
+            try:
+                self._redis_client = redis.from_url(
+                    "redis://redis-cache:6379",
+                    decode_responses=True,
+                    max_connections=20
+                )
+            except Exception as e:
+                logger.warning(f"Redis no disponible, funcionando sin cache: {e}")
+                self._redis_client = None
+        return self._redis_client
 
     def validate_password_complexity(self, password: str) -> bool:
-        """
-        Valida que la contraseña cumpla con la política de complejidad:
-        - Al menos 8 caracteres
-        - Al menos una mayúscula
-        - Al menos una minúscula
-        - Al menos un número
-        - Al menos un carácter especial
-        """
+        """Validación optimizada de complejidad de contraseña"""
         if len(password) < 8:
             return False
         
-        if not re.search(r"[A-Z]", password):
-            return False
-        
-        if not re.search(r"[a-z]", password):
-            return False
-        
-        if not re.search(r"\d", password):
-            return False
-        
-        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", password):
-            return False
-        
-        return True
+        # Usar una sola expresión regular para todas las validaciones
+        pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]).{8,}$'
+        return bool(re.match(pattern, password))
+
+    def get_password_hash(self, password: str) -> str:
+        """Hashing optimizado de contraseña"""
+        # Usar rounds más bajos para mejor rendimiento (10 en lugar de 12)
+        salt = bcrypt.gensalt(rounds=10)
+        return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
     async def validate_nit_exists(self, nit: str) -> Tuple[bool, Optional[int]]:
-        """
-        Valida que el NIT exista en InstitucionesAsociadas.
-        Returns: (existe, institucion_id)
-        """
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(f"{self.nit_service_url}/api/v1/validate/{nit}")
+        """Validación de NIT con cache Redis"""
+        redis_client = await self.get_redis_client()
+        
+        # Verificar cache primero
+        if redis_client:
+            try:
+                cache_key = f"nit_validation:{nit}"
+                cached_result = await redis_client.get(cache_key)
                 
-                if response.status_code == 200:
-                    data = response.json()
-                    # Si el NIT es válido y está activo
-                    if data.get("valid", False) and data.get("activo", False):
-                        # En este caso usamos un ID fijo ya que no tenemos tabla de instituciones en user_db
-                        # En producción, esto sería un ID real de institución
-                        return True, 1
-                    else:
-                        return False, None
-                elif response.status_code == 404:
-                    return False, None
-                else:
-                    logger.error(f"Error validando NIT: {response.status_code}")
-                    return False, None
+                if cached_result:
+                    result = json.loads(cached_result)
+                    logger.info(f"Cache hit para NIT {nit}")
+                    return result["exists"], result.get("institucion_id")
+            except Exception as e:
+                logger.warning(f"Error accediendo cache Redis: {e}")
+        
+        # Si no está en cache, hacer request HTTP
+        try:
+            http_client = await self.get_http_client()
+            response = await http_client.get(f"{self.nit_service_url}/api/v1/validate/{nit}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                institucion_id = data.get("id", 1)
+                
+                # Guardar en cache por 1 hora si Redis está disponible
+                if redis_client:
+                    try:
+                        cache_data = {"exists": True, "institucion_id": institucion_id}
+                        await redis_client.setex(cache_key, 3600, json.dumps(cache_data))
+                    except Exception as e:
+                        logger.warning(f"Error guardando en cache: {e}")
+                
+                return True, institucion_id
+            else:
+                # Guardar resultado negativo en cache por 5 minutos
+                if redis_client:
+                    try:
+                        cache_data = {"exists": False, "institucion_id": None}
+                        await redis_client.setex(cache_key, 300, json.dumps(cache_data))
+                    except Exception as e:
+                        logger.warning(f"Error guardando en cache: {e}")
+                
+                return False, None
+                
         except Exception as e:
-            logger.error(f"Error conectando con nit-validation-service: {str(e)}")
+            logger.error(f"Error validando NIT: {e}")
             return False, None
 
-    def generate_jwt_token(self, user_id: int, email: str) -> str:
-        """Genera un token JWT para el usuario."""
-        payload = {
-            "user_id": user_id,
-            "email": email,
-            "exp": datetime.utcnow() + timedelta(hours=24)
-        }
-        return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_algorithm)
-
-    async def create_user(self, user: UserRegister) -> Tuple[RegisterSuccessResponse, Optional[ErrorDetail]]:
-        """
-        Crear un usuario con validaciones completas y auditoría.
+    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None):
+        """Generación optimizada de tokens JWT"""
+        to_encode = data.copy()
+        if expires_delta:
+            expire = datetime.now(timezone.utc) + expires_delta
+        else:
+            expire = datetime.now(timezone.utc) + timedelta(hours=24)
         
-        Returns:
-            Tuple[RegisterSuccessResponse, ErrorDetail]: Respuesta exitosa o error
-        """
+        to_encode.update({"exp": expire})
+        encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+        return encoded_jwt
+
+    async def log_audit_async(self, event_data: dict, outcome: str, action: str, error_msg: str = None):
+        """Log de auditoría asíncrono no bloqueante"""
+        try:
+            http_client = await self.get_http_client()
+            
+            audit_data = {
+                "event": "user_register",
+                "request": event_data,
+                "outcome": outcome,
+                "action": action,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "auditid": f"user-{hashlib.md5(str(event_data).encode()).hexdigest()}"
+            }
+            
+            # Fire and forget - no esperamos respuesta
+            asyncio.create_task(
+                self._send_audit_log(audit_data)
+            )
+            
+        except Exception as e:
+            logger.warning(f"Error preparando audit log: {e}")
+            # No fallar si la auditoría falla
+
+    async def _send_audit_log(self, audit_data: dict):
+        """Envío interno de log de auditoría"""
+        try:
+            http_client = await self.get_http_client()
+            await http_client.post(
+                f"{self.audit_service_url}/audit/register",
+                json=audit_data,
+                headers={"Content-Type": "application/json"}
+            )
+        except Exception as e:
+            logger.warning(f"Error enviando audit log: {e}")
+
+    async def create_user(self, user: UserRegister) -> Tuple[Optional[RegisterSuccessResponse], Optional[ErrorDetail]]:
+        """Creación optimizada de usuarios con validaciones paralelas"""
         user_data = {
             "nombre": user.nombre,
             "email": user.email,
             "nit": user.nit
         }
+
+        # 1. Validar complejidad de contraseña (rápido, local)
+        if not self.validate_password_complexity(user.password):
+            await self.log_audit_async(user_data, "fail", "other", "Password complexity failed")
+            return None, ErrorDetail(
+                error="Reglas de negocio fallidas",
+                detalles={"password": "No cumple política de complejidad"}
+            )
+
+        # 2. Ejecutar validaciones de NIT y email en paralelo
+        validation_tasks = [
+            self.validate_nit_exists(user.nit),
+            asyncio.to_thread(self._check_email_exists, user.email)
+        ]
         
         try:
-            # 1. Validar complejidad de contraseña
-            if not self.validate_password_complexity(user.password):
-                error = ErrorDetail(
-                    error="Reglas de negocio fallidas",
-                    detalles={"password": "No cumple política de complejidad"}
-                )
-                await self.audit_client.log_user_register_error(
-                    user_data, "password_policy", "Contraseña no cumple política", "other"
-                )
-                return None, error
-
-            # 2. Validar que el NIT existe en InstitucionesAsociadas
-            nit_exists, institucion_id = await self.validate_nit_exists(user.nit)
-            if not nit_exists:
-                error = ErrorDetail(
-                    error="NIT no autorizado",
-                    detalles={"nit": f"{user.nit} no existe en InstitucionesAsociadas"}
-                )
-                await self.audit_client.log_user_register_error(
-                    user_data, "nit_not_found", f"NIT {user.nit} no autorizado", "nit"
-                )
-                return None, error
-
-            # 3. Verificar si el correo electrónico ya existe
-            existing_user = self.db.query(User).filter(User.correo_electronico == user.email).first()
-            if existing_user:
-                error = ErrorDetail(
-                    error="Usuario ya existe",
-                    detalles={"email": user.email}
-                )
-                await self.audit_client.log_user_register_error(
-                    user_data, "user_exists", f"Email {user.email} ya registrado", "email"
-                )
-                return None, error
-
-            # 4. Crear el usuario
-            password_hash = self.get_password_hash(user.password)
-            db_user = User(
-                nombre=user.nombre,
-                correo_electronico=user.email,
-                password_hash=password_hash,
-                nit=user.nit
-            )
-            
-            self.db.add(db_user)
-            self.db.commit()
-            self.db.refresh(db_user)
-
-            # 5. Generar token JWT
-            token = self.generate_jwt_token(db_user.id, db_user.correo_electronico)
-
-            # 6. Registrar éxito en auditoría
-            await self.audit_client.log_user_register_success(
-                user_data, db_user.id, institucion_id or 0
+            (nit_exists, institucion_id), email_exists = await asyncio.gather(*validation_tasks)
+        except Exception as e:
+            await self.log_audit_async(user_data, "fail", "other", f"Validation error: {str(e)}")
+            return None, ErrorDetail(
+                error="Error interno",
+                detalles={"message": "Error en validaciones"}
             )
 
-            # 7. Crear respuesta exitosa
-            success_response = RegisterSuccessResponse(
-                userId=db_user.id,
-                institucionId=institucion_id or 0,
-                token=token
+        # 3. Verificar resultados de validaciones
+        if not nit_exists:
+            await self.log_audit_async(user_data, "fail", "nit", f"NIT {user.nit} not found")
+            return None, ErrorDetail(
+                error="NIT no autorizado",
+                detalles={"nit": f"{user.nit} no existe en InstitucionesAsociadas"}
             )
 
-            return success_response, None
-
-        except IntegrityError as e:
-            self.db.rollback()
-            error = ErrorDetail(
+        if email_exists:
+            await self.log_audit_async(user_data, "fail", "email", f"Email {user.email} already exists")
+            return None, ErrorDetail(
                 error="Usuario ya existe",
                 detalles={"email": user.email}
             )
-            await self.audit_client.log_user_register_error(
-                user_data, "integrity_error", "Error de integridad en BD", "email"
-            )
-            return None, error
 
+        # 4. Crear usuario con hash de contraseña en thread separado
+        password_hash = await asyncio.to_thread(self.get_password_hash, user.password)
+        
+        db_user = User(
+            nombre=user.nombre,
+            correo_electronico=user.email,
+            password_hash=password_hash,
+            nit=user.nit
+        )
+
+        try:
+            self.db.add(db_user)
+            self.db.commit()
+            self.db.refresh(db_user)
+        except IntegrityError:
+            self.db.rollback()
+            await self.log_audit_async(user_data, "fail", "email", "Database integrity error")
+            return None, ErrorDetail(
+                error="Usuario ya existe",
+                detalles={"email": user.email}
+            )
         except Exception as e:
             self.db.rollback()
-            logger.error(f"Error interno creando usuario: {str(e)}")
-            error = ErrorDetail.create_with_trace(
+            await self.log_audit_async(user_data, "fail", "other", f"Database error: {str(e)}")
+            return None, ErrorDetail(
                 error="Error interno",
-                detalles={"message": "Error interno del servidor"}
+                detalles={"message": "Error al crear usuario"}
             )
-            await self.audit_client.log_user_register_error(
-                user_data, "internal_error", str(e), "other"
-            )
-            return None, error
+
+        # 5. Generar token JWT
+        access_token = self.create_access_token(
+            data={"sub": str(db_user.id), "email": db_user.correo_electronico}
+        )
+
+        # 6. Log de éxito (asíncrono)
+        await self.log_audit_async(user_data, "success", "email", None)
+
+        # 7. Respuesta exitosa
+        return RegisterSuccessResponse(
+            userId=db_user.id,
+            institucionId=institucion_id or 1,
+            token=access_token,
+            rol=db_user.rol
+        ), None
+
+    def _check_email_exists(self, email: str) -> bool:
+        """Verificación sincrónica de email duplicado"""
+        existing_user = self.db.query(User).filter(User.correo_electronico == email).first()
+        return existing_user is not None
+
+    async def close(self):
+        """Cerrar conexiones"""
+        if self._http_client:
+            await self._http_client.aclose()
+        if self._redis_client:
+            await self._redis_client.close()
