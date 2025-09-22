@@ -1,25 +1,39 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import QueuePool
 from typing import Generator
 import os
 
 # Configuración de la base de datos
 DATABASE_URL = os.getenv(
     "DATABASE_URL", 
-    "postgresql+psycopg://audit_service:audit_password@localhost:5432/audit_db"
+    "postgresql+psycopg://audit_service:audit_password@postgres-db:5432/audit_db"
 )
 
-# Configuración del engine con psycopg3
+# Configuración optimizada del engine para alto rendimiento
 engine = create_engine(
     DATABASE_URL,
-    echo=False,  # Cambiar a True para debug SQL
-    pool_size=10,
-    max_overflow=20,
+    echo=False,
+    poolclass=QueuePool,
+    pool_size=15,              # Pool optimizado para audit service
+    max_overflow=30,           # Menos overflow que user service
     pool_pre_ping=True,
-    pool_recycle=3600
+    pool_recycle=1800,         # Reciclar conexiones más frecuentemente
+    pool_timeout=30,           # Timeout para obtener conexión del pool
+    connect_args={
+        "connect_timeout": 10,
+        "options": "-c jit=off -c application_name=audit_service_optimized"
+    }
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Session maker optimizado
+SessionLocal = sessionmaker(
+    autocommit=False, 
+    autoflush=False, 
+    bind=engine,
+    expire_on_commit=False     # Evita queries adicionales después de commit
+)
 
 Base = declarative_base()
 
