@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .models import ProductStaging, ProductStagingErrors
 from .validator import process_pending_products
 from .database import SessionLocal, engine
-from mangum import Mangum
+import os
 
 
 # Crear tablas si no existen
@@ -59,5 +59,13 @@ def list_errors(db: Session = Depends(get_db)):
 def health():
     return {"status": "ok"}
 
-handler = Mangum(app)
 
+# Handler para Lambda con Mangum
+try:
+    from mangum import Mangum
+    handler = Mangum(app)
+except ImportError:
+    handler = None
+
+# Variable opcional para distinguir entornos
+IS_LAMBDA = os.environ.get("AWS_EXECUTION_ENV") is not None
