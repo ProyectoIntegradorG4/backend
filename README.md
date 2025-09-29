@@ -495,3 +495,56 @@ git branch -d feature/nombre-de-la-feature
 
 ---
 
+# Documentación Migroservicio de cargar Masiva
+Este proyecto implementa un pipeline de microservicios en Python para la carga, validación y consolidación de productos médicos, con ejecución local en Docker
+
+## Estructura 
+
+```
+carga_masiva/                     
+│
+├── ingestion-service/             # Microservicio de carga de archivos CSV
+│   ├── app/
+│   │   ├── main.py                # Punto de entrada (FastAPI + handler Lambda)
+│   │   ├── routes/                # Endpoints de ingesta
+│   │   └── utils/                 # Funciones auxiliares (ej. safe_float)
+│   ├── requirements.txt           # Dependencias específicas
+│   └── Dockerfile                 # Imagen Docker + Lambda (ECR)
+│
+├── validator-service/             # Microservicio de validación de productos
+│   ├── app/
+│   │   ├── main.py                # Validaciones de campos críticos
+│   │   ├── validators/            # Reglas de negocio
+│   │   └── errors/                # Manejo de errores
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── upserter-service/              # Microservicio de inserción en tabla final
+│   ├── app/
+│   │   ├── main.py                # Inserción en tabla final products
+│   │   └── db/                    # Conexión a Aurora PostgreSQL
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── docker-compose.yml             # Orquestación local con Docker
+```
+
+# Instalación y ejecución
+## Clonar repositorios
+git clone https://github.com/ProyectoIntegradorG4/backend
+cd carga_masiva
+
+## Configuración variables de entorno
+
+DATABASE_URL=postgresql+psycopg2://postgres:grupo4@postgres-db:5432/postgres
+
+
+## Teniendo instalado Docker Composse se levanta con:
+docker compose up --build
+
+
+# Endpoints locales
+Ingesta    → http://localhost:8010/upload-csv
+Validator  → http://localhost:8011/validate
+Upserter   → http://localhost:8012/upsert
+
