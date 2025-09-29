@@ -6,7 +6,7 @@ from .models import Base, ProductStaging, Products
 from typing import List
 from pydantic import BaseModel
 from datetime import datetime
-from mangum import Mangum
+import os
 
 
 # Crear tablas si no existen
@@ -90,4 +90,12 @@ def upsert_products(db: Session = Depends(get_db)):
     db.commit()
     return {"message": f"{inserted_count} productos insertados correctamente"}
 
-handler = Mangum(app)
+# Handler para Lambda con Mangum
+try:
+    from mangum import Mangum
+    handler = Mangum(app)
+except ImportError:
+    handler = None
+
+# Variable opcional para distinguir entornos
+IS_LAMBDA = os.environ.get("AWS_EXECUTION_ENV") is not None

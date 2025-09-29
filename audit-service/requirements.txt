@@ -1,5 +1,15 @@
+# Core dependencies
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 sqlalchemy==2.0.23
 psycopg[binary]==3.1.12
 pydantic==2.5.0
+
+# Performance dependencies
+aiofiles==23.2.1
+
+# Testing dependencies
+pytest==7.4.0
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.2

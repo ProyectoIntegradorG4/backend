@@ -6,7 +6,7 @@ from .database import SessionLocal, engine
 from .models import Base, ProductStaging
 from .utils import read_csv
 import uuid
-from mangum import Mangum
+import os
 
 
 Base.metadata.create_all(bind=engine)
@@ -166,7 +166,15 @@ def health():
     return {"status": "ok"}
 
 
-handler = Mangum(app)
+# Handler para Lambda con Mangum
+try:
+    from mangum import Mangum
+    handler = Mangum(app)
+except ImportError:
+    handler = None
+
+# Variable opcional para distinguir entornos
+IS_LAMBDA = os.environ.get("AWS_EXECUTION_ENV") is not None
 
 
 

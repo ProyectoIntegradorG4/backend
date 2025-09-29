@@ -81,7 +81,7 @@ Validar que el tiempo de respuesta (latencia) se mantiene por debajo de 1 segund
 -- Tabla InstitucionesAsociadas
 
 CREATE TABLE InstitucionesAsociadas (
-    nit INT PRIMARY KEY,
+    nit VARCHAR(20) PRIMARY KEY,
     nombre_institucion VARCHAR(255) NOT NULL,
     pais VARCHAR(100) NOT NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -94,7 +94,7 @@ CREATE TABLE Usuarios (
     nombre VARCHAR(255) NOT NULL,
     correo_electronico VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    nit INT NOT NULL,
+    nit VARCHAR(20) NOT NULL,
     rol VARCHAR(50) DEFAULT 'usuario_institucional',
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     activo BOOLEAN DEFAULT TRUE

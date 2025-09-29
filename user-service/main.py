@@ -1,11 +1,22 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.routes import users
 from app.database.connection import init_db
 
 app = FastAPI(
     title="User Service",
-    description="Microservicio para gestión de usuarios",
-    version="1.0.0"
+    description="Microservicio de gestión de usuarios con orquestador de registro optimizado",
+    version="2.0.0"
+)
+
+# Configuración de CORS optimizada
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # En producción, especificar dominios específicos
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+    max_age=3600,  # Cache preflight requests por 1 hora
 )
 
 # Incluir rutas
@@ -21,4 +32,12 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8001,
+        workers=1,  # En contenedor, usar 1 worker por contenedor
+        loop="asyncio",
+        access_log=False,  # Deshabilitar logs de acceso para mayor rendimiento
+        log_level="warning"  # Reducir verbosidad de logs
+    )

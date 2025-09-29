@@ -18,36 +18,75 @@ backend/
 ## Microservicios
 
 ### 1. User Service (Puerto 8001)
-- **Propósito**: Gestión de usuarios, autenticación y autorización
-- **Base de datos**: PostgreSQL (puerto 5432)
+- **Propósito**: Gestión de usuarios institucionales con orquestador de registro
+- **Base de datos**: PostgreSQL (user_db)
+- **Funcionalidades**:
+  - Registro de usuarios institucionales con validación de NIT
+  - Validación de políticas de contraseña (complejidad)
+  - Integración con servicio de validación de NIT
+  - Auditoría automática de eventos de registro
+  - Generación de tokens JWT para autenticación
 - **Endpoints principales**:
-  - `POST /api/v1/users/` - Crear usuario
-  - `GET /api/v1/users/` - Listar usuarios
-  - `GET /api/v1/users/{id}` - Obtener usuario
-  - `PUT /api/v1/users/{id}` - Actualizar usuario
-  - `DELETE /api/v1/users/{id}` - Eliminar usuario
+  - `POST /register` - Registrar usuario institucional (orquestador)
+  - `GET /health` - Health check del servicio
+- **Modelo de datos**: Campo NIT como string (VARCHAR(20)) para mayor flexibilidad
 
 ### 2. NIT Validation Service (Puerto 8002)
 - **Propósito**: Validación de NIT contra instituciones asociadas
-- **Base de datos**: PostgreSQL + Redis para caché
+- **Base de datos**: PostgreSQL (nit_db) + Redis para caché
+- **Funcionalidades**:
+  - Validación de NITs de instituciones autorizadas
+  - Caché de consultas con Redis para optimización
+  - Soporte para NITs como strings (mayor flexibilidad)
+  - Validación de estado activo de instituciones
 - **Endpoints principales**:
-  - `POST /api/v1/validate` - Validar NIT
-  - `GET /api/v1/validate/{nit}` - Validar NIT (GET)
-  - `GET /api/v1/institution/{nit}` - Detalles de institución
-  - `GET /api/v1/cache/stats` - Estadísticas de caché
-  - `DELETE /api/v1/cache/{nit}` - Limpiar caché
+  - `GET /api/v1/validate/{nit}` - Validar NIT (string)
+  - `GET /health` - Health check del servicio
+- **Datos de prueba**: 10 instituciones precargadas con NITs de diferentes países
 
 ### 3. Audit Service (Puerto 8003)
 - **Propósito**: Auditoría, logs y trazabilidad del sistema
-- **Base de datos**: PostgreSQL (puerto 5434)
+- **Base de datos**: PostgreSQL (audit_db)
+- **Funcionalidades**:
+  - Registro de eventos de auditoría (success/fail)
+  - Tracking de acciones de usuario (registro, validación, etc.)
+  - Almacenamiento de requests y outcomes
+  - Generación de IDs únicos de auditoría
 - **Endpoints principales**:
-  - `POST /api/v1/audits/` - Crear log de auditoría
-  - `GET /api/v1/audits/` - Consultar logs (con filtros)
-  - `GET /api/v1/audits/stats/summary` - Resumen estadístico
+  - `POST /audit/register` - Registrar evento de auditoría
+  - `GET /health` - Health check del servicio
+- **Modelo de datos**: Eventos con JSONB para requests flexibles
+
+## Funcionalidades Implementadas
+
+### User Management Orquestador
+El **User Service** implementa un patrón orquestador para el registro de usuarios que coordina múltiples validaciones:
+
+1. **Validación de complejidad de contraseña**:
+   - Mínimo 8 caracteres
+   - Al menos una mayúscula, minúscula, número y carácter especial
+   
+2. **Validación de NIT**: Consulta al NIT Validation Service para verificar instituciones autorizadas
+
+3. **Validación de duplicados**: Verificación de email único en el sistema
+
+4. **Auditoría automática**: Registro de todos los eventos (éxito y fallo) en Audit Service
+
+5. **Respuestas estandarizadas**: Códigos HTTP específicos para cada tipo de error:
+   - `200` - Registro exitoso con JWT token
+   - `400` - Datos inválidos (formato)
+   - `404` - NIT no autorizado
+   - `409` - Usuario ya existe
+   - `422` - Reglas de negocio fallidas (password débil)
+   - `500` - Error interno
+
+### Arquitectura de Microservicios
+- **Comunicación HTTP REST** entre servicios
+- **Base de datos independientes** por servicio
+- **Manejo de timeouts** y errores de red
+- **Logs estructurados** para debugging
 
 ## Tecnologías Utilizadas
-
-- **Framework**: FastAPI (Python 3.12)
 - **Base de datos**: PostgreSQL 16
 - **Driver de BD**: psycopg3 (última versión)
 - **ORM**: SQLAlchemy 2.0
@@ -100,8 +139,46 @@ docker-compose ps
 Cada servicio tiene documentación automática de Swagger:
 
 - User Service: http://localhost:8001/docs
-- NIT Validation Service: http://localhost:8002/docs
+- NIT Validation Service: http://localhost:8002/docs  
 - Audit Service: http://localhost:8003/docs
+
+### Colección de Postman
+
+El proyecto incluye una colección completa de Postman para testing manual y automatizado:
+
+**Archivos incluidos**:
+- `postman_collection.json` - Colección principal con todas las pruebas
+- `postman_environment.json` - Variables de entorno configurables
+- `POSTMAN_README.md` - Documentación detallada
+
+**Variables de entorno disponibles**:
+```json
+{
+  "base_url": "http://localhost:8001",
+  "audit_url": "http://localhost:8003", 
+  "nit_url": "http://localhost:8002",
+  "nit_valido": "901234567",
+  "nit_invalido": "999999999",
+  "password_valido": "S3gura!2025",
+  "password_debil": "123"
+}
+```
+
+**Casos de prueba incluidos**:
+- ✅ Registro exitoso con JWT token (200)
+- ✅ Validación de NIT inválido (404)
+- ✅ Email duplicado (409)
+- ✅ Password débil (422)
+- ✅ Datos inválidos (400)
+- ✅ Health checks de todos los servicios
+- ✅ Tests de auditoría y NIT validation
+- ✅ Tests automáticos con verificación de tiempo de respuesta
+
+**Importar en Postman**:
+1. Abrir Postman
+2. Hacer clic en "Import"
+3. Seleccionar y arrastrar ambos archivos JSON
+4. Configurar el environment "Backend Microservices Environment"
 
 ## Desarrollo Local
 
@@ -152,6 +229,80 @@ psql -h localhost -p 5432 -U nit_service -d nit_db
 psql -h localhost -p 5432 -U audit_service -d audit_db
 ```
 
+## Testing
+
+### Tests de Integración
+
+Los servicios incluyen tests de integración que se ejecutan con los servicios reales en contenedores Docker, proporcionando mayor confiabilidad que los tests unitarios con mocks.
+
+#### Características de los Tests de Integración:
+- **Servicios reales**: Tests contra APIs funcionando con base de datos
+- **Entorno consistente**: Misma configuración que producción
+- **Comunicación entre servicios**: Verificación de integración completa
+- **Dependencias preinstaladas**: pytest, pytest-asyncio, httpx incluidos en requirements.txt
+
+#### Ejecución de Tests
+
+**User Service (8 tests de integración)**:
+```bash
+# Ejecutar tests desde contenedor
+docker-compose exec user-service pytest tests/ -v
+
+# Con coverage
+docker-compose exec user-service pytest tests/ --cov=app --cov-report=term
+```
+
+**Audit Service (7 tests de integración)**:
+```bash
+# Ejecutar tests desde contenedor
+docker-compose exec audit-service pytest tests/ -v
+
+# Con coverage
+docker-compose exec audit-service pytest tests/ --cov=app --cov-report=term
+```
+
+#### Cobertura de Tests de Integración
+
+**User Service Tests**:
+- ✅ Validación de reglas de contraseña con API real
+- ✅ Hashing de contraseñas con bcrypt
+- ✅ Generación de tokens JWT
+- ✅ Validación de NIT con servicio real
+- ✅ Health checks de endpoints
+- ✅ Registro completo de usuarios (exitoso)
+- ✅ Registro con fallos (NIT inválido, contraseña débil)
+- ✅ Prevención de usuarios duplicados
+
+**Audit Service Tests**:
+- ✅ Health check del servicio
+- ✅ Registro de logs de auditoría (exitoso y fallido)
+- ✅ Validación de errores de entrada
+- ✅ Múltiples logs de auditoría
+- ✅ Datos complejos de request
+- ✅ Requests concurrentes
+
+#### Configuración de Testing
+
+Cada servicio incluye:
+- `tests/test_integration.py` - Tests de integración
+- `pytest.ini` - Configuración de pytest con asyncio
+- Dependencies en `requirements.txt`:
+  ```txt
+  pytest==7.4.0
+  pytest-asyncio==0.21.1
+  pytest-cov==4.1.0
+  httpx==0.25.2
+  ```
+
+#### Métricas de Calidad
+- **Tiempo de ejecución**: <3 segundos por servicio
+- **Cobertura objetivo**: >90% para funcionalidades críticas
+- **Todos los tests deben pasar** antes de merge a develop
+- **Tests automáticos en CI/CD** (próximamente)
+
+#### Testing Guide Completo
+Para información detallada sobre testing unitario y configuración avanzada, consultar: `TESTING_GUIDE.md`
+
 ## Comandos Útiles
 
 ```bash
@@ -185,7 +336,7 @@ docker-compose down -v
     ┌─────┴─────┐
     │           │
 ┌───▼───┐   ┌───▼───┐   ┌────▼────┐
-│ User  │   │ Tax   │   │ Audit   │
+│ User  │   │nit-val│   │ Audit   │
 │Service│   │Service│   │ Service │
 │:8001  │   │:8002  │   │ :8003   │
 └───┬───┘   └───┬───┘   └────┬────┘
@@ -213,17 +364,32 @@ docker-compose down -v
 
 ## Próximos Pasos
 
-- [ ] Implementar autenticación JWT
-- [ ] Agregar tests unitarios e integración
-- [ ] Configurar CI/CD
+- [x] Implementar orquestador de registro de usuarios
+- [x] Validación de complejidad de contraseña
+- [x] Integración con servicio de validación de NIT
+- [x] Sistema de auditoría automatizado
+- [x] Generación de tokens JWT
+- [x] Tests unitarios completos
+- [x] Colección de Postman con variables
+- [ ] Tests de integración end-to-end
+- [ ] Configurar CI/CD con GitHub Actions
 - [ ] Implementar rate limiting
 - [ ] Agregar monitoreo (Prometheus/Grafana)
 - [ ] Implementar circuit breaker
 - [ ] Configurar logging centralizado (ELK Stack)
+- [ ] Documentación de APIs con OpenAPI 3.0
 
 ## Documentación Adicional
 
-- [Migración a psycopg3](./PSYCOPG3_MIGRATION.md) - Detalles sobre el uso de psycopg3
+- **[Testing Guide](./TESTING_GUIDE.md)** - Guía completa de testing unitario y configuración avanzada
+- **[Postman Collection](./POSTMAN_README.md)** - Documentación detallada de la colección de Postman
+- **[Migración a psycopg3](./PSYCOPG3_MIGRATION.md)** - Detalles sobre el uso de psycopg3
+
+### Archivos de Configuración
+- `postman_collection.json` - Colección de Postman con todos los tests
+- `postman_environment.json` - Variables de entorno para Postman
+- `docker-compose.yml` - Orquestación de todos los servicios
+- `.env` - Variables de entorno del proyecto
 
 ---
 
