@@ -22,7 +22,7 @@ def hash_password(password: str) -> str:
 
 def setup_test_data():
     """Configurar datos de prueba en la base de datos"""
-    print("🔧 Configurando datos de prueba...")
+    print("Configurando datos de prueba...")
     
     try:
         # Conectar a la base de datos
@@ -40,7 +40,7 @@ def setup_test_data():
         table_exists = cur.fetchone()[0]
         
         if not table_exists:
-            print("❌ La tabla 'usuarios' no existe. Asegúrate de que el user-service esté configurado.")
+            print("La tabla 'usuarios' no existe. Asegúrate de que el user-service esté configurado.")
             return False
         
         # Crear datos de prueba
@@ -48,22 +48,22 @@ def setup_test_data():
             {
                 "nombre": "Juan Carlos",
                 "correo_electronico": "test1@google.com",
-                "password": "Abc123",
-                "nit": "123456789",
+                "password": "Abc@1234",
+                "nit": "83-102-2959",
                 "rol": "admin"
             },
             {
                 "nombre": "María García",
                 "correo_electronico": "maria@test.com",
-                "password": "Test123",
-                "nit": "987654321",
+                "password": "Test@1234",
+                "nit": "89-078-5710",
                 "rol": "usuario_institucional"
             },
             {
                 "nombre": "Pedro López",
                 "correo_electronico": "pedro@test.com",
-                "password": "Password123",
-                "nit": "456789123",
+                "password": "Password@1234",
+                "nit": "94-974-6914",
                 "rol": "usuario_institucional"
             }
         ]
@@ -77,7 +77,7 @@ def setup_test_data():
             existing_user = cur.fetchone()
             
             if existing_user:
-                print(f"   ⏭️  Usuario {user['correo_electronico']} ya existe, actualizando...")
+                print(f"Usuario {user['correo_electronico']} ya existe, actualizando...")
                 # Actualizar contraseña
                 hashed_password = hash_password(user["password"])
                 cur.execute("""
@@ -86,7 +86,7 @@ def setup_test_data():
                     WHERE correo_electronico = %s
                 """, (hashed_password, user["rol"], user["correo_electronico"]))
             else:
-                print(f"   ➕ Creando usuario {user['correo_electronico']}...")
+                print(f"Creando usuario {user['correo_electronico']}...")
                 # Crear nuevo usuario
                 hashed_password = hash_password(user["password"])
                 cur.execute("""
@@ -105,18 +105,20 @@ def setup_test_data():
         # Confirmar cambios
         conn.commit()
         
-        print("✅ Datos de prueba configurados correctamente")
+        print("Datos de prueba configurados correctamente")
         
         # Mostrar usuarios creados
-        cur.execute("""
+        emails = [user["correo_electronico"] for user in test_users]
+        placeholders = ','.join(['%s'] * len(emails))
+        cur.execute(f"""
             SELECT id, nombre, correo_electronico, rol, activo 
             FROM usuarios 
-            WHERE correo_electronico IN %s
+            WHERE correo_electronico IN ({placeholders})
             ORDER BY id
-        """, (tuple([user["correo_electronico"] for user in test_users]),))
+        """, emails)
         
         users = cur.fetchall()
-        print("\n📋 Usuarios disponibles para pruebas:")
+        print("\nUsuarios disponibles para pruebas:")
         for user in users:
             print(f"   ID: {user[0]}, Email: {user[2]}, Rol: {user[3]}, Activo: {user[4]}")
         
@@ -125,20 +127,20 @@ def setup_test_data():
         return True
         
     except Exception as e:
-        print(f"❌ Error configurando datos de prueba: {e}")
+        print(f"Error configurando datos de prueba: {e}")
         return False
 
 def main():
     """Función principal"""
-    print("🚀 Configuración de datos de prueba para Auth Service")
+    print("Configuración de datos de prueba para Auth Service")
     print("=" * 60)
     
     if setup_test_data():
-        print("\n🎉 Configuración completada exitosamente!")
+        print("\nConfiguración completada exitosamente!")
         print("\nPuedes probar el servicio con:")
         print("   python test_auth.py")
     else:
-        print("\n❌ Error en la configuración")
+        print("\nError en la configuración")
         return 1
     
     return 0
