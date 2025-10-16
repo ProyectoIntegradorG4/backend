@@ -166,6 +166,43 @@ services:
       timeout: 10s
       retries: 3
 
+  # Auth Service
+  auth-service:
+    build: 
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    environment:
+      DATABASE_URL: ${USER_DATABASE_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES}
+    ports:
+      - "${AUTH_SERVICE_PORT}:8004"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./auth-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
   # API Gateway (Nginx) - Opcional
   nginx:
     image: nginx:alpine
@@ -178,6 +215,7 @@ services:
       - user-service
       - nit-validation-service
       - audit-service
+      - auth-service
     networks:
       - microservices-network
     restart: unless-stopped
