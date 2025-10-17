@@ -49,13 +49,14 @@ class TestUserServiceIntegration:
     def test_jwt_token_generation(self):
         """Test que valida la generación de tokens JWT."""
         from app.services.user_service import UserService
-        
+
         service = UserService(None)
         user_id = 123
         email = "test@example.com"
-        
-        token = service.generate_jwt_token(user_id, email)
-        
+
+        # Usar el método correcto
+        token = service.create_access_token({"sub": str(user_id), "email": email})
+
         assert token is not None
         assert isinstance(token, str)
         assert len(token) > 50  # JWT tokens son largos

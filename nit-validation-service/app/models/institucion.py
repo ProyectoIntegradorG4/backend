@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -33,7 +33,7 @@ class InstitucionAsociada(Base):
     nit = Column(String(20), primary_key=True, comment="NIT de la institución como clave primaria")
     nombre_institucion = Column(String(255), nullable=False, comment="Nombre de la institución")
     pais = Column(String(100), nullable=False, comment="País de la institución")
-    fecha_registro = Column(DateTime, nullable=False, default=datetime.utcnow, comment="Fecha de registro")
+    fecha_registro = Column(DateTime, nullable=False, default=datetime.now, comment="Fecha de registro")
     activo = Column(Boolean, default=True, nullable=False, comment="Estado activo/inactivo")
 
     # Índices para optimizar búsquedas
@@ -57,8 +57,8 @@ class NITValidationResponse(BaseModel):
     activo: Optional[bool] = Field(None, description="Estado activo/inactivo de la institución")
     mensaje: Optional[str] = Field(None, description="Mensaje informativo o de error")
     
-    class Config:
-        from_attributes = True
+    
+    model_config = {'from_attributes': True}
 
 class InstitucionResponse(BaseModel):
     nit: str
@@ -66,9 +66,7 @@ class InstitucionResponse(BaseModel):
     pais: str
     fecha_registro: datetime
     activo: bool
-
-    class Config:
-        from_attributes = True
+    model_config = {'from_attributes': True}
 
 # Modelos para respuestas de error tipificadas
 class NITError(BaseModel):

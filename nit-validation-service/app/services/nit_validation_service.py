@@ -168,7 +168,7 @@ class NITValidationService:
             response = self._create_response(institucion, mensaje)
             
             # 6. Almacenar en caché (tanto resultados positivos como negativos)
-            cache_data = response.dict()
+            cache_data = response.model_dump()
             cache_ttl = REDIS_TTL if response.valid else REDIS_TTL // 4  # TTL menor para resultados negativos
             self._set_cache(cache_key, cache_data, cache_ttl)
             

@@ -23,7 +23,7 @@ class AuditService:
         db_audit_log = AuditLog(
             id=unique_id,
             event=audit_data.event,
-            request=audit_data.request.dict(),  # Convertir Pydantic model a dict
+            request=audit_data.request.model_dump(),  # Convertir Pydantic model a dict (v2)
             outcome=audit_data.outcome.value,
             action=audit_data.action.value,
             timestamp=audit_data.timestamp,

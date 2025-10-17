@@ -25,20 +25,20 @@ async def register_user(user: UserRegister, db: Session = Depends(get_db)):
         success_response, error_response = result
         
         if success_response:
-            return success_response.dict()
+            return success_response.model_dump()
         
         # Si hay error, manejar según el tipo
         if error_response:
             if error_response.error == "Datos inválidos":
-                raise HTTPException(status_code=400, detail=error_response.dict())
+                raise HTTPException(status_code=400, detail=error_response.model_dump())
             elif error_response.error == "NIT no autorizado":
-                raise HTTPException(status_code=404, detail=error_response.dict())
+                raise HTTPException(status_code=404, detail=error_response.model_dump())
             elif error_response.error == "Usuario ya existe":
-                raise HTTPException(status_code=409, detail=error_response.dict())
+                raise HTTPException(status_code=409, detail=error_response.model_dump())
             elif error_response.error == "Reglas de negocio fallidas":
-                raise HTTPException(status_code=422, detail=error_response.dict())
+                raise HTTPException(status_code=422, detail=error_response.model_dump())
             else:
-                raise HTTPException(status_code=500, detail=error_response.dict())
+                raise HTTPException(status_code=500, detail=error_response.model_dump())
         
         # Fallback si algo salió mal
         raise HTTPException(
