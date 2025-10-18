@@ -1,3 +1,68 @@
+## Pruebas Automatizadas y Coverage
+
+### Ejecutar tests con coverage (local o Docker)
+
+Para ejecutar todos los tests y obtener el reporte de cobertura:
+
+**En local:**
+```bash
+env PYTHONPATH=app pytest tests --cov=app --cov-report=term --cov-report=html
+```
+
+**En Docker:**
+```bash
+docker exec -it auth-service env PYTHONPATH=/app pytest tests --cov=app --cov-report=term --cov-report=html
+```
+El reporte HTML se genera en la carpeta `htmlcov`.
+
+### Integración continua (GitHub Actions)
+
+Ejemplo de workflow para validar tests y coverage en cada push:
+
+```yaml
+name: CI Auth Service
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user_service
+          POSTGRES_PASSWORD: user_password
+          POSTGRES_DB: user_db
+        ports: [5432:5432]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql+psycopg://user_service:user_password@localhost:5432/user_db
+          JWT_SECRET_KEY: test-secret
+        run: |
+          PYTHONPATH=app pytest tests --cov=app --cov-report=term
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: htmlcov/
+```
 # Auth Service - MediSupply
 
 Microservicio de autenticación con JWT para el sistema MediSupply.
