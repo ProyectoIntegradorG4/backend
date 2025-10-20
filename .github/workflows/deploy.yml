@@ -162,6 +162,49 @@ jobs:
           echo "✅ Grupo de logs /ecs/${{ matrix.service }} creado exitosamente"
         fi
         
+        # Crear VPC y subnets si no existen (requerido para awsvpc)
+        echo "🔍 Verificando VPC para microservicios"
+        VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=microservices-vpc" --query 'Vpcs[0].VpcId' --output text --region us-east-1)
+        
+        if [ "$VPC_ID" = "None" ] || [ -z "$VPC_ID" ]; then
+          echo "📦 Creando VPC para microservicios"
+          VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --region us-east-1 --query 'Vpc.VpcId' --output text)
+          aws ec2 create-tags --resources $VPC_ID --tags Key=Name,Value=microservices-vpc --region us-east-1
+          aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-hostnames --region us-east-1
+          aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-support --region us-east-1
+          echo "✅ VPC $VPC_ID creada exitosamente"
+        else
+          echo "✅ VPC $VPC_ID ya existe"
+        fi
+        
+        # Crear subnets si no existen
+        echo "🔍 Verificando subnets para microservicios"
+        SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=microservices-subnet" --query 'Subnets[0].SubnetId' --output text --region us-east-1)
+        
+        if [ "$SUBNET_ID" = "None" ] || [ -z "$SUBNET_ID" ]; then
+          echo "📦 Creando subnet para microservicios"
+          SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --region us-east-1 --query 'Subnet.SubnetId' --output text)
+          aws ec2 create-tags --resources $SUBNET_ID --tags Key=Name,Value=microservices-subnet --region us-east-1
+          aws ec2 modify-subnet-attribute --subnet-id $SUBNET_ID --map-public-ip-on-launch --region us-east-1
+          echo "✅ Subnet $SUBNET_ID creada exitosamente"
+        else
+          echo "✅ Subnet $SUBNET_ID ya existe"
+        fi
+        
+        # Crear Security Group si no existe
+        echo "🔍 Verificando Security Group para microservicios"
+        SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=microservices-sg" "Name=vpc-id,Values=$VPC_ID" --query 'SecurityGroups[0].GroupId' --output text --region us-east-1)
+        
+        if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
+          echo "📦 Creando Security Group para microservicios"
+          SG_ID=$(aws ec2 create-security-group --group-name microservices-sg --description "Security group for microservices" --vpc-id $VPC_ID --region us-east-1 --query 'GroupId' --output text)
+          aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 8000 --cidr 0.0.0.0/0 --region us-east-1
+          aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 22 --cidr 0.0.0.0/0 --region us-east-1
+          echo "✅ Security Group $SG_ID creado exitosamente"
+        else
+          echo "✅ Security Group $SG_ID ya existe"
+        fi
+        
         # Crear un docker-compose temporal solo para el servicio modificado
         echo "📦 Creando docker-compose temporal para ${{ matrix.service }}"
         
@@ -191,9 +234,17 @@ jobs:
         echo "        awslogs-group: /ecs/${{ matrix.service }}" >> docker-compose.temp.yml
         echo "        awslogs-region: us-east-1" >> docker-compose.temp.yml
         echo "        awslogs-stream-prefix: ecs" >> docker-compose.temp.yml
+        echo "    deploy:" >> docker-compose.temp.yml
+        echo "      resources:" >> docker-compose.temp.yml
+        echo "        limits:" >> docker-compose.temp.yml
+        echo "          cpus: '0.25'" >> docker-compose.temp.yml
+        echo "          memory: 512M" >> docker-compose.temp.yml
+        echo "        reservations:" >> docker-compose.temp.yml
+        echo "          cpus: '0.25'" >> docker-compose.temp.yml
+        echo "          memory: 512M" >> docker-compose.temp.yml
         
         # Desplegar el servicio usando el archivo temporal
-        ecs-cli compose -f docker-compose.temp.yml up --create-log-groups --force-update
+        ecs-cli compose -f docker-compose.temp.yml up --create-log-groups --force-update --launch-type FARGATE --network-mode awsvpc --vpc $VPC_ID --subnets $SUBNET_ID --security-groups $SG_ID
 
     - name: Verificar despliegue
       run: |
