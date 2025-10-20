@@ -211,8 +211,8 @@ jobs:
         export SG_ID
         export SERVICE_NAME=${{ matrix.service }}
         
-        # Desplegar el servicio usando docker-compose.aws.yml
-        ecs-cli compose -f docker-compose.aws.yml up ${{ matrix.service }} --create-log-groups --force-update --launch-type FARGATE
+        # Desplegar el servicio usando docker-compose.aws.yml con configuración de red
+        ecs-cli compose -f docker-compose.aws.yml up ${{ matrix.service }} --create-log-groups --force-update --launch-type FARGATE --vpc $VPC_ID --subnets $SUBNET_ID --security-groups $SG_ID
 
     - name: Verificar despliegue
       run: |
