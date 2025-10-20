@@ -1,0 +1,149 @@
+name: Desplegar Microservicios en AWS
+
+on:
+  push:
+    branches: [ main, release ]
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-services: ${{ steps.detect.outputs.changed-services }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Detectar servicios modificados
+      id: detect
+      run: |
+        chmod +x aws-deployment/detect-changes.sh
+        ./aws-deployment/detect-changes.sh
+        
+        # Leer servicios modificados del archivo generado
+        if [ -f .env.changes ]; then
+          source .env.changes
+          echo "changed-services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+          
+          if [ -n "$CHANGED_SERVICES" ]; then
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "🚀 Servicios a desplegar: $CHANGED_SERVICES"
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "✅ No hay servicios que necesiten despliegue"
+          fi
+        else
+          echo "changed-services=" >> $GITHUB_OUTPUT
+          echo "has-changes=false" >> $GITHUB_OUTPUT
+        fi
+
+  deploy-services:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Extraer versión del servicio
+      id: version
+      run: |
+        VERSION=$(grep -o 'version="[^"]*"' ${{ matrix.service }}/main.py | sed 's/version="\(.*\)"/\1/')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📦 Versión detectada para ${{ matrix.service }}: $VERSION"
+
+    - name: Construir y subir imagen Docker
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_VERSION=${{ steps.version.outputs.version }}
+        
+        echo "🏗️ Construyendo imagen para ${{ matrix.service }} versión $SERVICE_VERSION"
+        
+        # Construir imagen con versión específica
+        docker build -t $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION ./${{ matrix.service }}/
+        docker build -t $ECR_REGISTRY/${{ matrix.service }}:latest ./${{ matrix.service }}/
+        
+        # Subir ambas versiones
+        docker push $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION
+        docker push $ECR_REGISTRY/${{ matrix.service }}:latest
+        
+        echo "✅ Imagen desplegada: $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION"
+
+    - name: Desplegar en ECS
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_VERSION=${{ steps.version.outputs.version }}
+        
+        # Configurar variables de entorno
+        export ECR_REGISTRY
+        export POSTGRES_DB=postgres
+        export POSTGRES_USER=postgres
+        export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+        export POSTGRES_HOST=${{ secrets.RDS_ENDPOINT }}
+        export POSTGRES_PORT=5432
+        export NIT_DATABASE_URL=postgresql+psycopg://nit_service:nit_password@${{ secrets.RDS_ENDPOINT }}:5432/nit_db
+        export USER_DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+        export AUDIT_DATABASE_URL=postgresql+psycopg://audit_service:audit_password@${{ secrets.RDS_ENDPOINT }}:5432/audit_db
+        export REDIS_URL=redis://${{ secrets.REDIS_ENDPOINT }}:6379
+        export REDIS_TTL=3600
+        export JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+        export JWT_EXPIRE_MINUTES=60
+        
+        # Instalar ecs-cli
+        sudo curl -o /usr/local/bin/ecs-cli https://amazon-ecs-cli.s3.amazonaws.com/ecs-cli-linux-amd64-latest
+        sudo chmod +x /usr/local/bin/ecs-cli
+        
+        # Configurar ECS CLI
+        ecs-cli configure --cluster microservices-cluster --region us-east-1 --default-launch-type FARGATE
+        
+        # Desplegar solo el servicio modificado usando docker-compose
+        ecs-cli compose -f docker-compose.aws.yml up --create-log-groups --service ${{ matrix.service }}
+
+    - name: Verificar despliegue
+      run: |
+        echo "🔍 Verificando despliegue de ${{ matrix.service }}..."
+        
+        # Esperar un momento para que el servicio se estabilice
+        sleep 30
+        
+        # Verificar que el servicio esté ejecutándose
+        aws ecs describe-services \
+          --cluster microservices-cluster \
+          --services ${{ matrix.service }} \
+          --query 'services[0].status' \
+          --output text
+        
+        echo "✅ Despliegue de ${{ matrix.service }} completado"
+
+  notify-completion:
+    needs: [detect-changes, deploy-services]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Notificar resultado
+      run: |
+        if [ "${{ needs.detect-changes.outputs.has-changes }}" = "true" ]; then
+          echo "🎉 Despliegue completado para: ${{ needs.detect-changes.outputs.changed-services }}"
+        else
+          echo "✅ No se requirió despliegue - todos los servicios están actualizados"
+        fi

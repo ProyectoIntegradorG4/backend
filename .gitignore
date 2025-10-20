@@ -225,3 +225,17 @@ Thumbs.db
 # Logs específicos del proyecto
 logs/
 docker-compose.yml
+
+# Archivos de prueba y temporales del sistema de despliegue
+.env.changes
+*.test-*
+.test-*
+test-*
+simulate-*
+*.backup
+*.tmp
+
+# Archivos de configuración local
+.env.local
+.env.development
+.env.production

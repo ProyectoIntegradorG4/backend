@@ -1,0 +1,92 @@
+name: CI - Test and Build
+
+on:
+  push:
+    branches: [ main, develop, release ]
+  pull_request:
+    branches: [ main, release ]
+
+jobs:
+  test-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [nit-validation-service, user-service, audit-service, auth-service]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        cd ${{ matrix.service }}
+        pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        cd ${{ matrix.service }}
+        if [ -f "pytest.ini" ]; then
+          python -m pytest tests/ -v
+        else
+          echo "No pytest configuration found for ${{ matrix.service }}"
+        fi
+
+    - name: Build Docker image
+      run: |
+        cd ${{ matrix.service }}
+        docker build -t ${{ matrix.service }}:test .
+
+  lint-code:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install linting tools
+      run: |
+        pip install flake8 black isort
+
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Check code formatting with black
+      run: |
+        black --check .
+
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only .
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

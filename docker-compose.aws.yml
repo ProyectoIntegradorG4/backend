@@ -1,0 +1,61 @@
+# Simplified docker-compose for AWS ECS
+version: '3.8'
+
+services:
+  nit-validation-service:
+    image: ${ECR_REGISTRY}/nit-validation-service:latest
+    ports:
+      - "8002:8002"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      DATABASE_URL: ${NIT_DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      REDIS_TTL: ${REDIS_TTL}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  user-service:
+    image: ${ECR_REGISTRY}/user-service:latest
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: ${USER_DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  audit-service:
+    image: ${ECR_REGISTRY}/audit-service:latest
+    ports:
+      - "8003:8003"
+    environment:
+      DATABASE_URL: ${AUDIT_DATABASE_URL}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  auth-service:
+    image: ${ECR_REGISTRY}/auth-service:latest
+    ports:
+      - "8004:8004"
+    environment:
+      DATABASE_URL: ${USER_DATABASE_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
