@@ -31,7 +31,8 @@ jobs:
       run: |
         cd ${{ matrix.service }}
         if [ -f "pytest.ini" ]; then
-          python -m pytest tests/ -v
+          # Excluir tests de integración que requieren servicios ejecutándose
+          python -m pytest tests/ -v --ignore=tests/test_integration.py --ignore=tests/test_*_integration.py
         else
           echo "No pytest configuration found for ${{ matrix.service }}"
         fi
