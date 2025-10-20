@@ -125,7 +125,8 @@ def test_db_connection():
     """Verificar conexión a la base de datos"""
     try:
         with engine.connect() as connection:
-            connection.execute("SELECT 1")
+            from sqlalchemy import text
+            connection.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error(f"Error de conexión a la base de datos: {e}")
