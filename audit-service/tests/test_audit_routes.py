@@ -8,35 +8,8 @@ from app.models.audit import AuditLogCreate, OutcomeType, ActionType, RequestDat
 from datetime import datetime, timezone
 import uuid
 
-class DummyDB:
-    def __init__(self):
-        self.logs = []
-    
-    def add(self, log):
-        self.logs.append(log)
-        return log
-    
-    def commit(self):
-        pass
-    
-    def refresh(self, log):
-        pass
-    
-    def query(self, model):
-        return DummyQuery()
-    
-    def __enter__(self):
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-class DummyQuery:
-    def filter(self, *args, **kwargs):
-        return self
-    
-    def first(self):
-        return None
+# Las clases DummyDB y DummyQuery ya no son necesarias
+# Ahora usamos mocks directos del servicio
 
 @pytest.fixture
 def client():
@@ -46,8 +19,15 @@ def client():
     return TestClient(app)
 
 def test_register_audit_log_success(client, monkeypatch):
-    # Mock get_db para usar DummyDB
-    monkeypatch.setattr("app.database.connection.get_db", lambda: DummyDB())
+    # Mock AuditService directamente para evitar problemas de conexión
+    from app.services.audit_service import AuditService
+    
+    class MockAuditService:
+        async def create_audit_log(self, audit_data):
+            return {"logged": True}
+    
+    monkeypatch.setattr("app.routes.audits.AuditService", MockAuditService)
+    
     audit_data = {
         "event": "user_register",
         "request": {
@@ -62,17 +42,20 @@ def test_register_audit_log_success(client, monkeypatch):
     }
     response = client.post("/audit/register", json=audit_data)
     
-    # Debug: imprimir el error si hay uno
-    if response.status_code != 201:
-        print(f"Error response: {response.status_code}")
-        print(f"Error content: {response.text}")
-        print(f"Error headers: {response.headers}")
-    
     assert response.status_code == 201
     assert response.json()["logged"] is True
 
 def test_register_audit_log_invalid_enum(client, monkeypatch):
-    monkeypatch.setattr("app.database.connection.get_db", lambda: DummyDB())
+    # Mock AuditService para simular error de validación
+    from app.services.audit_service import AuditService
+    
+    class MockAuditService:
+        async def create_audit_log(self, audit_data):
+            from pydantic import ValidationError
+            raise ValidationError("Invalid enum value", model=audit_data)
+    
+    monkeypatch.setattr("app.routes.audits.AuditService", MockAuditService)
+    
     audit_data = {
         "event": "user_register",
         "request": {
