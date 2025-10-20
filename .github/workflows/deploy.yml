@@ -140,7 +140,7 @@ jobs:
         echo "📦 Creando docker-compose temporal para ${{ matrix.service }}"
         
         # Crear el archivo usando echo múltiple para evitar problemas de heredoc
-        echo "version: '3.8'" > docker-compose.temp.yml
+        echo "version: '3.0'" > docker-compose.temp.yml
         echo "services:" >> docker-compose.temp.yml
         echo "  ${{ matrix.service }}:" >> docker-compose.temp.yml
         echo "    image: $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION" >> docker-compose.temp.yml
