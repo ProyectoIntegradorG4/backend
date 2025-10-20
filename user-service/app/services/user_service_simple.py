@@ -27,10 +27,11 @@ class UserService:
 
     def generate_jwt_token(self, user_id: int, email: str) -> str:
         """Genera un token JWT para el usuario."""
+        from datetime import timezone
         payload = {
             "user_id": user_id,
             "email": email,
-            "exp": datetime.utcnow() + timedelta(hours=24)
+            "exp": datetime.now(timezone.utc) + timedelta(hours=24)
         }
         return jwt.encode(payload, self.jwt_secret, algorithm=self.jwt_algorithm)
 

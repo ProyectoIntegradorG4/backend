@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict, Any
@@ -36,8 +36,9 @@ class UserResponse(BaseModel):
     fecha_registro: datetime
     activo: bool
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
 # Modelos de respuesta del orquestador
 class RegisterSuccessResponse(BaseModel):

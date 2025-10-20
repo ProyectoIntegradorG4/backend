@@ -145,8 +145,7 @@ async def get_institution_details(
                 }
             )
         
-        return InstitucionResponse.from_orm(institucion)
-        
+        return InstitucionResponse.model_validate(institucion)
     except HTTPException:
         raise
     except Exception as e:
