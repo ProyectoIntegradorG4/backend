@@ -136,6 +136,32 @@ jobs:
         # Configurar ECS CLI
         ecs-cli configure --cluster microservices-cluster --region us-east-1 --default-launch-type FARGATE
         
+        # Crear cluster ECS si no existe
+        echo "🔍 Verificando si el cluster microservices-cluster existe"
+        if aws ecs describe-clusters --clusters microservices-cluster --region us-east-1 --query 'clusters[0].status' --output text | grep -q "ACTIVE"; then
+          echo "✅ Cluster microservices-cluster ya existe y está activo"
+        else
+          echo "📦 Creando cluster microservices-cluster"
+          aws ecs create-cluster \
+            --cluster-name microservices-cluster \
+            --region us-east-1 \
+            --capacity-providers FARGATE \
+            --default-capacity-provider-strategy capacityProvider=FARGATE,weight=1
+          echo "✅ Cluster microservices-cluster creado exitosamente"
+        fi
+        
+        # Crear grupo de logs de CloudWatch si no existe
+        echo "🔍 Verificando grupo de logs /ecs/${{ matrix.service }}"
+        if aws logs describe-log-groups --log-group-name-prefix "/ecs/${{ matrix.service }}" --region us-east-1 --query 'logGroups[0].logGroupName' --output text | grep -q "/ecs/${{ matrix.service }}"; then
+          echo "✅ Grupo de logs /ecs/${{ matrix.service }} ya existe"
+        else
+          echo "📦 Creando grupo de logs /ecs/${{ matrix.service }}"
+          aws logs create-log-group \
+            --log-group-name "/ecs/${{ matrix.service }}" \
+            --region us-east-1
+          echo "✅ Grupo de logs /ecs/${{ matrix.service }} creado exitosamente"
+        fi
+        
         # Crear un docker-compose temporal solo para el servicio modificado
         echo "📦 Creando docker-compose temporal para ${{ matrix.service }}"
         
