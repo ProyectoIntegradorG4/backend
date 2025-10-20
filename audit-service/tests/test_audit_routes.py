@@ -48,7 +48,7 @@ def client():
 @pytest.mark.asyncio
 def test_register_audit_log_success(client, monkeypatch):
     # Mock get_db para usar DummyDB
-    monkeypatch.setattr("app.routes.audits.get_db", lambda: DummyDB())
+    monkeypatch.setattr("app.database.connection.get_db", lambda: DummyDB())
     audit_data = {
         "event": "user_register",
         "request": {
@@ -67,7 +67,7 @@ def test_register_audit_log_success(client, monkeypatch):
 
 @pytest.mark.asyncio
 def test_register_audit_log_invalid_enum(client, monkeypatch):
-    monkeypatch.setattr("app.routes.audits.get_db", lambda: DummyDB())
+    monkeypatch.setattr("app.database.connection.get_db", lambda: DummyDB())
     audit_data = {
         "event": "user_register",
         "request": {
