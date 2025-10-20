@@ -11,16 +11,30 @@ import uuid
 class DummyDB:
     def __init__(self):
         self.logs = []
+    
     def add(self, log):
         self.logs.append(log)
+        return log
+    
     def commit(self):
         pass
+    
     def refresh(self, log):
         pass
-    def query(self):
+    
+    def query(self, model):
+        return DummyQuery()
+    
+    def __enter__(self):
         return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+class DummyQuery:
     def filter(self, *args, **kwargs):
         return self
+    
     def first(self):
         return None
 
