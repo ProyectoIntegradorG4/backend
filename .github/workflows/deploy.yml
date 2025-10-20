@@ -136,8 +136,38 @@ jobs:
         # Configurar ECS CLI
         ecs-cli configure --cluster microservices-cluster --region us-east-1 --default-launch-type FARGATE
         
-        # Desplegar solo el servicio modificado usando docker-compose
-        ecs-cli compose -f docker-compose.aws.yml up --create-log-groups --service ${{ matrix.service }}
+        # Crear un docker-compose temporal solo para el servicio modificado
+        echo "📦 Creando docker-compose temporal para ${{ matrix.service }}"
+        cat > docker-compose.temp.yml << EOF
+version: '3.8'
+services:
+  ${{ matrix.service }}:
+    image: $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION
+    environment:
+      - POSTGRES_DB=\${POSTGRES_DB}
+      - POSTGRES_USER=\${POSTGRES_USER}
+      - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=\${POSTGRES_HOST}
+      - POSTGRES_PORT=\${POSTGRES_PORT}
+      - NIT_DATABASE_URL=\${NIT_DATABASE_URL}
+      - USER_DATABASE_URL=\${USER_DATABASE_URL}
+      - AUDIT_DATABASE_URL=\${AUDIT_DATABASE_URL}
+      - REDIS_URL=\${REDIS_URL}
+      - REDIS_TTL=\${REDIS_TTL}
+      - JWT_SECRET_KEY=\${JWT_SECRET_KEY}
+      - JWT_EXPIRE_MINUTES=\${JWT_EXPIRE_MINUTES}
+    ports:
+      - "8000:8000"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/${{ matrix.service }}
+        awslogs-region: us-east-1
+        awslogs-stream-prefix: ecs
+EOF
+        
+        # Desplegar el servicio usando el archivo temporal
+        ecs-cli compose -f docker-compose.temp.yml up --create-log-groups --force-update
 
     - name: Verificar despliegue
       run: |
