@@ -45,7 +45,6 @@ def client():
     app.include_router(router)
     return TestClient(app)
 
-@pytest.mark.asyncio
 def test_register_audit_log_success(client, monkeypatch):
     # Mock get_db para usar DummyDB
     monkeypatch.setattr("app.database.connection.get_db", lambda: DummyDB())
@@ -62,10 +61,16 @@ def test_register_audit_log_success(client, monkeypatch):
         "auditid": str(uuid.uuid4())
     }
     response = client.post("/audit/register", json=audit_data)
+    
+    # Debug: imprimir el error si hay uno
+    if response.status_code != 201:
+        print(f"Error response: {response.status_code}")
+        print(f"Error content: {response.text}")
+        print(f"Error headers: {response.headers}")
+    
     assert response.status_code == 201
     assert response.json()["logged"] is True
 
-@pytest.mark.asyncio
 def test_register_audit_log_invalid_enum(client, monkeypatch):
     monkeypatch.setattr("app.database.connection.get_db", lambda: DummyDB())
     audit_data = {
