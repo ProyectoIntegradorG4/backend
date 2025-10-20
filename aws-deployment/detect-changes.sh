@@ -123,8 +123,16 @@ detect_changes() {
             echo "   - $service"
         done
         
-        # Crear archivo con servicios modificados en formato JSON
-        printf "CHANGED_SERVICES=[%s]\n" "$(printf '"%s",' "${changed_services[@]}" | sed 's/,$//')" > .env.changes
+        # Crear archivo con servicios modificados en formato JSON válido
+        local json_array="["
+        for i in "${!changed_services[@]}"; do
+            if [ $i -gt 0 ]; then
+                json_array+=","
+            fi
+            json_array+="\"${changed_services[$i]}\""
+        done
+        json_array+="]"
+        printf "CHANGED_SERVICES=%s\n" "$json_array" > .env.changes
     fi
     
     echo ""

@@ -29,10 +29,10 @@ jobs:
         
         # Leer servicios modificados del archivo generado
         if [ -f .env.changes ]; then
-          source .env.changes
+          CHANGED_SERVICES=$(grep "CHANGED_SERVICES=" .env.changes | cut -d'=' -f2-)
           echo "changed-services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
           
-          if [ -n "$CHANGED_SERVICES" ]; then
+          if [ -n "$CHANGED_SERVICES" ] && [ "$CHANGED_SERVICES" != "[]" ]; then
             echo "has-changes=true" >> $GITHUB_OUTPUT
             echo "🚀 Servicios a desplegar: $CHANGED_SERVICES"
           else
@@ -40,7 +40,7 @@ jobs:
             echo "✅ No hay servicios que necesiten despliegue"
           fi
         else
-          echo "changed-services=" >> $GITHUB_OUTPUT
+          echo "changed-services=[]" >> $GITHUB_OUTPUT
           echo "has-changes=false" >> $GITHUB_OUTPUT
         fi
 
