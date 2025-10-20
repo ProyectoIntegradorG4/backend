@@ -1,6 +1,18 @@
 # Simplified docker-compose for AWS ECS
 version: '3.8'
 
+x-aws-vpc: &default-vpc
+  vpc: ${VPC_ID}
+  subnets: ${SUBNET_ID}
+  security_groups: ${SG_ID}
+
+x-aws-logging: &default-logging
+  driver: awslogs
+  options:
+    awslogs-group: /ecs/microservices
+    awslogs-region: us-east-1
+    awslogs-stream-prefix: ecs
+
 services:
   nit-validation-service:
     image: ${ECR_REGISTRY}/nit-validation-service:latest
@@ -15,6 +27,15 @@ services:
       DATABASE_URL: ${NIT_DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       REDIS_TTL: ${REDIS_TTL}
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
       interval: 30s
@@ -28,6 +49,15 @@ services:
     environment:
       DATABASE_URL: ${USER_DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 30s
@@ -40,6 +70,15 @@ services:
       - "8003:8003"
     environment:
       DATABASE_URL: ${AUDIT_DATABASE_URL}
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
       interval: 30s
@@ -54,6 +93,15 @@ services:
       DATABASE_URL: ${USER_DATABASE_URL}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES}
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 512M
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
       interval: 30s

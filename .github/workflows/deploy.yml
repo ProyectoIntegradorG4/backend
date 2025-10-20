@@ -205,46 +205,14 @@ jobs:
           echo "✅ Security Group $SG_ID ya existe"
         fi
         
-        # Crear un docker-compose temporal solo para el servicio modificado
-        echo "📦 Creando docker-compose temporal para ${{ matrix.service }}"
+        # Configurar variables de entorno para el docker-compose
+        export VPC_ID
+        export SUBNET_ID
+        export SG_ID
+        export SERVICE_NAME=${{ matrix.service }}
         
-        # Crear el archivo usando echo múltiple para evitar problemas de heredoc
-        echo "version: '3.0'" > docker-compose.temp.yml
-        echo "services:" >> docker-compose.temp.yml
-        echo "  ${{ matrix.service }}:" >> docker-compose.temp.yml
-        echo "    image: $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION" >> docker-compose.temp.yml
-        echo "    environment:" >> docker-compose.temp.yml
-        echo "      - POSTGRES_DB=\${POSTGRES_DB}" >> docker-compose.temp.yml
-        echo "      - POSTGRES_USER=\${POSTGRES_USER}" >> docker-compose.temp.yml
-        echo "      - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD}" >> docker-compose.temp.yml
-        echo "      - POSTGRES_HOST=\${POSTGRES_HOST}" >> docker-compose.temp.yml
-        echo "      - POSTGRES_PORT=\${POSTGRES_PORT}" >> docker-compose.temp.yml
-        echo "      - NIT_DATABASE_URL=\${NIT_DATABASE_URL}" >> docker-compose.temp.yml
-        echo "      - USER_DATABASE_URL=\${USER_DATABASE_URL}" >> docker-compose.temp.yml
-        echo "      - AUDIT_DATABASE_URL=\${AUDIT_DATABASE_URL}" >> docker-compose.temp.yml
-        echo "      - REDIS_URL=\${REDIS_URL}" >> docker-compose.temp.yml
-        echo "      - REDIS_TTL=\${REDIS_TTL}" >> docker-compose.temp.yml
-        echo "      - JWT_SECRET_KEY=\${JWT_SECRET_KEY}" >> docker-compose.temp.yml
-        echo "      - JWT_EXPIRE_MINUTES=\${JWT_EXPIRE_MINUTES}" >> docker-compose.temp.yml
-        echo "    ports:" >> docker-compose.temp.yml
-        echo "      - \"8000:8000\"" >> docker-compose.temp.yml
-        echo "    logging:" >> docker-compose.temp.yml
-        echo "      driver: awslogs" >> docker-compose.temp.yml
-        echo "      options:" >> docker-compose.temp.yml
-        echo "        awslogs-group: /ecs/${{ matrix.service }}" >> docker-compose.temp.yml
-        echo "        awslogs-region: us-east-1" >> docker-compose.temp.yml
-        echo "        awslogs-stream-prefix: ecs" >> docker-compose.temp.yml
-        echo "    deploy:" >> docker-compose.temp.yml
-        echo "      resources:" >> docker-compose.temp.yml
-        echo "        limits:" >> docker-compose.temp.yml
-        echo "          cpus: '0.25'" >> docker-compose.temp.yml
-        echo "          memory: 512M" >> docker-compose.temp.yml
-        echo "        reservations:" >> docker-compose.temp.yml
-        echo "          cpus: '0.25'" >> docker-compose.temp.yml
-        echo "          memory: 512M" >> docker-compose.temp.yml
-        
-        # Desplegar el servicio usando el archivo temporal
-        ecs-cli compose -f docker-compose.temp.yml up --create-log-groups --force-update --launch-type FARGATE --network-mode awsvpc --vpc $VPC_ID --subnets $SUBNET_ID --security-groups $SG_ID
+        # Desplegar el servicio usando docker-compose.aws.yml
+        ecs-cli compose -f docker-compose.aws.yml up ${{ matrix.service }} --create-log-groups --force-update --launch-type FARGATE
 
     - name: Verificar despliegue
       run: |
