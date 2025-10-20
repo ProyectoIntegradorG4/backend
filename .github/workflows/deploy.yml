@@ -72,6 +72,26 @@ jobs:
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "📦 Versión detectada para ${{ matrix.service }}: $VERSION"
 
+    - name: Create ECR repository if not exists
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_NAME=${{ matrix.service }}
+        
+        echo "🔍 Verificando si el repositorio $SERVICE_NAME existe en ECR"
+        
+        # Verificar si el repositorio existe
+        if aws ecr describe-repositories --repository-names $SERVICE_NAME --region us-east-1 >/dev/null 2>&1; then
+          echo "✅ Repositorio $SERVICE_NAME ya existe"
+        else
+          echo "📦 Creando repositorio $SERVICE_NAME en ECR"
+          aws ecr create-repository \
+            --repository-name $SERVICE_NAME \
+            --region us-east-1 \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256
+          echo "✅ Repositorio $SERVICE_NAME creado exitosamente"
+        fi
+
     - name: Construir y subir imagen Docker
       run: |
         ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
