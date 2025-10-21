@@ -166,7 +166,7 @@ jobs:
         
         # Create task definition
         echo "📋 Creating task definition..."
-        TASK_DEFINITION=$(cat <<EOF
+        cat > task-definition.json <<EOF
         {
             "family": "$SERVICE_NAME",
             "networkMode": "awsvpc",
@@ -213,12 +213,11 @@ jobs:
             ]
         }
         EOF
-        )
         
         # Register task definition
         echo "📝 Registering task definition..."
-        TASK_DEF_ARN=$(echo "$TASK_DEFINITION" | aws ecs register-task-definition \
-            --cli-input-json file:///dev/stdin \
+        TASK_DEF_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://task-definition.json \
             --region us-east-1 \
             --query 'taskDefinition.taskDefinitionArn' \
             --output text)
@@ -254,6 +253,9 @@ jobs:
                 --region us-east-1
             echo "✅ Service updated successfully"
         fi
+        
+        # Cleanup
+        rm -f task-definition.json
 
     - name: Verificar despliegue
       run: |

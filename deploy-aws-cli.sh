@@ -66,7 +66,7 @@ aws logs create-log-group \
 
 # Create task definition
 echo "📋 Creating task definition..."
-TASK_DEFINITION=$(cat <<EOF
+cat > task-definition.json <<EOF
 {
     "family": "$SERVICE_NAME",
     "networkMode": "awsvpc",
@@ -113,12 +113,11 @@ TASK_DEFINITION=$(cat <<EOF
     ]
 }
 EOF
-)
 
 # Register task definition
 echo "📝 Registering task definition..."
-TASK_DEF_ARN=$(echo "$TASK_DEFINITION" | aws ecs register-task-definition \
-    --cli-input-json file:///dev/stdin \
+TASK_DEF_ARN=$(aws ecs register-task-definition \
+    --cli-input-json file://task-definition.json \
     --region "$AWS_REGION" \
     --query 'taskDefinition.taskDefinitionArn' \
     --output text)
@@ -163,3 +162,6 @@ echo "📊 Task Definition: $TASK_DEF_ARN"
 echo ""
 echo "🔍 To check service status:"
 echo "   aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --region $AWS_REGION"
+
+# Cleanup
+rm -f task-definition.json
