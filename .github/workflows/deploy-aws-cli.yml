@@ -1,0 +1,292 @@
+name: Deploy Microservices with AWS CLI
+
+on:
+  push:
+    branches: [ main, release ]
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-services: ${{ steps.detect.outputs.changed-services }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Detectar servicios modificados
+      id: detect
+      run: |
+        chmod +x aws-deployment/detect-changes.sh
+        ./aws-deployment/detect-changes.sh
+        
+        # Leer servicios modificados del archivo generado
+        if [ -f .env.changes ]; then
+          CHANGED_SERVICES=$(grep "CHANGED_SERVICES=" .env.changes | cut -d'=' -f2-)
+          echo "changed-services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+          
+          if [ -n "$CHANGED_SERVICES" ] && [ "$CHANGED_SERVICES" != "[]" ]; then
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "🚀 Servicios a desplegar: $CHANGED_SERVICES"
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "✅ No hay servicios que necesiten despliegue"
+          fi
+        else
+          echo "changed-services=[]" >> $GITHUB_OUTPUT
+          echo "has-changes=false" >> $GITHUB_OUTPUT
+        fi
+
+  deploy-services:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Extraer versión del servicio
+      id: version
+      run: |
+        VERSION=$(grep -o 'version="[^"]*"' ${{ matrix.service }}/main.py | sed 's/version="\(.*\)"/\1/')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📦 Versión detectada para ${{ matrix.service }}: $VERSION"
+
+    - name: Create ECR repository if not exists
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_NAME=${{ matrix.service }}
+        
+        echo "🔍 Verificando si el repositorio $SERVICE_NAME existe en ECR"
+        
+        # Verificar si el repositorio existe
+        if aws ecr describe-repositories --repository-names $SERVICE_NAME --region us-east-1 >/dev/null 2>&1; then
+          echo "✅ Repositorio $SERVICE_NAME ya existe"
+        else
+          echo "📦 Creando repositorio $SERVICE_NAME en ECR"
+          aws ecr create-repository \
+            --repository-name $SERVICE_NAME \
+            --region us-east-1 \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256
+          echo "✅ Repositorio $SERVICE_NAME creado exitosamente"
+        fi
+
+    - name: Construir y subir imagen Docker
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_VERSION=${{ steps.version.outputs.version }}
+        
+        echo "🏗️ Construyendo imagen para ${{ matrix.service }} versión $SERVICE_VERSION"
+        
+        # Construir imagen con versión específica
+        docker build -t $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION ./${{ matrix.service }}/
+        docker build -t $ECR_REGISTRY/${{ matrix.service }}:latest ./${{ matrix.service }}/
+        
+        # Subir ambas versiones
+        docker push $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION
+        docker push $ECR_REGISTRY/${{ matrix.service }}:latest
+        
+        echo "✅ Imagen desplegada: $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION"
+
+    - name: Desplegar con AWS CLI
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_NAME=${{ matrix.service }}
+        
+        # Configurar variables de entorno
+        export ECR_REGISTRY
+        export POSTGRES_DB=postgres
+        export POSTGRES_USER=postgres
+        export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+        export POSTGRES_HOST=${{ secrets.RDS_ENDPOINT }}
+        export POSTGRES_PORT=5432
+        export NIT_DATABASE_URL=postgresql+psycopg://nit_service:nit_password@${{ secrets.RDS_ENDPOINT }}:5432/nit_db
+        export USER_DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+        export AUDIT_DATABASE_URL=postgresql+psycopg://audit_service:audit_password@${{ secrets.RDS_ENDPOINT }}:5432/audit_db
+        export REDIS_URL=redis://${{ secrets.REDIS_ENDPOINT }}:6379
+        export REDIS_TTL=3600
+        export JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+        export JWT_EXPIRE_MINUTES=60
+        
+        # Configurar variables específicas del servicio
+        case "$SERVICE_NAME" in
+          "nit-validation-service")
+            export DATABASE_URL=$NIT_DATABASE_URL
+            PORT=8002
+            LOG_GROUP="/ecs/nit-validation-service"
+            ;;
+          "user-service")
+            export DATABASE_URL=$USER_DATABASE_URL
+            PORT=8001
+            LOG_GROUP="/ecs/user-service"
+            ;;
+          "audit-service")
+            export DATABASE_URL=$AUDIT_DATABASE_URL
+            PORT=8003
+            LOG_GROUP="/ecs/audit-service"
+            ;;
+          "auth-service")
+            export DATABASE_URL=$USER_DATABASE_URL
+            PORT=8004
+            LOG_GROUP="/ecs/auth-service"
+            ;;
+        esac
+        
+        echo "📦 Deploying service: $SERVICE_NAME"
+        echo "🔧 Port: $PORT"
+        echo "📝 Log Group: $LOG_GROUP"
+        
+        # Create log group if it doesn't exist
+        echo "📝 Creating log group if it doesn't exist..."
+        aws logs create-log-group \
+            --log-group-name "$LOG_GROUP" \
+            --region us-east-1 \
+            2>/dev/null || echo "Log group already exists"
+        
+        # Create task definition
+        echo "📋 Creating task definition..."
+        TASK_DEFINITION=$(cat <<EOF
+        {
+            "family": "$SERVICE_NAME",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+            "cpu": "256",
+            "memory": "512",
+            "executionRoleArn": "arn:aws:iam::403245568912:role/ecsTaskExecutionRole",
+            "containerDefinitions": [
+                {
+                    "name": "$SERVICE_NAME",
+                    "image": "$ECR_REGISTRY/$SERVICE_NAME:latest",
+                    "portMappings": [
+                        {
+                            "containerPort": $PORT,
+                            "protocol": "tcp"
+                        }
+                    ],
+                    "environment": [
+                        {"name": "POSTGRES_DB", "value": "postgres"},
+                        {"name": "POSTGRES_USER", "value": "postgres"},
+                        {"name": "POSTGRES_PASSWORD", "value": "$POSTGRES_PASSWORD"},
+                        {"name": "POSTGRES_HOST", "value": "$POSTGRES_HOST"},
+                        {"name": "POSTGRES_PORT", "value": "5432"},
+                        {"name": "DATABASE_URL", "value": "$DATABASE_URL"},
+                        {"name": "REDIS_URL", "value": "$REDIS_URL"},
+                        {"name": "JWT_SECRET_KEY", "value": "$JWT_SECRET_KEY"},
+                        {"name": "JWT_EXPIRE_MINUTES", "value": "60"}
+                    ],
+                    "logConfiguration": {
+                        "logDriver": "awslogs",
+                        "options": {
+                            "awslogs-group": "$LOG_GROUP",
+                            "awslogs-region": "us-east-1",
+                            "awslogs-stream-prefix": "ecs"
+                        }
+                    },
+                    "healthCheck": {
+                        "command": ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:$PORT/health')"],
+                        "interval": 30,
+                        "timeout": 10,
+                        "retries": 3
+                    }
+                }
+            ]
+        }
+        EOF
+        )
+        
+        # Register task definition
+        echo "📝 Registering task definition..."
+        TASK_DEF_ARN=$(echo "$TASK_DEFINITION" | aws ecs register-task-definition \
+            --cli-input-json file:///dev/stdin \
+            --region us-east-1 \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+        
+        echo "✅ Task definition registered: $TASK_DEF_ARN"
+        
+        # Check if service exists
+        echo "🔍 Checking if service exists..."
+        SERVICE_EXISTS=$(aws ecs describe-services \
+            --cluster microservices-cluster \
+            --services "$SERVICE_NAME" \
+            --region us-east-1 \
+            --query 'services[0].serviceName' \
+            --output text 2>/dev/null || echo "None")
+        
+        if [ "$SERVICE_EXISTS" = "None" ] || [ "$SERVICE_EXISTS" = "" ]; then
+            echo "📦 Creating new service..."
+            aws ecs create-service \
+                --cluster microservices-cluster \
+                --service-name "$SERVICE_NAME" \
+                --task-definition "$TASK_DEF_ARN" \
+                --desired-count 1 \
+                --launch-type FARGATE \
+                --network-configuration "awsvpcConfiguration={subnets=[subnet-0bc9724bfda2781c8],securityGroups=[sg-062e1b7295652790c],assignPublicIp=ENABLED}" \
+                --region us-east-1
+            echo "✅ Service created successfully"
+        else
+            echo "🔄 Updating existing service..."
+            aws ecs update-service \
+                --cluster microservices-cluster \
+                --service "$SERVICE_NAME" \
+                --task-definition "$TASK_DEF_ARN" \
+                --region us-east-1
+            echo "✅ Service updated successfully"
+        fi
+
+    - name: Verificar despliegue
+      run: |
+        echo "🔍 Verificando despliegue de ${{ matrix.service }}..."
+        
+        # Esperar un momento para que el servicio se estabilice
+        sleep 30
+        
+        # Verificar que el servicio esté ejecutándose
+        SERVICE_STATUS=$(aws ecs describe-services \
+          --cluster microservices-cluster \
+          --services ${{ matrix.service }} \
+          --query 'services[0].status' \
+          --output text \
+          --region us-east-1)
+        
+        echo "📊 Estado del servicio: $SERVICE_STATUS"
+        
+        if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
+          echo "✅ Despliegue de ${{ matrix.service }} completado exitosamente"
+        else
+          echo "⚠️ Servicio desplegado pero estado: $SERVICE_STATUS"
+        fi
+
+  notify-completion:
+    needs: [detect-changes, deploy-services]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Notificar resultado
+      run: |
+        if [ "${{ needs.detect-changes.outputs.has-changes }}" = "true" ]; then
+          echo "🎉 Despliegue completado para: ${{ needs.detect-changes.outputs.changed-services }}"
+        else
+          echo "✅ No se requirió despliegue - todos los servicios están actualizados"
+        fi
