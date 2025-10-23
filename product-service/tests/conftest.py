@@ -2,6 +2,9 @@
 import os
 from importlib import reload
 from fastapi.testclient import TestClient
+import sys, pathlib
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))  
+
 
 # Asegura que el import sea desde app.main (no desde main suelto)
 from app.main import app

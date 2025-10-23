@@ -8,11 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV PYTHONPATH=/app
-
-
 EXPOSE 8005
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8005", "--workers", "1", "--loop", "uvloop", "--no-access-log", "--log-level", "warning"]
-
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8005"]
 

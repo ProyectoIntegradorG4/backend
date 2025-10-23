@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, List
 from uuid import UUID
+from datetime import datetime
 
 # Request de creación (HU)
 class ProductoCreate(BaseModel):
@@ -25,3 +26,25 @@ class ProductoCreatedResponse(BaseModel):
     requiereCadenaFrio: bool
     registroSanitario: Optional[str]
     requierePrescripcion: bool
+
+# Listar productos
+class ProductoOut(BaseModel):
+    productoId: UUID
+    nombre: str
+    categoria: str
+    formaFarmaceutica: str
+    requierePrescripcion: bool
+    registroSanitario: Optional[str]
+    estado_producto: str
+    actualizado_en: datetime
+
+    class Config:
+        model_config = ConfigDict(from_attributes=True)
+
+
+class ProductosResponse(BaseModel):
+    page: int
+    page_size: int
+    total: int
+    items: List[ProductoOut]   
+
