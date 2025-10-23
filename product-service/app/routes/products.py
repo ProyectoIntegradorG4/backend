@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, status
+from fastapi import APIRouter, Depends, HTTPException, Header, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
+from uuid import UUID
 import os
 import redis
 import json
@@ -8,7 +9,7 @@ import asyncio
 
 from app.database.connection import get_db
 from app.models.product import Producto
-from app.schemas.product import ProductoCreate, ProductoCreatedResponse
+from app.schemas.product import ProductoCreate, ProductoCreatedResponse, ProductosResponse
 from app.service.product_service import ProductoService
 from app.service.rbac import require_role_admincompras
 from app.service.audit_client import send_audit_event
@@ -24,15 +25,38 @@ try:
 except Exception:
     redis_client = None
 
-@router.get("/productos", response_model=list)
-def listar_productos(db: Session = Depends(get_db)):
-    productos = db.query(Producto).all()
-    # Evita atributos de estado de SQLAlchemy
-    return [{
-        "productoId": str(p.productoId),
-        "nombre": p.nombre,
-        "categoriaId": p.categoriaId
-    } for p in productos]
+@router.get(
+    "/productos",
+    response_model=ProductosResponse,
+    dependencies=[Depends(require_role_admincompras)]
+)
+def listar_productos(
+    q: Optional[str] = Query(None),
+    categoriaId: Optional[str] = Query(None, description="UUID o id de categoría"),
+    estado_producto: Optional[str] = Query(None, pattern="^(activo|inactivo)$"),
+    sort: str = Query("actualizado_en", pattern="^(nombre|actualizado_en)$"),
+    order: str = Query("desc", pattern="^(asc|desc)$"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    # (Opcional) valida UUID si corresponde
+    if categoriaId:
+        try:
+            UUID(categoriaId)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="categoriaId inválido (UUID requerido)")
+
+    return ProductoService.listar_productos(
+        db=db,
+        q=q,
+        categoria_id=categoriaId,
+        estado=estado_producto,
+        sort=sort,
+        order=order,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.post(
@@ -62,7 +86,7 @@ async def crear_producto(
 
     # Crear producto
     try:
-        entity, requiereCadenaFrio = ProductoService.crear_producto(db, payload.dict())
+        entity, requiereCadenaFrio = ProductoService.crear_producto(db, payload.model_dump())
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
 

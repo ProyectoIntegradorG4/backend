@@ -1,9 +1,5 @@
-ARG ENV=local
-FROM public.ecr.aws/lambda/python:3.11 AS lambda-base
-FROM python:3.11-slim AS local-base
+FROM python:3.11-slim
 
-# Selecciona la base según entorno
-FROM ${ENV}-base
 
 WORKDIR /app
 
@@ -15,6 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Levanta la app FastAPI
-CMD ["bash", "-c", "if [ \"$ENV\" = 'lambda' ]; then echo 'Lambda handler ready'; else uvicorn app.main:app --host 0.0.0.0 --port 8000; fi"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
