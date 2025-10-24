@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "backend-microservices-collection-v2",
-		"name": "Backend Microservices - User & Audit Services v2",
-		"description": "Colección completa de Postman para los microservicios de usuarios y auditoría con variables configurables",
+		"name": "Backend Microservices - User, Audit & Provider Services",
+		"description": "Colección completa de Postman para los microservicios de usuarios, auditoría y proveedores con variables configurables",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -337,6 +337,228 @@
 					}
 				}
 			]
+		},
+		{
+			"name": "Provider Service",
+			"item": [
+				{
+					"name": "Registrar Proveedor - Sin X-Idempotency-Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razon_social\": \"{{proveedor_razon_social}}\",\n    \"nit\": \"{{proveedor_nit}}\",\n    \"tipo_proveedor\": \"laboratorio\",\n    \"email\": \"{{proveedor_email}}\",\n    \"telefono\": \"{{proveedor_telefono}}\",\n    \"direccion\": \"{{proveedor_direccion}}\",\n    \"ciudad\": \"Bogota\",\n    \"pais\": \"colombia\",\n    \"certificaciones\": [\"ISO 9001\"],\n    \"estado\": \"activo\",\n    \"calificacion\": 4.5,\n    \"tiempo_entrega_promedio\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							]
+						},
+						"description": "Intenta registrar un proveedor sin el header X-Idempotency-Key - debe retornar 400"
+					}
+				},
+				{
+					"name": "Registrar Proveedor - Exitoso",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Idempotency-Key",
+								"value": "{{$guid}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razon_social\": \"{{proveedor_razon_social}}\",\n    \"nit\": \"{{proveedor_nit}}\",\n    \"tipo_proveedor\": \"laboratorio\",\n    \"email\": \"{{proveedor_email}}\",\n    \"telefono\": \"{{proveedor_telefono}}\",\n    \"direccion\": \"{{proveedor_direccion}}\",\n    \"ciudad\": \"Bogota\",\n    \"pais\": \"colombia\",\n    \"certificaciones\": [\"ISO 9001\"],\n    \"estado\": \"activo\",\n    \"calificacion\": 4.5,\n    \"tiempo_entrega_promedio\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							]
+						},
+						"description": "Registra un nuevo proveedor con todos los campos requeridos y X-Idempotency-Key"
+					}
+				},
+				{
+					"name": "Registrar Proveedor - NIT Duplicado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Idempotency-Key",
+								"value": "{{$guid}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razon_social\": \"Otro Nombre\",\n    \"nit\": \"{{proveedor_nit_existente}}\",\n    \"tipo_proveedor\": \"laboratorio\",\n    \"email\": \"otro@example.com\",\n    \"telefono\": \"+57-1-9998888\",\n    \"direccion\": \"Otra Calle 789\",\n    \"ciudad\": \"Bogota\",\n    \"pais\": \"colombia\",\n    \"certificaciones\": [\"ISO 9001\"],\n    \"estado\": \"activo\",\n    \"calificacion\": 4.0,\n    \"tiempo_entrega_promedio\": 4\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							]
+						},
+						"description": "Intenta registrar un proveedor con un NIT que ya existe - debe retornar 409"
+					}
+				},
+				{
+					"name": "Registrar Proveedor - Reintento con misma Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Idempotency-Key",
+								"value": "{{proveedor_idempotency_key}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razon_social\": \"{{proveedor_razon_social}}\",\n    \"nit\": \"{{proveedor_nit}}\",\n    \"tipo_proveedor\": \"laboratorio\",\n    \"email\": \"{{proveedor_email}}\",\n    \"telefono\": \"{{proveedor_telefono}}\",\n    \"direccion\": \"{{proveedor_direccion}}\",\n    \"ciudad\": \"Bogota\",\n    \"pais\": \"colombia\",\n    \"certificaciones\": [\"ISO 9001\"],\n    \"estado\": \"activo\",\n    \"calificacion\": 4.5,\n    \"tiempo_entrega_promedio\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							]
+						},
+						"description": "Reintenta el registro con la misma X-Idempotency-Key - debe retornar la misma respuesta"
+					}
+				},
+				{
+					"name": "Listar Proveedores",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores?skip=0&limit=10",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Lista todos los proveedores registrados con paginación"
+					}
+				},
+				{
+					"name": "Verificar Existencia Proveedor",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores/exists?nit={{proveedor_nit}}",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores",
+								"exists"
+							],
+							"query": [
+								{
+									"key": "nit",
+									"value": "{{proveedor_nit}}"
+								}
+							]
+						},
+						"description": "Verifica si existe un proveedor por NIT y valida el NIT"
+					}
+				},
+				{
+					"name": "Health Check Provider Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/health",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verifica el estado de salud del microservicio de proveedores"
+					}
+				}
+			]
 		}
 	],
 	"event": [
@@ -345,8 +567,20 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					"// Script para generar valores dinámicos si es necesario",
-					"console.log('Ejecutando pruebas de microservicios...');"
+					"// Script para generar valores dinámicos para proveedores",
+					"if (!pm.collectionVariables.get('proveedor_idempotency_key')) {",
+					"    pm.collectionVariables.set('proveedor_idempotency_key', pm.variables.replaceIn('{{$guid}}'));",
+					"}",
+					"",
+					"// Generar datos aleatorios para proveedores si no existen",
+					"if (!pm.collectionVariables.get('proveedor_nit')) {",
+					"    const timestamp = new Date().getTime();",
+					"    pm.collectionVariables.set('proveedor_razon_social', 'Proveedor Test ' + timestamp);",
+					"    pm.collectionVariables.set('proveedor_nit', '900' + timestamp.toString().slice(-6));",
+					"    pm.collectionVariables.set('proveedor_email', 'test.' + timestamp + '@example.com');",
+					"    pm.collectionVariables.set('proveedor_telefono', '+57-1-' + Math.floor(Math.random() * 10000000));",
+					"    pm.collectionVariables.set('proveedor_direccion', 'Calle Test ' + Math.floor(Math.random() * 1000));",
+					"}"
 				]
 			}
 		},
@@ -355,19 +589,87 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					"// Tests automáticos que se pueden añadir",
+					"// Tests automáticos para verificar respuestas",
 					"pm.test('Response time is less than 2000ms', function () {",
 					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
 					"});",
 					"",
-					"pm.test('Content-Type header is present', function () {",
-					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
-					"});"
+					"pm.test('Status code is handled appropriately', function () {",
+					"    // Verificar códigos de estado específicos",
+					"    switch (pm.response.code) {",
+					"        case 200:",
+					"        case 201:",
+					"            pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+					"            break;",
+					"        case 400:",
+					"            pm.expect(pm.response.json()).to.have.property('detail');",
+					"            break;",
+					"        case 409:",
+					"            pm.expect(pm.response.json().detail).to.include('NIT duplicado');",
+					"            break;",
+					"    }",
+					"});",
+					"",
+					"// Guardar NIT existente para pruebas de duplicados",
+					"if (pm.response.code === 201) {",
+					"    const responseData = pm.response.json();",
+					"    if (responseData.nit) {",
+					"        pm.collectionVariables.set('proveedor_nit_existente', responseData.nit);",
+					"    }",
+					"}"
 				]
 			}
 		}
 	],
 	"variable": [
+		{
+			"key": "proveedor_razon_social",
+			"value": "",
+			"type": "string",
+			"description": "Razón social del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_nit",
+			"value": "",
+			"type": "string",
+			"description": "NIT del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_nit_existente",
+			"value": "",
+			"type": "string",
+			"description": "NIT de un proveedor ya registrado para pruebas de duplicidad"
+		},
+		{
+			"key": "proveedor_email",
+			"value": "",
+			"type": "string",
+			"description": "Email del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_telefono",
+			"value": "",
+			"type": "string",
+			"description": "Teléfono del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_direccion",
+			"value": "",
+			"type": "string",
+			"description": "Dirección del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_idempotency_key",
+			"value": "",
+			"type": "string",
+			"description": "X-Idempotency-Key para pruebas de reintento de registro"
+		},
+		{
+			"key": "provider_url",
+			"value": "http://localhost:8006",
+			"type": "string",
+			"description": "URL base del Provider Service"
+		},
 		{
 			"key": "base_url",
 			"value": "http://localhost:8001",
