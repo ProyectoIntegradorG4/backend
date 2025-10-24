@@ -6,6 +6,7 @@ from app.database.seed import seed_categories
 import asyncio
 import logging
 
+
 logger = logging.getLogger("uvicorn")
 
 app = FastAPI(
@@ -13,6 +14,8 @@ app = FastAPI(
     description="Microservicio de carga individual de productos médicos",
     version="1.0.0"
 )
+
+app.include_router(products_router)
 
 app.add_middleware(
     CORSMiddleware,
