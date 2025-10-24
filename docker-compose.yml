@@ -203,22 +203,6 @@ services:
           cpus: '0.5'
           memory: 256M
 
-  # Proveedor Service
-  proveedor-service:
-    build: 
-      context: ./proveedor-service
-      dockerfile: Dockerfile
-    container_name: proveedor-service
-    environment:
-      DATABASE_URL: ${PROVEEDOR_DATABASE_URL}
-      REDIS_URL: "redis://redis-cache:6379"
-    ports:
-      - "${PROVEEDOR_SERVICE_PORT}:8006"
-    depends_on:
-      postgres-db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
   # Product Service (HU-WEB-003) - Carga individual de productos
   product-service:
     build:
@@ -253,6 +237,42 @@ services:
       - microservices-network
     restart: unless-stopped
     volumes:
+        - ./product-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+
+  # Proveedor Service
+  proveedor-service:
+    build: 
+      context: ./proveedor-service
+      dockerfile: Dockerfile
+    container_name: proveedor-service
+    environment:
+      DATABASE_URL: ${PROVEEDOR_DATABASE_URL}
+      REDIS_URL: "redis://redis-cache:6379"
+    ports:
+      - "${PROVEEDOR_SERVICE_PORT}:8006"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
       - ./proveedor-service:/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
@@ -267,21 +287,6 @@ services:
           memory: 512M
         reservations:
           cpus: '0.5'
-          memory: 256M
-
-      - ./product-service:/app
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.5"
           memory: 256M
 
 
