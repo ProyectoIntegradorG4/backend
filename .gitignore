@@ -224,4 +224,3 @@ Thumbs.db
 
 # Logs específicos del proyecto
 logs/
-docker-compose.yml

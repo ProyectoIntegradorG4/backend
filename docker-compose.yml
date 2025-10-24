@@ -10,7 +10,7 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=md5"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./001-init.sql:/docker-entrypoint-initdb.d/001-init.sql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     ports:
       - "${POSTGRES_PORT}:5432"
     networks:
@@ -203,6 +203,42 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # Proveedor Service
+  proveedor-service:
+    build: 
+      context: ./proveedor-service
+      dockerfile: Dockerfile
+    container_name: proveedor-service
+    environment:
+      DATABASE_URL: ${PROVEEDOR_DATABASE_URL}
+      REDIS_URL: "redis://redis-cache:6379"
+    ports:
+      - "${PROVEEDOR_SERVICE_PORT}:8006"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./proveedor-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
   # API Gateway (Nginx) - Opcional
   nginx:
     image: nginx:alpine
@@ -216,6 +252,7 @@ services:
       - nit-validation-service
       - audit-service
       - auth-service
+      - proveedor-service
     networks:
       - microservices-network
     restart: unless-stopped
