@@ -35,6 +35,7 @@ jobs:
         FAILED=0
         CHANGED_SERVICES=()
         NOT_BUMPED=()
+        NOT_BUMPED_DETAILS=""
 
         # Get base commit
         BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
@@ -59,11 +60,16 @@ jobs:
             else
               echo "  ❌ Version NOT bumped in main.py"
               NOT_BUMPED+=("$SERVICE")
+              CURRENT_VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/' || echo "unknown")
+              NOT_BUMPED_DETAILS="${NOT_BUMPED_DETAILS}${SERVICE}|${CURRENT_VERSION};"
               FAILED=1
             fi
             echo ""
           fi
         done
+
+        # Save NOT_BUMPED_DETAILS for comment step
+        echo "not_bumped_details=$NOT_BUMPED_DETAILS" >> $GITHUB_OUTPUT
 
         # Summary
         echo "================================"
@@ -108,15 +114,38 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
+          const details = '${{ steps.check.outputs.not_bumped_details }}';
+
+          // Parse service details (format: "service|version;service|version;")
+          const services = details.split(';').filter(s => s).map(entry => {
+            const [name, version] = entry.split('|');
+            return { name, version };
+          });
+
+          // Build services list
+          let servicesList = '';
+          services.forEach(svc => {
+            servicesList += `
+          ### 📦 \`${svc.name}\`
+          - **Versión actual:** \`${svc.version}\`
+          - **Archivo:** \`${svc.name}/main.py\`
+          - **Acción requerida:** Incrementar la versión
+
+          `;
+          });
+
           const message = `## ❌ Se Requiere Actualización de Versión
 
-          Algunos servicios tienen cambios de código pero no se detectó actualización de versión.
+          Los siguientes servicios tienen cambios de código pero **no se detectó actualización de versión**:
 
-          ### Servicios que necesitan actualización de versión:
+          ${servicesList}
 
-          Por favor actualiza el campo \`version\` en el archivo \`main.py\` de cada servicio.
+          ---
 
-          **Ejemplo:**
+          ### 📝 Cómo arreglar:
+
+          Edita el archivo \`main.py\` de cada servicio y actualiza la versión:
+
           \`\`\`python
           app = FastAPI(
               title="User Service",
@@ -124,16 +153,19 @@ jobs:
           )
           \`\`\`
 
-          **Guía de Versiones:**
-          - **Patch** (x.y.Z): Corrección de bugs, cambios pequeños
-          - **Minor** (x.Y.0): Nuevas funcionalidades, compatible hacia atrás
-          - **Major** (X.0.0): Cambios que rompen compatibilidad
+          ### 📚 Guía de Versiones (SemVer):
+          - **Patch** (x.y.**Z**): Corrección de bugs, cambios pequeños
+          - **Minor** (x.**Y**.0): Nuevas funcionalidades, compatible hacia atrás
+          - **Major** (**X**.0.0): Cambios que rompen compatibilidad
 
-          Una vez actualices la(s) versión(es), haz push de tus cambios y este check pasará.
+          ### ✅ Próximos pasos:
+          1. Actualiza la versión en \`main.py\` de cada servicio listado arriba
+          2. Haz commit de los cambios
+          3. Haz push y este check pasará automáticamente
 
-          📖 **Más información:** Ver \`FLUJO_EQUIPO.md\``;
+          📖 **Más información:** Ver [\`FLUJO_EQUIPO.md\`](../blob/${context.payload.pull_request.head.ref}/FLUJO_EQUIPO.md)`;
 
-          github.rest.issues.createComment({
+          await github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
