@@ -6,7 +6,7 @@ from app.database.connection import init_db
 app = FastAPI(
     title="Auth Service",
     description="Microservicio de autenticación con JWT para MediSupply",
-    version="1.0.12"
+    version="1.0.13"
 )
 
 # Configuración de CORS
