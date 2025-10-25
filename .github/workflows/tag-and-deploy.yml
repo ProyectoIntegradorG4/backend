@@ -194,19 +194,19 @@ jobs:
         case "$SERVICE_NAME" in
           "nit-validation-service")
             PORT=8002
-            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/nit_db"
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/nit_db?sslmode=require"
             ;;
           "user-service")
             PORT=8001
-            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db"
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
             ;;
           "audit-service")
             PORT=8003
-            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/audit_db"
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/audit_db?sslmode=require"
             ;;
           "auth-service")
             PORT=8004
-            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db"
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
             ;;
         esac
 
