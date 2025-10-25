@@ -195,7 +195,7 @@ jobs:
                 {"name": "POSTGRES_PASSWORD", "value": "${{ secrets.POSTGRES_PASSWORD }}"},
                 {"name": "POSTGRES_HOST", "value": "${{ secrets.RDS_ENDPOINT }}"},
                 {"name": "POSTGRES_PORT", "value": "5432"},
-                {"name": "DATABASE_URL", "value": "$DATABASE_URL"},
+                {"name": "DATABASE_URL", "value": "${DATABASE_URL}"},
                 {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
                 {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
                 {"name": "JWT_EXPIRE_MINUTES", "value": "60"}
