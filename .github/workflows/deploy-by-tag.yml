@@ -1,0 +1,310 @@
+name: Deploy Service by Tag (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Service tag to deploy (e.g., user-service-v2.1.0)'
+        required: true
+        type: string
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
+
+jobs:
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Validate tag format
+      id: validate
+      run: |
+        TAG="${{ github.event.inputs.tag }}"
+
+        echo "🔍 Validating tag: $TAG"
+
+        # Check tag format: service-name-vX.Y.Z
+        if [[ ! "$TAG" =~ ^(user-service|auth-service|nit-validation-service|audit-service)-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "❌ Invalid tag format: $TAG"
+          echo "Expected format: service-name-vX.Y.Z"
+          echo "Valid service names: user-service, auth-service, nit-validation-service, audit-service"
+          echo "Example: user-service-v2.1.0"
+          exit 1
+        fi
+
+        # Extract service name and version
+        SERVICE=$(echo "$TAG" | sed -E 's/-v[0-9]+\.[0-9]+\.[0-9]+$//')
+        VERSION=$(echo "$TAG" | sed -E 's/^.*-v([0-9]+\.[0-9]+\.[0-9]+)$/\1/')
+
+        echo "service=$SERVICE" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+        echo "✅ Valid tag"
+        echo "  Service: $SERVICE"
+        echo "  Version: $VERSION"
+
+    - name: Checkout tag
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.tag }}
+        fetch-depth: 0
+
+    - name: Verify tag exists
+      run: |
+        TAG="${{ github.event.inputs.tag }}"
+
+        if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+          echo "❌ Tag $TAG does not exist in repository"
+          echo "Available tags:"
+          git tag --list "*-v*" | tail -20
+          exit 1
+        fi
+
+        echo "✅ Tag $TAG exists"
+        echo "Commit: $(git rev-parse $TAG)"
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Verify service version matches tag
+      run: |
+        SERVICE="${{ steps.validate.outputs.service }}"
+        EXPECTED_VERSION="${{ steps.validate.outputs.version }}"
+
+        # Read version from service's main.py
+        ACTUAL_VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/')
+
+        echo "Expected version: $EXPECTED_VERSION"
+        echo "Actual version in code: $ACTUAL_VERSION"
+
+        if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
+          echo "⚠️ Warning: Version mismatch!"
+          echo "Tag suggests version $EXPECTED_VERSION but code has $ACTUAL_VERSION"
+          echo "This might indicate the tag was created incorrectly."
+          exit 1
+        fi
+
+        echo "✅ Version matches tag"
+
+    - name: Build and push Docker image
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE="${{ steps.validate.outputs.service }}"
+        VERSION="${{ steps.validate.outputs.version }}"
+        ENV="${{ github.event.inputs.environment }}"
+
+        echo "🏗️ Building Docker image for $SERVICE:$VERSION"
+        echo "Environment: $ENV"
+
+        # Build with version tag
+        docker build \
+          -t $ECR_REGISTRY/$SERVICE:$VERSION \
+          -t $ECR_REGISTRY/$SERVICE:$ENV-latest \
+          ./$SERVICE/
+
+        # Push images
+        docker push $ECR_REGISTRY/$SERVICE:$VERSION
+        docker push $ECR_REGISTRY/$SERVICE:$ENV-latest
+
+        echo "✅ Images pushed:"
+        echo "  - $ECR_REGISTRY/$SERVICE:$VERSION"
+        echo "  - $ECR_REGISTRY/$SERVICE:$ENV-latest"
+
+    - name: Deploy to ECS
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE="${{ steps.validate.outputs.service }}"
+        VERSION="${{ steps.validate.outputs.version }}"
+        ENV="${{ github.event.inputs.environment }}"
+
+        # Determine cluster name based on environment
+        if [ "$ENV" == "production" ]; then
+          CLUSTER="microservices-cluster"
+        else
+          CLUSTER="microservices-cluster-staging"
+        fi
+
+        # Configure service-specific settings
+        case "$SERVICE" in
+          "nit-validation-service")
+            PORT=8002
+            DATABASE_URL=postgresql+psycopg://nit_service:nit_password@${{ secrets.RDS_ENDPOINT }}:5432/nit_db
+            ;;
+          "user-service")
+            PORT=8001
+            DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+            ;;
+          "audit-service")
+            PORT=8003
+            DATABASE_URL=postgresql+psycopg://audit_service:audit_password@${{ secrets.RDS_ENDPOINT }}:5432/audit_db
+            ;;
+          "auth-service")
+            PORT=8004
+            DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+            ;;
+        esac
+
+        LOG_GROUP="/ecs/$SERVICE-$ENV"
+
+        # Create log group
+        aws logs create-log-group \
+          --log-group-name "$LOG_GROUP" \
+          --region us-east-1 \
+          2>/dev/null || echo "Log group exists"
+
+        # Create task definition
+        cat > task-definition.json <<EOF
+        {
+          "family": "$SERVICE-$ENV",
+          "networkMode": "awsvpc",
+          "requiresCompatibilities": ["FARGATE"],
+          "cpu": "256",
+          "memory": "512",
+          "executionRoleArn": "arn:aws:iam::403245568912:role/ecsTaskExecutionRole",
+          "containerDefinitions": [
+            {
+              "name": "$SERVICE",
+              "image": "$ECR_REGISTRY/$SERVICE:$VERSION",
+              "portMappings": [
+                {
+                  "containerPort": $PORT,
+                  "protocol": "tcp"
+                }
+              ],
+              "environment": [
+                {"name": "ENVIRONMENT", "value": "$ENV"},
+                {"name": "POSTGRES_DB", "value": "postgres"},
+                {"name": "POSTGRES_USER", "value": "postgres"},
+                {"name": "POSTGRES_PASSWORD", "value": "${{ secrets.POSTGRES_PASSWORD }}"},
+                {"name": "POSTGRES_HOST", "value": "${{ secrets.RDS_ENDPOINT }}"},
+                {"name": "POSTGRES_PORT", "value": "5432"},
+                {"name": "DATABASE_URL", "value": "$DATABASE_URL"},
+                {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
+                {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
+                {"name": "JWT_EXPIRE_MINUTES", "value": "60"}
+              ],
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "$LOG_GROUP",
+                  "awslogs-region": "us-east-1",
+                  "awslogs-stream-prefix": "ecs"
+                }
+              },
+              "healthCheck": {
+                "command": ["CMD-SHELL", "curl -f http://localhost:$PORT/health || exit 1"],
+                "interval": 30,
+                "timeout": 10,
+                "retries": 3,
+                "startPeriod": 60
+              }
+            }
+          ],
+          "tags": [
+            {
+              "key": "Version",
+              "value": "$VERSION"
+            },
+            {
+              "key": "Environment",
+              "value": "$ENV"
+            },
+            {
+              "key": "Service",
+              "value": "$SERVICE"
+            }
+          ]
+        }
+        EOF
+
+        # Register task definition
+        TASK_DEF_ARN=$(aws ecs register-task-definition \
+          --cli-input-json file://task-definition.json \
+          --region us-east-1 \
+          --query 'taskDefinition.taskDefinitionArn' \
+          --output text)
+
+        echo "✅ Task definition: $TASK_DEF_ARN"
+
+        # Update or create service
+        SERVICE_NAME="$SERVICE-$ENV"
+
+        if aws ecs describe-services \
+          --cluster "$CLUSTER" \
+          --services "$SERVICE_NAME" \
+          --region us-east-1 \
+          --query 'services[0].serviceName' \
+          --output text 2>/dev/null | grep -q "$SERVICE_NAME"; then
+
+          echo "🔄 Updating service $SERVICE_NAME in cluster $CLUSTER"
+          aws ecs update-service \
+            --cluster "$CLUSTER" \
+            --service "$SERVICE_NAME" \
+            --task-definition "$TASK_DEF_ARN" \
+            --force-new-deployment \
+            --region us-east-1
+
+          echo "✅ Service updated"
+        else
+          echo "📦 Creating new service $SERVICE_NAME in cluster $CLUSTER"
+          aws ecs create-service \
+            --cluster "$CLUSTER" \
+            --service-name "$SERVICE_NAME" \
+            --task-definition "$TASK_DEF_ARN" \
+            --desired-count 1 \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-0bc9724bfda2781c8],securityGroups=[sg-062e1b7295652790c],assignPublicIp=ENABLED}" \
+            --region us-east-1 \
+            --tags key=Version,value=$VERSION key=Environment,value=$ENV
+
+          echo "✅ Service created"
+        fi
+
+        rm -f task-definition.json
+
+    - name: Wait for deployment
+      run: |
+        SERVICE="${{ steps.validate.outputs.service }}"
+        ENV="${{ github.event.inputs.environment }}"
+
+        if [ "$ENV" == "production" ]; then
+          CLUSTER="microservices-cluster"
+        else
+          CLUSTER="microservices-cluster-staging"
+        fi
+
+        SERVICE_NAME="$SERVICE-$ENV"
+
+        echo "⏳ Waiting for $SERVICE_NAME to stabilize in cluster $CLUSTER..."
+
+        aws ecs wait services-stable \
+          --cluster "$CLUSTER" \
+          --services "$SERVICE_NAME" \
+          --region us-east-1 \
+          && echo "✅ Service is stable" \
+          || echo "⚠️ Service did not stabilize in time"
+
+    - name: Deployment Summary
+      if: always()
+      run: |
+        echo "## 🚀 Deployment Summary"
+        echo ""
+        echo "**Tag:** ${{ github.event.inputs.tag }}"
+        echo "**Service:** ${{ steps.validate.outputs.service }}"
+        echo "**Version:** ${{ steps.validate.outputs.version }}"
+        echo "**Environment:** ${{ github.event.inputs.environment }}"
+        echo ""
+        echo "**Deployed by:** ${{ github.actor }}"
+        echo "**Workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

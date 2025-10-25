@@ -239,3 +239,8 @@ simulate-*
 .env.local
 .env.development
 .env.production
+
+# LLM
+CLAUDE.md
+CLAUDE_ANALYSIS.md
+/scripts

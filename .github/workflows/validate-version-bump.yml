@@ -1,0 +1,136 @@
+name: Validate Version Bump
+
+on:
+  pull_request:
+    branches: [ main, release ]
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  check-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history to compare
+
+    - name: Fetch base branch
+      run: |
+        git fetch origin ${{ github.base_ref }}
+
+    - name: Check version bumps for changed services
+      id: check
+      run: |
+        # Define all services
+        SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service")
+
+        echo "🔍 Checking for version bumps in changed services..."
+        echo ""
+
+        FAILED=0
+        CHANGED_SERVICES=()
+        NOT_BUMPED=()
+
+        # Get base commit
+        BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
+
+        for SERVICE in "${SERVICES[@]}"; do
+          # Check if service has code changes (excluding version changes in main.py)
+          CODE_CHANGES=$(git diff --name-only $BASE_SHA HEAD -- "$SERVICE/" | grep -v "main.py" | wc -l)
+
+          if [ "$CODE_CHANGES" -gt 0 ]; then
+            echo "📦 $SERVICE has code changes"
+            CHANGED_SERVICES+=("$SERVICE")
+
+            # Check if version was bumped in main.py
+            VERSION_CHANGED=$(git diff $BASE_SHA HEAD -- "$SERVICE/main.py" | grep -E '^\+.*version=' | wc -l)
+
+            if [ "$VERSION_CHANGED" -gt 0 ]; then
+              # Get old and new versions
+              OLD_VERSION=$(git show $BASE_SHA:$SERVICE/main.py | grep -o 'version="[^"]*"' | sed 's/version="\(.*\)"/\1/' || echo "unknown")
+              NEW_VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/' || echo "unknown")
+
+              echo "  ✅ Version bumped: $OLD_VERSION → $NEW_VERSION"
+            else
+              echo "  ❌ Version NOT bumped in main.py"
+              NOT_BUMPED+=("$SERVICE")
+              FAILED=1
+            fi
+            echo ""
+          fi
+        done
+
+        # Summary
+        echo "================================"
+        echo "📊 Summary"
+        echo "================================"
+
+        if [ ${#CHANGED_SERVICES[@]} -eq 0 ]; then
+          echo "ℹ️  No service changes detected"
+          exit 0
+        fi
+
+        echo "Services with code changes: ${#CHANGED_SERVICES[@]}"
+        for SERVICE in "${CHANGED_SERVICES[@]}"; do
+          echo "  - $SERVICE"
+        done
+        echo ""
+
+        if [ $FAILED -eq 1 ]; then
+          echo "❌ FAILED: The following services have code changes but no version bump:"
+          for SERVICE in "${NOT_BUMPED[@]}"; do
+            echo "  - $SERVICE"
+          done
+          echo ""
+          echo "Please update the version in each service's main.py file:"
+          echo ""
+          for SERVICE in "${NOT_BUMPED[@]}"; do
+            CURRENT_VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/' || echo "unknown")
+            echo "  $SERVICE/main.py"
+            echo "    Current: version=\"$CURRENT_VERSION\""
+            echo "    Example: version=\"X.Y.Z\"  # Bump this!"
+            echo ""
+          done
+          exit 1
+        else
+          echo "✅ All changed services have version bumps"
+          exit 0
+        fi
+
+    - name: Comentar en PR (si falló)
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const message = `## ❌ Se Requiere Actualización de Versión
+
+          Algunos servicios tienen cambios de código pero no se detectó actualización de versión.
+
+          ### Servicios que necesitan actualización de versión:
+
+          Por favor actualiza el campo \`version\` en el archivo \`main.py\` de cada servicio.
+
+          **Ejemplo:**
+          \`\`\`python
+          app = FastAPI(
+              title="User Service",
+              version="2.2.0"  # ← Incrementa esta versión
+          )
+          \`\`\`
+
+          **Guía de Versiones:**
+          - **Patch** (x.y.Z): Corrección de bugs, cambios pequeños
+          - **Minor** (x.Y.0): Nuevas funcionalidades, compatible hacia atrás
+          - **Major** (X.0.0): Cambios que rompen compatibilidad
+
+          Una vez actualices la(s) versión(es), haz push de tus cambios y este check pasará.
+
+          📖 **Más información:** Ver \`FLUJO_EQUIPO.md\``;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: message
+          });
