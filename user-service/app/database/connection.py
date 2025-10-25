@@ -23,6 +23,7 @@ engine = create_engine(
     pool_timeout=30,           # Timeout para obtener conexión del pool
     connect_args={
         "connect_timeout": 10,
+        "sslmode": "require",
         "options": "-c jit=off -c application_name=user_service_optimized"
     }
 )
