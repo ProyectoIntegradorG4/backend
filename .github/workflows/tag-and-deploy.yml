@@ -215,8 +215,10 @@ jobs:
           --region us-east-1 \
           2>/dev/null || echo "Log group exists"
 
-        # Create task definition
-        cat > task-definition.json <<EOF
+        echo "DEBUG: DATABASE_URL = $DATABASE_URL"
+
+        # Create task definition with proper variable substitution
+        cat > task-definition.json <<EOFTASK
         {
           "family": "$SERVICE_NAME",
           "networkMode": "awsvpc",
@@ -240,7 +242,7 @@ jobs:
                 {"name": "POSTGRES_PASSWORD", "value": "${{ secrets.POSTGRES_PASSWORD }}"},
                 {"name": "POSTGRES_HOST", "value": "${{ secrets.RDS_ENDPOINT }}"},
                 {"name": "POSTGRES_PORT", "value": "5432"},
-                {"name": "DATABASE_URL", "value": "${DATABASE_URL}"},
+                {"name": "DATABASE_URL", "value": "$DATABASE_URL"},
                 {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
                 {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
                 {"name": "JWT_EXPIRE_MINUTES", "value": "60"}
@@ -263,7 +265,10 @@ jobs:
             }
           ]
         }
-        EOF
+        EOFTASK
+
+        echo "DEBUG: Task definition created, checking DATABASE_URL in file:"
+        grep "DATABASE_URL" task-definition.json || echo "Not found in file"
 
         # Register task definition
         TASK_DEF_ARN=$(aws ecs register-task-definition \
