@@ -215,8 +215,6 @@ jobs:
           --region us-east-1 \
           2>/dev/null || echo "Log group exists"
 
-        echo "DEBUG: DATABASE_URL = $DATABASE_URL"
-
         # Create task definition with proper variable substitution
         cat > task-definition.json <<EOFTASK
         {
@@ -267,7 +265,6 @@ jobs:
         }
         EOFTASK
 
-        echo "DEBUG: Task definition created, checking DATABASE_URL in file:"
         grep "DATABASE_URL" task-definition.json || echo "Not found in file"
 
         # Register task definition
