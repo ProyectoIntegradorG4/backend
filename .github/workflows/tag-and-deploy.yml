@@ -78,9 +78,9 @@ jobs:
           fi
         done
 
-        # Convert array to JSON for output
+        # Convert array to JSON for output (compact format)
         if [ ${#TAGGED_SERVICES[@]} -gt 0 ]; then
-          JSON_SERVICES=$(printf '%s\n' "${TAGGED_SERVICES[@]}" | jq -R . | jq -s .)
+          JSON_SERVICES=$(printf '%s\n' "${TAGGED_SERVICES[@]}" | jq -R . | jq -s -c .)
           echo "tagged-services=$JSON_SERVICES" >> $GITHUB_OUTPUT
           echo "has-changes=true" >> $GITHUB_OUTPUT
           echo "🚀 Tagged services: $JSON_SERVICES"
