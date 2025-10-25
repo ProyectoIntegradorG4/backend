@@ -188,22 +188,25 @@ jobs:
         # Configure port and log group based on service
         RDS_HOST="${{ secrets.RDS_ENDPOINT }}"
 
+        # Use postgres superuser temporarily until service-specific users are created
+        POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+
         case "$SERVICE_NAME" in
           "nit-validation-service")
             PORT=8002
-            DATABASE_URL="postgresql+psycopg://nit_service:nit_password@${RDS_HOST}:5432/nit_db"
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/nit_db"
             ;;
           "user-service")
             PORT=8001
-            DATABASE_URL="postgresql+psycopg://user_service:user_password@${RDS_HOST}:5432/user_db"
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db"
             ;;
           "audit-service")
             PORT=8003
-            DATABASE_URL="postgresql+psycopg://audit_service:audit_password@${RDS_HOST}:5432/audit_db"
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/audit_db"
             ;;
           "auth-service")
             PORT=8004
-            DATABASE_URL="postgresql+psycopg://user_service:user_password@${RDS_HOST}:5432/user_db"
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db"
             ;;
         esac
 
