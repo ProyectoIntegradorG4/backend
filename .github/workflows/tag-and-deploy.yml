@@ -304,13 +304,82 @@ jobs:
         rm -f task-definition.json
 
     - name: Wait for deployment
+      continue-on-error: true
       run: |
-        echo "⏳ Waiting for service to stabilize..."
-        aws ecs wait services-stable \
-          --cluster microservices-cluster \
-          --services ${{ matrix.service }} \
+        echo "⏳ Waiting for service to stabilize (max 10 minutes)..."
+
+        SERVICE_NAME="${{ matrix.service }}"
+        CLUSTER="microservices-cluster"
+        MAX_WAIT=600  # 10 minutes
+        ELAPSED=0
+
+        while [ $ELAPSED -lt $MAX_WAIT ]; do
+          STATUS=$(aws ecs describe-services \
+            --cluster $CLUSTER \
+            --services $SERVICE_NAME \
+            --region us-east-1 \
+            --query 'services[0].deployments[0].rolloutState' \
+            --output text)
+
+          RUNNING=$(aws ecs describe-services \
+            --cluster $CLUSTER \
+            --services $SERVICE_NAME \
+            --region us-east-1 \
+            --query 'services[0].runningCount' \
+            --output text)
+
+          DESIRED=$(aws ecs describe-services \
+            --cluster $CLUSTER \
+            --services $SERVICE_NAME \
+            --region us-east-1 \
+            --query 'services[0].desiredCount' \
+            --output text)
+
+          echo "Status: $STATUS | Running: $RUNNING/$DESIRED"
+
+          if [ "$STATUS" = "COMPLETED" ] && [ "$RUNNING" = "$DESIRED" ]; then
+            echo "✅ Service is stable!"
+            exit 0
+          fi
+
+          if [ "$STATUS" = "FAILED" ]; then
+            echo "❌ Deployment failed!"
+            aws ecs describe-services \
+              --cluster $CLUSTER \
+              --services $SERVICE_NAME \
+              --region us-east-1 \
+              --query 'services[0].events[0:5]'
+            exit 1
+          fi
+
+          sleep 30
+          ELAPSED=$((ELAPSED + 30))
+        done
+
+        echo "⚠️ Service did not stabilize in $MAX_WAIT seconds"
+        echo "Current service status:"
+        aws ecs describe-services \
+          --cluster $CLUSTER \
+          --services $SERVICE_NAME \
           --region us-east-1 \
-          || echo "⚠️ Service did not stabilize in time, check ECS console"
+          --query 'services[0].events[0:5]'
+        exit 1
+
+    - name: Deployment info
+      if: always()
+      run: |
+        echo "📊 Deployment Summary for ${{ matrix.service }}"
+        echo ""
+        echo "✅ Deployment completed"
+        echo "🔍 To check service status manually:"
+        echo ""
+        echo "aws ecs describe-services \\"
+        echo "  --cluster microservices-cluster \\"
+        echo "  --services ${{ matrix.service }} \\"
+        echo "  --region us-east-1"
+        echo ""
+        echo "📝 To view logs:"
+        echo "aws logs tail /ecs/${{ matrix.service }} --follow"
 
   summary:
     needs: [detect-and-tag-services, deploy-services]
