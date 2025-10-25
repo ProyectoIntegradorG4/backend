@@ -1,0 +1,337 @@
+name: Tag and Deploy Services (Monorepo)
+
+on:
+  push:
+    branches: [ main, release ]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  detect-and-tag-services:
+    runs-on: ubuntu-latest
+    outputs:
+      tagged-services: ${{ steps.tag.outputs.tagged-services }}
+      has-changes: ${{ steps.tag.outputs.has-changes }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for git diff
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Detect changed services and create tags
+      id: tag
+      run: |
+        # Define all services
+        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service")
+        TAGGED_SERVICES=()
+
+        echo "🔍 Detecting changed services..."
+
+        # Get the previous commit (for comparison)
+        if [ "${{ github.event.before }}" == "0000000000000000000000000000000000000000" ]; then
+          # First push to branch - compare with HEAD~1
+          PREV_COMMIT="HEAD~1"
+        else
+          PREV_COMMIT="${{ github.event.before }}"
+        fi
+
+        # Check each service for changes
+        for SERVICE in "${ALL_SERVICES[@]}"; do
+          echo "📦 Checking $SERVICE..."
+
+          # Check if service directory has changes
+          CHANGES=$(git diff --name-only $PREV_COMMIT HEAD -- "$SERVICE/" | wc -l)
+
+          if [ "$CHANGES" -gt 0 ]; then
+            echo "✅ Changes detected in $SERVICE"
+
+            # Extract version from main.py
+            VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/')
+
+            if [ -z "$VERSION" ]; then
+              echo "⚠️ Warning: No version found in $SERVICE/main.py, skipping tag creation"
+              continue
+            fi
+
+            TAG_NAME="${SERVICE}-v${VERSION}"
+
+            # Check if tag already exists
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+              echo "⚠️ Tag $TAG_NAME already exists, skipping"
+            else
+              echo "🏷️ Creating tag: $TAG_NAME"
+              git tag -a "$TAG_NAME" -m "Release $SERVICE version $VERSION"
+              git push origin "$TAG_NAME"
+              echo "✅ Tag $TAG_NAME created and pushed"
+              TAGGED_SERVICES+=("$SERVICE")
+            fi
+          else
+            echo "ℹ️ No changes in $SERVICE"
+          fi
+        done
+
+        # Convert array to JSON for output
+        if [ ${#TAGGED_SERVICES[@]} -gt 0 ]; then
+          JSON_SERVICES=$(printf '%s\n' "${TAGGED_SERVICES[@]}" | jq -R . | jq -s .)
+          echo "tagged-services=$JSON_SERVICES" >> $GITHUB_OUTPUT
+          echo "has-changes=true" >> $GITHUB_OUTPUT
+          echo "🚀 Tagged services: $JSON_SERVICES"
+        else
+          echo "tagged-services=[]" >> $GITHUB_OUTPUT
+          echo "has-changes=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ No services to tag"
+        fi
+
+    - name: Create Release Notes
+      if: steps.tag.outputs.has-changes == 'true'
+      run: |
+        echo "📝 Creating release summary..."
+
+        TAGGED_SERVICES='${{ steps.tag.outputs.tagged-services }}'
+
+        echo "## 🚀 Services Released" > release-notes.md
+        echo "" >> release-notes.md
+
+        for SERVICE in $(echo $TAGGED_SERVICES | jq -r '.[]'); do
+          VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/')
+          TAG="${SERVICE}-v${VERSION}"
+          echo "- **$SERVICE** - \`v$VERSION\` - [\`$TAG\`](https://github.com/${{ github.repository }}/releases/tag/$TAG)" >> release-notes.md
+        done
+
+        echo "" >> release-notes.md
+        echo "**Commit:** \`${{ github.sha }}\`" >> release-notes.md
+        echo "**Branch:** \`${{ github.ref_name }}\`" >> release-notes.md
+
+        cat release-notes.md
+
+  deploy-services:
+    needs: detect-and-tag-services
+    if: needs.detect-and-tag-services.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-and-tag-services.outputs.tagged-services) }}
+      fail-fast: false  # Continue deploying other services even if one fails
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Extract service version
+      id: version
+      run: |
+        VERSION=$(grep -o 'version="[^"]*"' ${{ matrix.service }}/main.py | sed 's/version="\(.*\)"/\1/')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📦 Deploying ${{ matrix.service }} version $VERSION"
+
+    - name: Create ECR repository if not exists
+      run: |
+        SERVICE_NAME=${{ matrix.service }}
+
+        if aws ecr describe-repositories --repository-names $SERVICE_NAME --region us-east-1 >/dev/null 2>&1; then
+          echo "✅ ECR repository $SERVICE_NAME exists"
+        else
+          echo "📦 Creating ECR repository $SERVICE_NAME"
+          aws ecr create-repository \
+            --repository-name $SERVICE_NAME \
+            --region us-east-1 \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256
+        fi
+
+    - name: Build and push Docker image
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_VERSION=${{ steps.version.outputs.version }}
+        SERVICE_NAME=${{ matrix.service }}
+
+        echo "🏗️ Building Docker image for $SERVICE_NAME:$SERVICE_VERSION"
+
+        # Build with version tag and latest tag
+        docker build \
+          -t $ECR_REGISTRY/$SERVICE_NAME:$SERVICE_VERSION \
+          -t $ECR_REGISTRY/$SERVICE_NAME:latest \
+          ./$SERVICE_NAME/
+
+        # Push both tags
+        docker push $ECR_REGISTRY/$SERVICE_NAME:$SERVICE_VERSION
+        docker push $ECR_REGISTRY/$SERVICE_NAME:latest
+
+        echo "✅ Images pushed:"
+        echo "  - $ECR_REGISTRY/$SERVICE_NAME:$SERVICE_VERSION"
+        echo "  - $ECR_REGISTRY/$SERVICE_NAME:latest"
+
+    - name: Deploy to ECS
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_NAME=${{ matrix.service }}
+        SERVICE_VERSION=${{ steps.version.outputs.version }}
+
+        # Configure port and log group based on service
+        case "$SERVICE_NAME" in
+          "nit-validation-service")
+            PORT=8002
+            DATABASE_URL=postgresql+psycopg://nit_service:nit_password@${{ secrets.RDS_ENDPOINT }}:5432/nit_db
+            ;;
+          "user-service")
+            PORT=8001
+            DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+            ;;
+          "audit-service")
+            PORT=8003
+            DATABASE_URL=postgresql+psycopg://audit_service:audit_password@${{ secrets.RDS_ENDPOINT }}:5432/audit_db
+            ;;
+          "auth-service")
+            PORT=8004
+            DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+            ;;
+        esac
+
+        LOG_GROUP="/ecs/$SERVICE_NAME"
+
+        # Create log group if needed
+        aws logs create-log-group \
+          --log-group-name "$LOG_GROUP" \
+          --region us-east-1 \
+          2>/dev/null || echo "Log group exists"
+
+        # Create task definition
+        cat > task-definition.json <<EOF
+        {
+          "family": "$SERVICE_NAME",
+          "networkMode": "awsvpc",
+          "requiresCompatibilities": ["FARGATE"],
+          "cpu": "256",
+          "memory": "512",
+          "executionRoleArn": "arn:aws:iam::403245568912:role/ecsTaskExecutionRole",
+          "containerDefinitions": [
+            {
+              "name": "$SERVICE_NAME",
+              "image": "$ECR_REGISTRY/$SERVICE_NAME:$SERVICE_VERSION",
+              "portMappings": [
+                {
+                  "containerPort": $PORT,
+                  "protocol": "tcp"
+                }
+              ],
+              "environment": [
+                {"name": "POSTGRES_DB", "value": "postgres"},
+                {"name": "POSTGRES_USER", "value": "postgres"},
+                {"name": "POSTGRES_PASSWORD", "value": "${{ secrets.POSTGRES_PASSWORD }}"},
+                {"name": "POSTGRES_HOST", "value": "${{ secrets.RDS_ENDPOINT }}"},
+                {"name": "POSTGRES_PORT", "value": "5432"},
+                {"name": "DATABASE_URL", "value": "$DATABASE_URL"},
+                {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
+                {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
+                {"name": "JWT_EXPIRE_MINUTES", "value": "60"}
+              ],
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "$LOG_GROUP",
+                  "awslogs-region": "us-east-1",
+                  "awslogs-stream-prefix": "ecs"
+                }
+              },
+              "healthCheck": {
+                "command": ["CMD-SHELL", "curl -f http://localhost:$PORT/health || exit 1"],
+                "interval": 30,
+                "timeout": 10,
+                "retries": 3,
+                "startPeriod": 60
+              }
+            }
+          ]
+        }
+        EOF
+
+        # Register task definition
+        TASK_DEF_ARN=$(aws ecs register-task-definition \
+          --cli-input-json file://task-definition.json \
+          --region us-east-1 \
+          --query 'taskDefinition.taskDefinitionArn' \
+          --output text)
+
+        echo "✅ Task definition: $TASK_DEF_ARN"
+
+        # Update or create service
+        if aws ecs describe-services \
+          --cluster microservices-cluster \
+          --services "$SERVICE_NAME" \
+          --region us-east-1 \
+          --query 'services[0].serviceName' \
+          --output text 2>/dev/null | grep -q "$SERVICE_NAME"; then
+
+          echo "🔄 Updating existing service..."
+          aws ecs update-service \
+            --cluster microservices-cluster \
+            --service "$SERVICE_NAME" \
+            --task-definition "$TASK_DEF_ARN" \
+            --force-new-deployment \
+            --region us-east-1
+        else
+          echo "📦 Creating new service..."
+          aws ecs create-service \
+            --cluster microservices-cluster \
+            --service-name "$SERVICE_NAME" \
+            --task-definition "$TASK_DEF_ARN" \
+            --desired-count 1 \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-0bc9724bfda2781c8],securityGroups=[sg-062e1b7295652790c],assignPublicIp=ENABLED}" \
+            --region us-east-1
+        fi
+
+        echo "✅ Deployed $SERVICE_NAME version $SERVICE_VERSION"
+
+        rm -f task-definition.json
+
+    - name: Wait for deployment
+      run: |
+        echo "⏳ Waiting for service to stabilize..."
+        aws ecs wait services-stable \
+          --cluster microservices-cluster \
+          --services ${{ matrix.service }} \
+          --region us-east-1 \
+          || echo "⚠️ Service did not stabilize in time, check ECS console"
+
+  summary:
+    needs: [detect-and-tag-services, deploy-services]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Deployment Summary
+      run: |
+        echo "## 🚀 Deployment Summary"
+        echo ""
+
+        if [ "${{ needs.detect-and-tag-services.outputs.has-changes }}" == "true" ]; then
+          SERVICES='${{ needs.detect-and-tag-services.outputs.tagged-services }}'
+          echo "**Tagged and deployed services:**"
+          echo "$SERVICES" | jq -r '.[]' | while read service; do
+            echo "  - ✅ $service"
+          done
+        else
+          echo "ℹ️ No changes detected - no services deployed"
+        fi
+
+        echo ""
+        echo "**Branch:** ${{ github.ref_name }}"
+        echo "**Commit:** ${{ github.sha }}"
