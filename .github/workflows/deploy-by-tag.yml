@@ -16,6 +16,9 @@ on:
           - staging
         default: production
 
+permissions:
+  contents: read
+
 jobs:
   validate-and-deploy:
     runs-on: ubuntu-latest

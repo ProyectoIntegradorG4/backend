@@ -4,6 +4,10 @@ on:
   push:
     branches: [ main, release ]
 
+permissions:
+  contents: write
+  pull-requests: read
+
 jobs:
   detect-and-tag-services:
     runs-on: ubuntu-latest
