@@ -140,22 +140,24 @@ jobs:
         fi
 
         # Configure service-specific settings
+        RDS_HOST="${{ secrets.RDS_ENDPOINT }}"
+
         case "$SERVICE" in
           "nit-validation-service")
             PORT=8002
-            DATABASE_URL=postgresql+psycopg://nit_service:nit_password@${{ secrets.RDS_ENDPOINT }}:5432/nit_db
+            DATABASE_URL="postgresql+psycopg://nit_service:nit_password@${RDS_HOST}:5432/nit_db"
             ;;
           "user-service")
             PORT=8001
-            DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+            DATABASE_URL="postgresql+psycopg://user_service:user_password@${RDS_HOST}:5432/user_db"
             ;;
           "audit-service")
             PORT=8003
-            DATABASE_URL=postgresql+psycopg://audit_service:audit_password@${{ secrets.RDS_ENDPOINT }}:5432/audit_db
+            DATABASE_URL="postgresql+psycopg://audit_service:audit_password@${RDS_HOST}:5432/audit_db"
             ;;
           "auth-service")
             PORT=8004
-            DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+            DATABASE_URL="postgresql+psycopg://user_service:user_password@${RDS_HOST}:5432/user_db"
             ;;
         esac
 
@@ -193,7 +195,7 @@ jobs:
                 {"name": "POSTGRES_PASSWORD", "value": "${{ secrets.POSTGRES_PASSWORD }}"},
                 {"name": "POSTGRES_HOST", "value": "${{ secrets.RDS_ENDPOINT }}"},
                 {"name": "POSTGRES_PORT", "value": "5432"},
-                {"name": "DATABASE_URL", "value": "$DATABASE_URL"},
+                {"name": "DATABASE_URL", "value": "${DATABASE_URL}"},
                 {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
                 {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
                 {"name": "JWT_EXPIRE_MINUTES", "value": "60"}

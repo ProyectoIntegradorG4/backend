@@ -186,22 +186,27 @@ jobs:
         SERVICE_VERSION=${{ steps.version.outputs.version }}
 
         # Configure port and log group based on service
+        RDS_HOST="${{ secrets.RDS_ENDPOINT }}"
+
+        # Use postgres superuser temporarily until service-specific users are created
+        POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+
         case "$SERVICE_NAME" in
           "nit-validation-service")
             PORT=8002
-            DATABASE_URL=postgresql+psycopg://nit_service:nit_password@${{ secrets.RDS_ENDPOINT }}:5432/nit_db
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/nit_db?sslmode=require"
             ;;
           "user-service")
             PORT=8001
-            DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
             ;;
           "audit-service")
             PORT=8003
-            DATABASE_URL=postgresql+psycopg://audit_service:audit_password@${{ secrets.RDS_ENDPOINT }}:5432/audit_db
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/audit_db?sslmode=require"
             ;;
           "auth-service")
             PORT=8004
-            DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
             ;;
         esac
 
@@ -213,8 +218,8 @@ jobs:
           --region us-east-1 \
           2>/dev/null || echo "Log group exists"
 
-        # Create task definition
-        cat > task-definition.json <<EOF
+        # Create task definition with proper variable substitution
+        cat > task-definition.json <<EOFTASK
         {
           "family": "$SERVICE_NAME",
           "networkMode": "awsvpc",
@@ -261,7 +266,9 @@ jobs:
             }
           ]
         }
-        EOF
+        EOFTASK
+
+        grep "DATABASE_URL" task-definition.json || echo "Not found in file"
 
         # Register task definition
         TASK_DEF_ARN=$(aws ecs register-task-definition \
@@ -272,20 +279,41 @@ jobs:
 
         echo "✅ Task definition: $TASK_DEF_ARN"
 
-        # Update or create service
-        if aws ecs describe-services \
+        # Check service status
+        SERVICE_STATUS=$(aws ecs describe-services \
           --cluster microservices-cluster \
           --services "$SERVICE_NAME" \
           --region us-east-1 \
-          --query 'services[0].serviceName' \
-          --output text 2>/dev/null | grep -q "$SERVICE_NAME"; then
+          --query 'services[0].status' \
+          --output text 2>/dev/null || echo "MISSING")
 
+        if [ "$SERVICE_STATUS" = "ACTIVE" ]; then
           echo "🔄 Updating existing service..."
           aws ecs update-service \
             --cluster microservices-cluster \
             --service "$SERVICE_NAME" \
             --task-definition "$TASK_DEF_ARN" \
             --force-new-deployment \
+            --region us-east-1
+        elif [ "$SERVICE_STATUS" = "DRAINING" ] || [ "$SERVICE_STATUS" = "INACTIVE" ]; then
+          echo "⚠️  Service is $SERVICE_STATUS, waiting for deletion to complete..."
+          aws ecs delete-service \
+            --cluster microservices-cluster \
+            --service "$SERVICE_NAME" \
+            --force \
+            --region us-east-1 2>/dev/null || true
+
+          echo "Waiting 30 seconds for service deletion..."
+          sleep 30
+
+          echo "📦 Creating new service..."
+          aws ecs create-service \
+            --cluster microservices-cluster \
+            --service-name "$SERVICE_NAME" \
+            --task-definition "$TASK_DEF_ARN" \
+            --desired-count 1 \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-0e7e4f22a222012b8,subnet-02176df83fa164137],securityGroups=[sg-07764172a92869b20],assignPublicIp=ENABLED}" \
             --region us-east-1
         else
           echo "📦 Creating new service..."
@@ -295,7 +323,7 @@ jobs:
             --task-definition "$TASK_DEF_ARN" \
             --desired-count 1 \
             --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[subnet-0bc9724bfda2781c8],securityGroups=[sg-062e1b7295652790c],assignPublicIp=ENABLED}" \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-0e7e4f22a222012b8,subnet-02176df83fa164137],securityGroups=[sg-07764172a92869b20],assignPublicIp=ENABLED}" \
             --region us-east-1
         fi
 
