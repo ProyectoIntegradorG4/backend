@@ -1,0 +1,225 @@
+{
+  "info": {
+    "_postman_id": "pedidos-service-collection",
+    "name": "Pedidos Service",
+    "description": "Colección de pruebas para el Pedidos Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Crear Pedido - Gerente (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "usuario-id",
+            "value": "2"
+          },
+          {
+            "key": "rol-usuario",
+            "value": "admin"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nit\": \"800654321\",\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 5\n    }\n  ],\n  \"observaciones\": \"Pedido de prueba por gerente\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8007/api/v1/pedidos/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "pedidos", ""]
+        }
+      }
+    },
+    {
+      "name": "Crear Pedido - Cliente Institucional",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "usuario-id",
+            "value": "1"
+          },
+          {
+            "key": "rol-usuario",
+            "value": "usuario_institucional"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nit\": \"900123456\",\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 3\n    },\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n      \"cantidad_solicitada\": 2\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8007/api/v1/pedidos/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "pedidos", ""]
+        }
+      }
+    },
+    {
+      "name": "Obtener Pedido",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8007/api/v1/pedidos/550e8400-e29b-41d4-a716-446655440000",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "pedidos", "550e8400-e29b-41d4-a716-446655440000"]
+        }
+      }
+    },
+    {
+      "name": "Listar Pedidos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8007/api/v1/pedidos/?pagina=1&por_pagina=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "pedidos", ""],
+          "query": [
+            {
+              "key": "pagina",
+              "value": "1"
+            },
+            {
+              "key": "por_pagina",
+              "value": "10"
+            },
+            {
+              "key": "nit",
+              "value": "900123456",
+              "disabled": true
+            },
+            {
+              "key": "usuario_id",
+              "value": "1",
+              "disabled": true
+            },
+            {
+              "key": "estado",
+              "value": "pendiente",
+              "disabled": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Listar Pedidos por NIT",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8007/api/v1/pedidos/?nit=900123456&pagina=1&por_pagina=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "pedidos", ""],
+          "query": [
+            {
+              "key": "nit",
+              "value": "900123456"
+            },
+            {
+              "key": "pagina",
+              "value": "1"
+            },
+            {
+              "key": "por_pagina",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Validar Inventario",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "usuario-id",
+            "value": "1"
+          },
+          {
+            "key": "rol-usuario",
+            "value": "usuario_institucional"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nit\": \"900123456\",\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 5\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8007/api/v1/pedidos/validar-inventario",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "pedidos", "validar-inventario"]
+        }
+      }
+    },
+    {
+      "name": "Actualizar Estado Pedido",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "rol-usuario",
+            "value": "admin"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nuevo_estado\": \"confirmado\",\n  \"observaciones\": \"Pedido confirmado por gerente de cuentas\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8007/api/v1/pedidos/550e8400-e29b-41d4-a716-446655440000/estado",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "pedidos", "550e8400-e29b-41d4-a716-446655440000", "estado"]
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8007/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["health"]
+        }
+      }
+    }
+  ]
+}

@@ -10,7 +10,7 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=md5"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./001-init.sql:/docker-entrypoint-initdb.d/001-init.sql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     ports:
       - "${POSTGRES_PORT}:5432"
     networks:
@@ -203,6 +203,42 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # Proveedor Service
+  proveedor-service:
+    build: 
+      context: ./proveedor-service
+      dockerfile: Dockerfile
+    container_name: proveedor-service
+    environment:
+      DATABASE_URL: ${PROVEEDOR_DATABASE_URL}
+      REDIS_URL: "redis://redis-cache:6379"
+    ports:
+      - "${PROVEEDOR_SERVICE_PORT}:8006"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./proveedor-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
   # Product Service (HU-WEB-003) - Carga individual de productos
   product-service:
     build:
@@ -232,7 +268,6 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
-     
     networks:
       - microservices-network
     restart: unless-stopped
@@ -243,6 +278,62 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+
+  # Pedidos Service (HU-WEB-004)
+  pedidos-service:
+    build:
+      context: ./pedidos-service
+      dockerfile: Dockerfile
+    container_name: pedidos-service
+    environment:
+      # --- Base de datos ---
+      PEDIDOS_DB_NAME: ${PEDIDOS_DB_NAME}
+      PEDIDOS_DB_USER: ${PEDIDOS_DB_USER}
+      PEDIDOS_DB_PASSWORD: ${PEDIDOS_DB_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      # Permite override completo si se desea
+      PEDIDOS_DATABASE_URL: ${PEDIDOS_DATABASE_URL}
+      
+      # --- URLs de servicios ---
+      PRODUCT_SERVICE_URL: "http://product-service:8005"
+      
+      # --- Pool / tuning ---
+      DB_POOL_SIZE: "20"
+      DB_MAX_OVERFLOW: "40"
+      DB_POOL_RECYCLE: "1800"
+      DB_POOL_TIMEOUT: "30"
+      DB_CONNECT_TIMEOUT: "10"
+      SQL_ECHO: "false"
+    
+    ports:
+      - "${PEDIDOS_SERVICE_PORT}:8007"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./pedidos-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Optimizaciones de recursos
     deploy:
       resources:
         limits:
@@ -263,7 +354,7 @@ services:
       AUTH_VERIFY_URL: "http://auth-service:8004/verify-token"
       SKIP_AUTH: "${SKIP_AUTH}"
     ports:
-      - "${INGESTION_SERVICE_PORT}:8000"
+      - "${INGESTION_SERVICE_PORT}:8010"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -275,7 +366,7 @@ services:
     volumes:
       - ./ingestion-service:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -291,7 +382,7 @@ services:
       AUTH_VERIFY_URL: "http://auth-service:8004/verify-token"
       SKIP_AUTH: "${SKIP_AUTH}"
     ports:
-      - "${VALIDATOR_SERVICE_PORT}:8000"
+      - "${VALIDATOR_SERVICE_PORT}:8011"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -303,7 +394,7 @@ services:
     volumes:
       - ./validator-service:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -319,7 +410,7 @@ services:
       AUTH_VERIFY_URL: "http://auth-service:8004/verify-token"
       SKIP_AUTH: "${SKIP_AUTH}"
     ports:
-      - "${UPSERTER_SERVICE_PORT}:8000"
+      - "${UPSERTER_SERVICE_PORT}:8012"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -331,7 +422,7 @@ services:
     volumes:
       - ./upserter-service:/app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -349,6 +440,8 @@ services:
       - nit-validation-service
       - audit-service
       - auth-service
+      - proveedor-service
+      - pedidos-service
     networks:
       - microservices-network
     restart: unless-stopped
