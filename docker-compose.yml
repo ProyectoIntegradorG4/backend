@@ -251,7 +251,90 @@ services:
         reservations:
           cpus: "0.5"
           memory: 256M
+  
+  # Ingestion Service (carga masiva)
+  ingestion-service:
+    build:
+      context: ./ingestion-service
+      dockerfile: Dockerfile
+    container_name: ingestion-service
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      AUTH_VERIFY_URL: "http://auth-service:8004/verify-token"
+      SKIP_AUTH: "${SKIP_AUTH}"
+    ports:
+      - "${INGESTION_SERVICE_PORT}:8000"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./ingestion-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
+  # Validator Service (validación de staging)
+  validator-service:
+    build:
+      context: ./validator-service
+      dockerfile: Dockerfile
+    container_name: validator-service
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      AUTH_VERIFY_URL: "http://auth-service:8004/verify-token"
+      SKIP_AUTH: "${SKIP_AUTH}"
+    ports:
+      - "${VALIDATOR_SERVICE_PORT}:8000"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./validator-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Upserter Service (pasa de staging a final)
+  upserter-service:
+    build:
+      context: ./upserter-service
+      dockerfile: Dockerfile
+    container_name: upserter-service
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      AUTH_VERIFY_URL: "http://auth-service:8004/verify-token"
+      SKIP_AUTH: "${SKIP_AUTH}"
+    ports:
+      - "${UPSERTER_SERVICE_PORT}:8000"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./upserter-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   # API Gateway (Nginx) - Opcional
   nginx:
