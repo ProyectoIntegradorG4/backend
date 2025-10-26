@@ -289,6 +289,60 @@ services:
           memory: 256M
 
 
+  # Pedidos Service (HU-WEB-004)
+  pedidos-service:
+    build:
+      context: ./pedidos-service
+      dockerfile: Dockerfile
+    container_name: pedidos-service
+    environment:
+      # --- Base de datos ---
+      PEDIDOS_DB_NAME: ${PEDIDOS_DB_NAME}
+      PEDIDOS_DB_USER: ${PEDIDOS_DB_USER}
+      PEDIDOS_DB_PASSWORD: ${PEDIDOS_DB_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      # Permite override completo si se desea
+      PEDIDOS_DATABASE_URL: ${PEDIDOS_DATABASE_URL}
+      
+      # --- URLs de servicios ---
+      PRODUCT_SERVICE_URL: "http://product-service:8005"
+      
+      # --- Pool / tuning ---
+      DB_POOL_SIZE: "20"
+      DB_MAX_OVERFLOW: "40"
+      DB_POOL_RECYCLE: "1800"
+      DB_POOL_TIMEOUT: "30"
+      DB_CONNECT_TIMEOUT: "10"
+      SQL_ECHO: "false"
+    
+    ports:
+      - "${PEDIDOS_SERVICE_PORT}:8007"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./pedidos-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
   # API Gateway (Nginx) - Opcional
   nginx:
     image: nginx:alpine
@@ -303,6 +357,7 @@ services:
       - audit-service
       - auth-service
       - proveedor-service
+      - pedidos-service
     networks:
       - microservices-network
     restart: unless-stopped

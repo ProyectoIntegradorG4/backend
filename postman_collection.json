@@ -559,6 +559,277 @@
 					}
 				}
 			]
+		},
+		{
+			"name": "Pedidos Service",
+			"item": [
+				{
+					"name": "Crear Pedido - Cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{pedido_usuario_id_cliente}}",
+								"type": "text"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "usuario_institucional",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nit\": \"{{pedido_nit_cliente}}\",\n  \"productos\": [\n    {\n      \"producto_id\": \"{{producto_id_1}}\",\n      \"cantidad_solicitada\": 5\n    },\n    {\n      \"producto_id\": \"{{producto_id_2}}\",\n      \"cantidad_solicitada\": 10\n    },\n    {\n      \"producto_id\": \"{{producto_id_3}}\",\n      \"cantidad_solicitada\": 8\n    }\n  ],\n  \"observaciones\": \"Pedido urgente\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos"
+							]
+						},
+						"description": "Crea un nuevo pedido como cliente institucional"
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Pedido - Gerente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{pedido_usuario_id_gerente}}",
+								"type": "text"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "admin",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nit\": \"{{pedido_nit_gerente}}\",\n  \"productos\": [\n    {\n      \"producto_id\": \"{{producto_id_1}}\",\n      \"cantidad_solicitada\": 8\n    },\n    {\n      \"producto_id\": \"{{producto_id_2}}\",\n      \"cantidad_solicitada\": 12\n    },\n    {\n      \"producto_id\": \"{{producto_id_3}}\",\n      \"cantidad_solicitada\": 6\n    }\n  ],\n  \"observaciones\": \"Pedido creado por gerente\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos"
+							]
+						},
+						"description": "Crea un nuevo pedido como gerente/admin para un cliente"
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Pedido",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos/{{pedido_id}}",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos",
+								"{{pedido_id}}"
+							]
+						},
+						"description": "Obtiene los detalles de un pedido específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Pedidos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos?pagina=1&por_pagina=10",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos"
+							],
+							"query": [
+								{
+									"key": "pagina",
+									"value": "1"
+								},
+								{
+									"key": "por_pagina",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Lista todos los pedidos con paginación"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Pedidos por NIT",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos?nit={{pedido_nit_cliente}}&pagina=1&por_pagina=10",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos"
+							],
+							"query": [
+								{
+									"key": "nit",
+									"value": "{{pedido_nit_cliente}}"
+								},
+								{
+									"key": "pagina",
+									"value": "1"
+								},
+								{
+									"key": "por_pagina",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Filtra pedidos por NIT específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Validar Inventario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productos\": [\n    {\n      \"producto_id\": \"{{producto_id_1}}\",\n      \"cantidad_solicitada\": 5\n    },\n    {\n      \"producto_id\": \"{{producto_id_2}}\",\n      \"cantidad_solicitada\": 10\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos/validar-inventario",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos",
+								"validar-inventario"
+							]
+						},
+						"description": "Valida disponibilidad de inventario"
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Estado Pedido",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nuevo_estado\": \"confirmado\",\n  \"observaciones\": \"Pedido confirmado\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos/{{pedido_id}}/estado",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos",
+								"{{pedido_id}}",
+								"estado"
+							]
+						},
+						"description": "Actualiza el estado de un pedido"
+					},
+					"response": []
+				},
+				{
+					"name": "Health Check Pedidos Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/health",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verifica el estado de salud del microservicio de pedidos"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"event": [
@@ -789,6 +1060,60 @@
 			"value": "email",
 			"type": "string",
 			"description": "Tipo de acción para auditoría"
+		},
+		{
+			"key": "pedidos_url",
+			"value": "http://localhost:8007",
+			"type": "string",
+			"description": "URL base del Pedidos Service"
+		},
+		{
+			"key": "pedido_usuario_id_cliente",
+			"value": "1",
+			"type": "string",
+			"description": "ID del usuario cliente para pruebas de pedidos"
+		},
+		{
+			"key": "pedido_usuario_id_gerente",
+			"value": "2",
+			"type": "string",
+			"description": "ID del usuario gerente para pruebas de pedidos"
+		},
+		{
+			"key": "pedido_nit_cliente",
+			"value": "900123456",
+			"type": "string",
+			"description": "NIT del cliente institucional para pruebas de pedidos"
+		},
+		{
+			"key": "pedido_nit_gerente",
+			"value": "800654321",
+			"type": "string",
+			"description": "NIT del cliente para pruebas de gerente en pedidos"
+		},
+		{
+			"key": "producto_id_1",
+			"value": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "string",
+			"description": "ID del primer producto"
+		},
+		{
+			"key": "producto_id_2",
+			"value": "550e8400-e29b-41d4-a716-446655440001",
+			"type": "string",
+			"description": "ID del segundo producto"
+		},
+		{
+			"key": "producto_id_3",
+			"value": "550e8400-e29b-41d4-a716-446655440002",
+			"type": "string",
+			"description": "ID del tercer producto"
+		},
+		{
+			"key": "pedido_id",
+			"value": "",
+			"type": "string",
+			"description": "ID del pedido creado (se obtiene de la respuesta)"
 		}
 	]
 }

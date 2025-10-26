@@ -17,5 +17,9 @@ COPY . .
 # Exponer puerto
 EXPOSE 8004
 
+# Healthcheck
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:8004/health || exit 1
+
 # Comando de inicio
 CMD ["python", "main.py"]
