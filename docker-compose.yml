@@ -219,6 +219,26 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./proveedor-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
   # Product Service (HU-WEB-003) - Carga individual de productos
   product-service:
     build:
@@ -248,33 +268,17 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
-     
     networks:
       - microservices-network
     restart: unless-stopped
     volumes:
-      - ./proveedor-service:/app
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    # Optimizaciones de recursos
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          cpus: '0.5'
-          memory: 256M
-
       - ./product-service:/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
       interval: 10s
       timeout: 5s
       retries: 3
+    # Optimizaciones de recursos
     deploy:
       resources:
         limits:
