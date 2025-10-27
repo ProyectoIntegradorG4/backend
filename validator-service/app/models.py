@@ -1,10 +1,7 @@
 from sqlalchemy import Column, Integer, Numeric, String, Text, Boolean, DECIMAL, Date, TIMESTAMP
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import UUID
-import datetime
-import uuid
+from .database import Base
 
-Base = declarative_base()
+import datetime
 
 class ProductStaging(Base):
     __tablename__ = "products_stg"
@@ -27,11 +24,25 @@ class ProductStaging(Base):
     purchase_conditions = Column(Text)
     delivery_time_hours = Column(Integer)
     external_code = Column(String(100))
-    import_id = Column(UUID(as_uuid=True), default=uuid.uuid4, nullable=False)    
+    import_id = Column(String(36), nullable=False)
     created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow)
     updated_at = Column(TIMESTAMP, default=datetime.datetime.utcnow)
     created_by = Column(String(50))
-    validation_status = Column(String(10), default="PENDING")
-    validation_errors = Column(Text, nullable=True)
-    validated_at = Column(TIMESTAMP, nullable=True)
+    validation_status = Column(String(20), default='PENDING')  # PENDING / VALID / INVALID
+    validation_errors = Column(Text, default=None)
+    validated_at = Column(TIMESTAMP, default=None)
     processed = Column(Boolean, default=False) 
+
+
+class ProductStagingErrors(Base):
+    __tablename__ = "products_stg_errors"
+
+    error_id = Column(Integer, primary_key=True)
+    sku = Column(String(50))
+    import_id = Column(String(36), nullable=False)
+    error_message = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, default=datetime.datetime.utcnow)
+
+
+
+

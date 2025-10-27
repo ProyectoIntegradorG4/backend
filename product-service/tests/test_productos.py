@@ -1,143 +1,88 @@
-import os
-from types import SimpleNamespace
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
+import app.service.audit_client as audit_client
 from app.main import app
 
 client = TestClient(app)
 
-# ---------- utilidades ----------
-def _listar_rutas():
-    rutas = []
-    for r in app.router.routes:
-        try:
-            methods = sorted(getattr(r, "methods", []))
-            path = getattr(r, "path", "")
-            rutas.append(f"{methods} {path}")
-        except Exception:
-            pass
-    return "\n".join(rutas)
+ALLOWED_ROLE = "Administrador de Compras"
 
-def _descubrir_endpoint_creacion():
-    preferido = os.getenv("PRODUCTS_BASE_PATH")
-    if preferido:
-        return preferido.rstrip("/")
-    candidatos = []
-    for r in app.router.routes:
-        methods = getattr(r, "methods", set())
-        path = getattr(r, "path", "")
-        if not methods or "POST" not in methods:
-            continue
-        if "{" in path or "}" in path:
-            continue
-        low = path.lower()
-        if "producto" in low or "product" in low:
-            candidatos.append(path)
-    if candidatos:
-        return candidatos[0].rstrip("/")
-    return "/api/productos"   # fallback común
+def _auth_header(token: str):
+    return {"Authorization": f"Bearer {token}"}
 
-# ---------- test ----------
-def test_creacion_exitosa_producto(monkeypatch):
-    create_path = _descubrir_endpoint_creacion()
-    assert create_path, f"No pude inferir el endpoint de creación.\nRutas:\n{_listar_rutas()}"
+def _make_token(roles=None):
+    # token dummy; los roles se pasan por header X-User-Role (legacy)
+    return "dummy"
 
-    # Parchear la capa de servicio para NO ir a la DB
-    import app.service.product_service as ps
+def test_listar_productos_requiere_token():
+    r = client.get("/productos")  # sin token ni rol
+    assert r.status_code == 401
+    assert "Authorization" in r.json().get("detail", "")
 
-    def fake_crear_producto(db, data: dict):
-        entity = SimpleNamespace(
-            # 👇 UUID válido en vez de "9999"
-            productoId="11111111-1111-1111-1111-111111111111",
-            nombre=data.get("nombre"),
-            descripcion=data.get("descripcion"),
-            categoriaId=data.get("categoriaId"),
-            subcategoria=data.get("subcategoria"),
-            laboratorio=data.get("laboratorio"),
-            principioActivo=data.get("principioActivo"),
-            concentracion=data.get("concentracion"),
-            formaFarmaceutica=data.get("formaFarmaceutica"),
-            registroSanitario=data.get("registroSanitario"),
-            requierePrescripcion=data.get("requierePrescripcion", False),
-            codigoBarras=data.get("codigoBarras"),
-        )
-        requiere_cadena_frio = True
-        return entity, requiere_cadena_frio
-    
-    def test_error_en_creacion(monkeypatch):
-        import app.service.product_service as ps
+def test_listar_productos_forbidden_sin_rol():
+    # Con token pero sin rol válido => 403 "No autorizado"
+    headers = _auth_header(_make_token())  # sin X-User-Role
+    r = client.get("/productos", headers=headers)
+    assert r.status_code == 403
+    assert r.json().get("detail") == "No autorizado"
 
-        def fake_crear_producto(db, data: dict):
-            raise ValueError("Categoría inválida")
+def test_listar_productos_ok_con_rol():
+    # Con token y rol correcto => 200
+    headers = _auth_header(_make_token())
+    headers["X-User-Role"] = ALLOWED_ROLE
+    r = client.get("/productos", headers=headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert "items" in body
+    assert "total" in body
 
-        monkeypatch.setattr(ps.ProductoService, "crear_producto", staticmethod(fake_crear_producto))
+def test_crear_producto_valida_categoria_inexistente():
+    # Con token y rol pero categoriaId inválida => 400 "categoriaId inexistente"
+    headers = _auth_header(_make_token())
+    headers["X-User-Role"] = ALLOWED_ROLE
+    payload = {
+        "nombre": "X",
+        "descripcion": "Y",
+        "categoriaId": "NO-EXISTE",
+        "formaFarmaceutica": "Tableta",
+        "requierePrescripcion": False
+    }
+    r = client.post("/productos", headers=headers, json=payload)
+    assert r.status_code == 400
+    assert "categoriaId inexistente" in r.json().get("detail", "")
 
-        payload = {
-            "nombre": "Vacuna DEF",
-            "descripcion": "Prueba de error",
-            "categoriaId": "INVALIDA",
-        }
-        headers = {"X-User-Role": "Administrador de Compras"}
-        resp = client.post("/api/productos", json=payload, headers=headers)
-        assert resp.status_code == 400
-        assert "Categoría inválida" in resp.text
+def test_crear_producto_valida_campos_obligatorios():
+    # Falta descripcion y formaFarmaceutica => 422 (validación Pydantic)
+    headers = _auth_header(_make_token())
+    headers["X-User-Role"] = ALLOWED_ROLE
+    payload = {
+        "nombre": "Ibuprofeno",
+        "categoriaId": "CAT-ANL-001",
+        "requierePrescripcion": False
+    }
+    r = client.post("/productos", headers=headers, json=payload)
+    assert r.status_code == 422
 
-    def test_falla_por_rol_incorrecto():
-        payload = {"nombre": "Producto sin permisos"}
-        headers = {"X-User-Role": "Analista de Cartera"}
-        resp = client.post("/api/productos", json=payload, headers=headers)
-        assert resp.status_code == 403
-    
-    def test_idempotencia(monkeypatch):
-        import app.service.product_service as ps
-        from types import SimpleNamespace
+def test_crear_producto_ok_con_rbac_y_token(monkeypatch):
+    # Evitar conexión a auditoría; redis ya vale None en tests.
+    async def noop(*args, **kwargs):
+        return None
+    monkeypatch.setattr(audit_client, "send_audit_event", noop)
 
-        def fake_crear_producto(db, data):
-            return SimpleNamespace(productoId="11111111-1111-1111-1111-111111111111"), True
-
-        monkeypatch.setattr(ps.ProductoService, "crear_producto", staticmethod(fake_crear_producto))
-
-        headers = {
-            "X-User-Role": "Administrador de Compras",
-            "X-Idempotency-Key": "idemp-1",
-        }
-        payload = {"nombre": "Vacuna repetida"}
-        r1 = client.post("/api/productos", json=payload, headers=headers)
-        r2 = client.post("/api/productos", json=payload, headers=headers)
-        assert r1.status_code == 201
-        assert r2.status_code in (200, 201)
-
-
-    monkeypatch.setattr(ps.ProductoService, "crear_producto", staticmethod(fake_crear_producto))
+    headers = _auth_header(_make_token())
+    headers["X-User-Role"] = ALLOWED_ROLE
 
     payload = {
-        "nombre": "Vacuna XYZ 10ml",
-        "descripcion": "Suspensión inyectable...",
-        "categoriaId": "CAT-IMM-001",
-        "subcategoria": "Vacunas pediátricas",
-        "laboratorio": "BioPharma LATAM",
-        "principioActivo": "Antígeno X",
-        "concentracion": "10 ml",
-        "formaFarmaceutica": "suspension_inyectable",
-        "registroSanitario": "INVIMA 2025M-000123-R1",
-        "requierePrescripcion": True,
-        "codigoBarras": "7701234567896",
+        "nombre": "Acetaminofén 500mg",
+        "descripcion": "Caja x 16 tabletas",
+        "categoriaId": "CAT-ANL-001",
+        "formaFarmaceutica": "Tableta",
+        "requierePrescripcion": False,
+        "registroSanitario": "INVIMA2020-M-123456"
     }
+    r = client.post("/productos", headers=headers, json=payload)
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["nombre"] == payload["nombre"]
+    assert body["categoria"] in ("CAT-ANL-001", "Analgésicos")
+    assert body["formaFarmaceutica"] == "Tableta"
 
-    headers = {
-        "X-User-Role": "Administrador de Compras",  # literal que valida tu servicio
-        "X-Idempotency-Key": "abc-123",
-    }
-
-    resp = client.post(create_path, json=payload, headers=headers)
-
-    assert resp.status_code == 201, (
-        f"{resp.status_code} => {resp.text}\n"
-        f"Intenté: {create_path}\n"
-        f"Rutas disponibles:\n{_listar_rutas()}"
-    )
-
-    data = resp.json()
-    # Aserciones mínimas acordadas
-    assert data["categoriaId"] == "CAT-IMM-001"
-    assert data.get("requiereCadenaFrio") is True
-    assert data.get("sku_visible", "").startswith("PROD-")
