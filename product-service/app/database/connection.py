@@ -44,9 +44,6 @@ def ensure_database_exists():
         logger.error(f"❌ Error ensuring database exists: {e}")
         return False
 
-# Ensure database exists before creating engine
-ensure_database_exists()
-
 engine = create_engine(
     DATABASE_URL,
     echo=False,
