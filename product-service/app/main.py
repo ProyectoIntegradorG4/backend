@@ -11,7 +11,7 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(
     title="Product Service (HU-WEB-003)",
     description="Microservicio de carga individual de productos médicos",
-    version="1.0.0"
+    version="1.1.0"
 )
 
 app.add_middleware(
