@@ -40,8 +40,8 @@ get_aws_info() {
 # Crear repositorios ECR
 create_ecr_repos() {
     echo "📦 Creando repositorios ECR..."
-    
-    services=("nit-validation-service" "user-service" "audit-service" "auth-service")
+
+    services=("nit-validation-service" "user-service" "audit-service" "auth-service" "product-service")
     
     for service in "${services[@]}"; do
         echo "Creando repositorio ECR para $service..."
@@ -70,8 +70,8 @@ create_ecs_cluster() {
 create_log_groups() {
     echo "📝 Creando grupos de logs CloudWatch..."
     
-    services=("nit-validation-service" "user-service" "audit-service" "auth-service")
-    
+    services=("nit-validation-service" "user-service" "audit-service" "auth-service" "product-service")
+
     for service in "${services[@]}"; do
         aws logs create-log-group \
             --log-group-name "/ecs/$service" \
