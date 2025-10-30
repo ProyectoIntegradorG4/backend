@@ -48,7 +48,7 @@ async def health_check():
     return {
         "status": "healthy" if db_status == "ok" else "degraded",
         "service": "product-service",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "dependencies": {"database": db_status},
     }
 
