@@ -11,7 +11,7 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(
     title="Product Service (HU-WEB-003)",
     description="Microservicio de carga individual de productos médicos",
-    version="1.1.3"
+    version="1.1.4"
 )
 
 app.add_middleware(
@@ -48,13 +48,7 @@ async def startup_event():
 
 @app.get("/health")
 async def health_check():
-    db_status = "ok" if test_db_connection() else "error"
-    return {
-        "status": "healthy" if db_status == "ok" else "degraded",
-        "service": "product-service",
-        "version": "1.1.3",
-        "dependencies": {"database": db_status},
-    }
+    return {"status": "healthy", "service": "product-service"}
 
 if __name__ == "__main__":
     import uvicorn
