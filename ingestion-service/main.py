@@ -77,7 +77,7 @@ async def require_token(request: Request):
 app = FastAPI(
     title="Ingestion Service",
     description="Microservicio de ingesta masiva de productos vía CSV",
-    version="1.0.0"
+    version="1.0.1"
 )
 
 # Crear tablas en startup (evita efectos al importar el módulo)
