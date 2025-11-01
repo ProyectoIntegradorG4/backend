@@ -63,7 +63,11 @@ async def require_token(request: Request):
 #  FastAPI app
 # =========================
 
-app = FastAPI(title="Validator Definitivo")
+app = FastAPI(
+    title="Validator Service",
+    description="Microservicio de validación de productos en staging",
+    version="1.0.3"
+)
 
 # Crear tablas en startup (evita efectos secundarios al importar)
 @app.on_event("startup")

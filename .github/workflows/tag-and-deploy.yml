@@ -30,7 +30,7 @@ jobs:
       id: tag
       run: |
         # Define all services
-        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service" "product-service")
+        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service" "product-service" "proveedor-service" "pedidos-service" "ingestion-service" "validator-service" "upserter-service")
         TAGGED_SERVICES=()
 
         echo "🔍 Detecting changed services..."
@@ -53,8 +53,14 @@ jobs:
           if [ "$CHANGES" -gt 0 ]; then
             echo "✅ Changes detected in $SERVICE"
 
-            # Extract version from main.py
-            VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/')
+            # Extract version from main.py or app/main.py
+            if [ -f "$SERVICE/main.py" ]; then
+              VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/')
+            elif [ -f "$SERVICE/app/main.py" ]; then
+              VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/app/main.py" | sed 's/version="\(.*\)"/\1/')
+            else
+              VERSION=""
+            fi
 
             if [ -z "$VERSION" ]; then
               echo "⚠️ Warning: No version found in $SERVICE/main.py, skipping tag creation"
@@ -138,7 +144,15 @@ jobs:
     - name: Extract service version
       id: version
       run: |
-        VERSION=$(grep -o 'version="[^"]*"' ${{ matrix.service }}/main.py | sed 's/version="\(.*\)"/\1/')
+        SERVICE_NAME=${{ matrix.service }}
+        if [ -f "$SERVICE_NAME/main.py" ]; then
+          VERSION=$(grep -o 'version="[^"]*"' "$SERVICE_NAME/main.py" | sed 's/version="\(.*\)"/\1/')
+        elif [ -f "$SERVICE_NAME/app/main.py" ]; then
+          VERSION=$(grep -o 'version="[^"]*"' "$SERVICE_NAME/app/main.py" | sed 's/version="\(.*\)"/\1/')
+        else
+          echo "❌ No main.py found for $SERVICE_NAME"
+          exit 1
+        fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "📦 Deploying ${{ matrix.service }} version $VERSION"
 
@@ -210,6 +224,26 @@ jobs:
             ;;
           "product-service")
             PORT=8005
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db?sslmode=require"
+            ;;
+          "proveedor-service")
+            PORT=8006
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/proveedor_db?sslmode=require"
+            ;;
+          "pedidos-service")
+            PORT=8007
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/pedidos_db?sslmode=require"
+            ;;
+          "ingestion-service")
+            PORT=8010
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/ingestion_db?sslmode=require"
+            ;;
+          "validator-service")
+            PORT=8011
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db?sslmode=require"
+            ;;
+          "upserter-service")
+            PORT=8012
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db?sslmode=require"
             ;;
         esac

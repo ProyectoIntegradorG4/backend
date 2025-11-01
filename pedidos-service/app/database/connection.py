@@ -18,8 +18,11 @@ DB_PORT = os.getenv("POSTGRES_PORT", "5432")
 DB_NAME = os.getenv("PEDIDOS_DB_NAME", "pedidos_db")
 
 DATABASE_URL = os.getenv(
-    "PEDIDOS_DATABASE_URL",
-    f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    "DATABASE_URL",
+    os.getenv(
+        "PEDIDOS_DATABASE_URL",
+        f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    )
 )
 
 # Configuración del engine con psycopg3
