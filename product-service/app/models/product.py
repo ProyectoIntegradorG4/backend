@@ -28,6 +28,12 @@ class Producto(Base):
     requierePrescripcion = Column(Boolean, default=False)
     registroSanitario = Column(String, nullable=True)
 
+    # Stock and location fields
+    sku = Column(String, nullable=True, index=True)
+    location = Column(String, nullable=True)
+    ubicacion = Column(String, nullable=True)
+    stock = Column(String, nullable=True)
+
     # estado como texto para tests ("activo"/"inactivo")
     estado_producto = Column(String, default="activo")
 
@@ -43,11 +49,15 @@ class Producto(Base):
 # ---------------------------
 class ProductoCreate(BaseModel):
     nombre: str = Field(..., min_length=1, max_length=200)
-    descripcion: str = Field(..., min_length=1, max_length=500)         # <- requerido
-    categoriaId: str = Field(..., min_length=1, max_length=50)
-    formaFarmaceutica: str = Field(..., min_length=1, max_length=100)   # <- requerido
+    descripcion: Optional[str] = Field(None, min_length=1, max_length=500)
+    categoriaId: Optional[str] = Field(None, min_length=1, max_length=50)
+    formaFarmaceutica: Optional[str] = Field(None, min_length=1, max_length=100)
     requierePrescripcion: bool = False
     registroSanitario: Optional[str] = None
+    sku: Optional[str] = Field(None, max_length=100)
+    location: Optional[str] = Field(None, max_length=200)
+    ubicacion: Optional[str] = Field(None, max_length=200)
+    stock: Optional[str] = Field(None, max_length=50)
 
 
 class ProductoOut(BaseModel):
@@ -59,6 +69,10 @@ class ProductoOut(BaseModel):
     registroSanitario: Optional[str] = None
     estado_producto: str
     actualizado_en: Optional[datetime] = None
+    sku: Optional[str] = None
+    location: Optional[str] = None
+    ubicacion: Optional[str] = None
+    stock: Optional[str] = None
 
 
 class ProductosResponse(BaseModel):
