@@ -7,7 +7,7 @@ import os
 app = FastAPI(
     title="Proveedor Service",
     description="Microservicio de gestión de proveedores médicos",
-    version="1.0.2"
+    version="1.0.3"
 )
 
 # Configuración de CORS optimizada
