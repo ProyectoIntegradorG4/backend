@@ -3,9 +3,10 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.database.connection import get_db, test_db_connection, test_redis_connection
 from app.models.institucion import (
-    NITValidationRequest, 
-    NITValidationResponse, 
+    NITValidationRequest,
+    NITValidationResponse,
     InstitucionResponse,
+    InstitucionCreateRequest,
     NITError,
     NITErrorCodes
 )
@@ -202,7 +203,7 @@ async def get_cache_stats():
             "cache_stats": stats,
             "timestamp": time.time()
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting cache stats: {e}")
         raise HTTPException(
@@ -210,6 +211,72 @@ async def get_cache_stats():
             detail={
                 "codigo": NITErrorCodes.CACHE_ERROR,
                 "mensaje": "Error obteniendo estadísticas del caché",
+                "detalles": {"error": str(e)}
+            }
+        )
+
+@router.post("/institution", response_model=InstitucionResponse, status_code=201)
+async def create_institution(
+    institucion: InstitucionCreateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Crear una nueva institución asociada con NIT válido
+
+    - **nit**: NIT de la institución (8-20 caracteres)
+    - **nombre_institucion**: Nombre de la institución
+    - **pais**: País de la institución
+    - **activo**: Estado activo de la institución (por defecto True)
+    """
+    try:
+        from app.models.institucion import InstitucionAsociada
+        from datetime import datetime
+
+        # Verificar si el NIT ya existe
+        existing = db.query(InstitucionAsociada).filter(
+            InstitucionAsociada.nit == institucion.nit
+        ).first()
+
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "codigo": "NIT_YA_EXISTE",
+                    "mensaje": f"El NIT {institucion.nit} ya está registrado",
+                    "detalles": {"nit": institucion.nit}
+                }
+            )
+
+        # Crear nueva institución
+        nueva_institucion = InstitucionAsociada(
+            nit=institucion.nit,
+            nombre_institucion=institucion.nombre_institucion,
+            pais=institucion.pais,
+            fecha_registro=datetime.now(),
+            activo=institucion.activo
+        )
+
+        db.add(nueva_institucion)
+        db.commit()
+        db.refresh(nueva_institucion)
+
+        # Limpiar caché si existe
+        nit_service.clear_cache_for_nit(institucion.nit, institucion.pais)
+
+        logger.info(f"Nueva institución creada: NIT {institucion.nit}")
+
+        return InstitucionResponse.model_validate(nueva_institucion)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating institution: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "codigo": NITErrorCodes.ERROR_INTERNO,
+                "mensaje": "Error interno del servidor",
                 "detalles": {"error": str(e)}
             }
         )

@@ -19,19 +19,28 @@ class ProductoService:
 
     @staticmethod
     def crear_producto(db: Session, data: dict) -> Tuple[Producto, bool]:
-        # Validar categoría
-        categoria: CategoriaProducto = db.query(CategoriaProducto).get(data["categoriaId"])
-        if not categoria:
-            raise ValueError("categoriaId inexistente")
+        # Validar categoría si se proporciona
+        categoria_id = data.get("categoriaId")
+        if categoria_id:
+            categoria: CategoriaProducto = db.query(CategoriaProducto).get(categoria_id)
+            if not categoria:
+                raise ValueError("categoriaId inexistente")
+        else:
+            # Si no se proporciona categoría, usar una por defecto o crear una genérica
+            categoria_id = "default"
 
         entity = Producto(
             productoId=str(uuid4()),
             nombre=data["nombre"],
             descripcion=data.get("descripcion"),
-            categoriaId=data["categoriaId"],
+            categoriaId=categoria_id,
             formaFarmaceutica=data.get("formaFarmaceutica"),
             requierePrescripcion=data.get("requierePrescripcion", False),
             registroSanitario=data.get("registroSanitario"),
+            sku=data.get("sku"),
+            location=data.get("location"),
+            ubicacion=data.get("ubicacion"),
+            stock=data.get("stock"),
             estado_producto="activo",
         )
         db.add(entity)
@@ -131,6 +140,10 @@ class ProductoService:
                     registroSanitario=getattr(r, "registroSanitario", getattr(r, "registro_sanitario", None)),
                     estado_producto=estado_val or "activo",
                     actualizado_en=actualizado_en,
+                    sku=getattr(r, "sku", None),
+                    location=getattr(r, "location", None),
+                    ubicacion=getattr(r, "ubicacion", None),
+                    stock=getattr(r, "stock", None),
                 )
             )
 
