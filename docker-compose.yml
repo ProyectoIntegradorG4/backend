@@ -102,6 +102,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
 
   # User Service optimizado
   user-service:
@@ -168,6 +177,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
 
   # Auth Service
   auth-service:
@@ -380,6 +398,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
 
   # Validator Service (validación de staging)
   validator-service:
@@ -409,6 +436,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
 
   # Upserter Service (pasa de staging a final)
   upserter-service:
@@ -438,6 +474,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
 
   # API Gateway (Nginx) - Opcional
   nginx:
@@ -458,6 +503,15 @@ services:
     networks:
       - microservices-network
     restart: unless-stopped
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
 
 networks:
   microservices-network:
