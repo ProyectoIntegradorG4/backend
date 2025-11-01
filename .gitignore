@@ -2,6 +2,18 @@
 __pycache__/
 *.py[codz]
 *$py.class
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+venv/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.env
+.git
+.gitignore
 
 # C extensions
 *.so

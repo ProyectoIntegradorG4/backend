@@ -6,6 +6,7 @@ import sys
 import os
 from datetime import datetime
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 # Agregar el directorio raíz al path para importar los módulos
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -79,7 +80,7 @@ def load_sample_data():
         print(f"   - Instituciones inactivas: {total_inactivas}")
         
         # Mostrar distribución por país
-        paises = db.query(InstitucionAsociada.pais, db.func.count(InstitucionAsociada.nit)).group_by(InstitucionAsociada.pais).all()
+        paises = db.query(InstitucionAsociada.pais, func.count(InstitucionAsociada.nit)).group_by(InstitucionAsociada.pais).all()
         print(f"   - Distribución por país:")
         for pais, count in paises:
             print(f"     * {pais}: {count}")
