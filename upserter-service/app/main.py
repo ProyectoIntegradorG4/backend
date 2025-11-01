@@ -67,7 +67,11 @@ async def require_token(request: Request):
 #  FastAPI app
 # =========================
 
-app = FastAPI(title="Products Upserter Service")
+app = FastAPI(
+    title="Upserter Service",
+    description="Microservicio de upsert de productos validados",
+    version="1.0.0"
+)
 
 # Crear tablas en startup (evita efectos al importar el módulo)
 @app.on_event("startup")
