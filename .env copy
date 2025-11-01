@@ -1,0 +1,137 @@
+########################################
+# ========================================
+# CONFIGURACIÓN BASE - POSTGRES & REDIS
+# ========================================
+########################################
+
+# PostgreSQL - Configuración base del cluster compartido
+POSTGRES_DB=postgres
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=grupo4
+POSTGRES_PORT=5432
+POSTGRES_HOST=postgres-db
+
+# Redis - Caché compartido
+REDIS_URL=redis://redis-cache:6379/0
+REDIS_TTL=3600
+
+# SSL Mode para desarrollo local (disable | require | prefer)
+# En producción, usar "require" o "prefer"
+DB_SSL_MODE=disable
+
+########################################
+# ========================================
+# SERVICIOS CORE - AUTENTICACIÓN Y USUARIOS
+# ========================================
+########################################
+
+# --- User Service ---
+USER_SERVICE_PORT=8001
+USER_DB_NAME=user_db
+USER_DB_USER=user_service
+USER_DB_PASSWORD=user_password
+USER_DATABASE_URL=postgresql+psycopg://user_service:user_password@postgres-db:5432/user_db
+
+# --- Auth Service ---
+AUTH_SERVICE_PORT=8004
+JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production-2025
+JWT_EXPIRE_MINUTES=60
+
+########################################
+# ========================================
+# SERVICIOS DE VALIDACIÓN Y AUDITORÍA
+# ========================================
+########################################
+
+# --- NIT Validation Service ---
+NIT_SERVICE_PORT=8002
+NIT_DB_NAME=nit_db
+NIT_DB_USER=nit_service
+NIT_DB_PASSWORD=nit_password
+NIT_DATABASE_URL=postgresql+psycopg://nit_service:nit_password@postgres-db:5432/nit_db
+
+# --- Audit Service ---
+AUDIT_SERVICE_PORT=8003
+AUDIT_DB_NAME=audit_db
+AUDIT_DB_USER=audit_service
+AUDIT_DB_PASSWORD=audit_password
+AUDIT_DATABASE_URL=postgresql+psycopg://audit_service:audit_password@postgres-db:5432/audit_db
+
+########################################
+# ========================================
+# SERVICIOS DE NEGOCIO - PRODUCTOS Y PEDIDOS
+# ========================================
+########################################
+
+# --- Product Service ---
+PRODUCT_SERVICE_PORT=8005
+PRODUCT_DB_NAME=product_db
+PRODUCT_DB_USER=product_service
+PRODUCT_DB_PASSWORD=product_password
+PRODUCT_DATABASE_URL=postgresql+psycopg://product_service:product_password@postgres-db:5432/product_db
+
+# --- Proveedor Service ---
+PROVEEDOR_SERVICE_PORT=8006
+PROVEEDOR_DB_NAME=proveedor_db
+PROVEEDOR_DB_USER=proveedor_service
+PROVEEDOR_DB_PASSWORD=proveedor_password
+PROVEEDOR_DATABASE_URL=postgresql+psycopg://proveedor_service:proveedor_password@postgres-db:5432/proveedor_db
+
+# --- Pedidos Service ---
+PEDIDOS_SERVICE_PORT=8007
+PEDIDOS_DB_NAME=pedidos_db
+PEDIDOS_DB_USER=pedidos_service
+PEDIDOS_DB_PASSWORD=pedidos_password
+PEDIDOS_DATABASE_URL=postgresql+psycopg://pedidos_service:pedidos_password@postgres-db:5432/pedidos_db
+
+########################################
+# ========================================
+# SERVICIOS DE CARGA MASIVA - ETL PIPELINE
+# ========================================
+########################################
+
+# --- Ingestion Service (Carga masiva CSV) ---
+INGESTION_SERVICE_PORT=8010
+# DATABASE_URL compartida para ingestion, validator y upserter
+# Usar psycopg2 porque es lo que tienen instalado (psycopg2-binary)
+DATABASE_URL=postgresql+psycopg2://postgres:grupo4@postgres-db:5432/postgres
+
+# --- Validator Service (Validación de staging) ---
+VALIDATOR_SERVICE_PORT=8011
+
+# --- Upserter Service (Migración staging -> final) ---
+UPSERTER_SERVICE_PORT=8012
+
+# Configuración de autenticación para servicios ETL
+SKIP_AUTH=false
+
+########################################
+# ========================================
+# API GATEWAY
+# ========================================
+########################################
+
+# --- Nginx (API Gateway) ---
+NGINX_PORT=80
+
+########################################
+# ========================================
+# NOTAS IMPORTANTES - DESARROLLO LOCAL
+# ========================================
+########################################
+# 
+# IMPORTANTE: Los servicios auth, nit-validation, user y audit
+# están configurados para requerir SSL en el código.
+# 
+# Para desarrollo local, necesitas modificar los archivos:
+# - backend/auth-service/app/database/connection.py (línea 26)
+# - backend/nit-validation-service/app/database/connection.py (línea 38)
+# - backend/user-service/app/database/connection.py (línea 26)
+# - backend/audit-service/app/database/connection.py (línea 26)
+# 
+# Cambia "sslmode": "require" por "sslmode": "disable"
+# 
+# O mejor aún, haz que respeten una variable de entorno:
+# sslmode = os.getenv("DB_SSL_MODE", "disable")
+# 
+########################################

@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import Generator
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.pool import QueuePool
@@ -45,7 +46,7 @@ def ensure_database_exists():
         return False
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
+    DATABASE_URL,
     connect_args={"check_same_thread": False}  # necesario para SQLite + threads
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
