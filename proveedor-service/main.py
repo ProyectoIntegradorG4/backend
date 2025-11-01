@@ -7,7 +7,7 @@ import os
 app = FastAPI(
     title="Proveedor Service",
     description="Microservicio de gestión de proveedores médicos",
-    version="1.0.0"
+    version="1.0.3"
 )
 
 # Configuración de CORS optimizada
@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 # Incluir rutas
-app.include_router(proveedores.router, prefix="/api/proveedores", tags=["proveedores"])
+app.include_router(proveedores.router, prefix="/api/v1/proveedores", tags=["proveedores"])
 
 # Debug: imprimir todas las rutas registradas
 @app.on_event("startup")
