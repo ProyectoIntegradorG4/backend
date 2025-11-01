@@ -1,0 +1,173 @@
+name: Validate Version Bump
+
+on:
+  pull_request:
+    branches: [ main, release ]
+    types: [ opened, synchronize, reopened ]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  check-version-bump:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history to compare
+
+    - name: Fetch base branch
+      run: |
+        git fetch origin ${{ github.base_ref }}
+
+    - name: Check version bumps for changed services
+      id: check
+      run: |
+        # Define all services
+        SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service")
+
+        echo "🔍 Checking for version bumps in changed services..."
+        echo ""
+
+        FAILED=0
+        CHANGED_SERVICES=()
+        NOT_BUMPED=()
+        NOT_BUMPED_DETAILS=""
+
+        # Get base commit
+        BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
+
+        for SERVICE in "${SERVICES[@]}"; do
+          # Check if service has code changes (excluding version changes in main.py)
+          CODE_CHANGES=$(git diff --name-only $BASE_SHA HEAD -- "$SERVICE/" | grep -v "main.py" | wc -l)
+
+          if [ "$CODE_CHANGES" -gt 0 ]; then
+            echo "📦 $SERVICE has code changes"
+            CHANGED_SERVICES+=("$SERVICE")
+
+            # Check if version was bumped in main.py
+            VERSION_CHANGED=$(git diff $BASE_SHA HEAD -- "$SERVICE/main.py" | grep -E '^\+.*version=' | wc -l)
+
+            if [ "$VERSION_CHANGED" -gt 0 ]; then
+              # Get old and new versions
+              OLD_VERSION=$(git show $BASE_SHA:$SERVICE/main.py | grep -o 'version="[^"]*"' | sed 's/version="\(.*\)"/\1/' || echo "unknown")
+              NEW_VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/' || echo "unknown")
+
+              echo "  ✅ Version bumped: $OLD_VERSION → $NEW_VERSION"
+            else
+              echo "  ❌ Version NOT bumped in main.py"
+              NOT_BUMPED+=("$SERVICE")
+              CURRENT_VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/' || echo "unknown")
+              NOT_BUMPED_DETAILS="${NOT_BUMPED_DETAILS}${SERVICE}|${CURRENT_VERSION};"
+              FAILED=1
+            fi
+            echo ""
+          fi
+        done
+
+        # Save NOT_BUMPED_DETAILS for comment step
+        echo "not_bumped_details=$NOT_BUMPED_DETAILS" >> $GITHUB_OUTPUT
+
+        # Summary
+        echo "================================"
+        echo "📊 Summary"
+        echo "================================"
+
+        if [ ${#CHANGED_SERVICES[@]} -eq 0 ]; then
+          echo "ℹ️  No service changes detected"
+          exit 0
+        fi
+
+        echo "Services with code changes: ${#CHANGED_SERVICES[@]}"
+        for SERVICE in "${CHANGED_SERVICES[@]}"; do
+          echo "  - $SERVICE"
+        done
+        echo ""
+
+        if [ $FAILED -eq 1 ]; then
+          echo "❌ FAILED: The following services have code changes but no version bump:"
+          for SERVICE in "${NOT_BUMPED[@]}"; do
+            echo "  - $SERVICE"
+          done
+          echo ""
+          echo "Please update the version in each service's main.py file:"
+          echo ""
+          for SERVICE in "${NOT_BUMPED[@]}"; do
+            CURRENT_VERSION=$(grep -o 'version="[^"]*"' "$SERVICE/main.py" | sed 's/version="\(.*\)"/\1/' || echo "unknown")
+            echo "  $SERVICE/main.py"
+            echo "    Current: version=\"$CURRENT_VERSION\""
+            echo "    Example: version=\"X.Y.Z\"  # Bump this!"
+            echo ""
+          done
+          exit 1
+        else
+          echo "✅ All changed services have version bumps"
+          exit 0
+        fi
+
+    - name: Comentar en PR (si falló)
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const details = '${{ steps.check.outputs.not_bumped_details }}';
+
+          // Parse service details (format: "service|version;service|version;")
+          const services = details.split(';').filter(s => s).map(entry => {
+            const [name, version] = entry.split('|');
+            return { name, version };
+          });
+
+          // Build services list
+          let servicesList = '';
+          services.forEach(svc => {
+            servicesList += `
+          ### 📦 \`${svc.name}\`
+          - **Versión actual:** \`${svc.version}\`
+          - **Archivo:** \`${svc.name}/main.py\`
+          - **Acción requerida:** Incrementar la versión
+
+          `;
+          });
+
+          const message = `## ❌ Se Requiere Actualización de Versión
+
+          Los siguientes servicios tienen cambios de código pero **no se detectó actualización de versión**:
+
+          ${servicesList}
+
+          ---
+
+          ### 📝 Cómo arreglar:
+
+          Edita el archivo \`main.py\` de cada servicio y actualiza la versión:
+
+          \`\`\`python
+          app = FastAPI(
+              title="User Service",
+              version="2.2.0"  # ← Incrementa esta versión
+          )
+          \`\`\`
+
+          ### 📚 Guía de Versiones (SemVer):
+          - **Patch** (x.y.**Z**): Corrección de bugs, cambios pequeños
+          - **Minor** (x.**Y**.0): Nuevas funcionalidades, compatible hacia atrás
+          - **Major** (**X**.0.0): Cambios que rompen compatibilidad
+
+          ### ✅ Próximos pasos:
+          1. Actualiza la versión en \`main.py\` de cada servicio listado arriba
+          2. Haz commit de los cambios
+          3. Haz push y este check pasará automáticamente
+
+          📖 **Más información:** Ver [\`FLUJO_EQUIPO.md\`](../blob/${context.payload.pull_request.head.ref}/FLUJO_EQUIPO.md)`;
+
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: message
+          });

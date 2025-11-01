@@ -381,9 +381,10 @@ docker-compose down -v
 
 ## Documentación Adicional
 
+- **[Flujo de Trabajo del Equipo](./FLUJO_EQUIPO.md)** - ⭐ Guía rápida para el equipo sobre despliegues monorepo
+- **[Guía de Despliegue](./GUIA_DESPLIEGUE.md)** - Documentación completa del sistema de despliegue
 - **[Testing Guide](./TESTING_GUIDE.md)** - Guía completa de testing unitario y configuración avanzada
 - **[Postman Collection](./POSTMAN_README.md)** - Documentación detallada de la colección de Postman
-- **[Migración a psycopg3](./PSYCOPG3_MIGRATION.md)** - Detalles sobre el uso de psycopg3
 
 ### Archivos de Configuración
 - `postman_collection.json` - Colección de Postman con todos los tests

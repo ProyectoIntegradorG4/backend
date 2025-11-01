@@ -33,7 +33,10 @@ engine = create_engine(
     pool_size=10,
     max_overflow=20,
     pool_pre_ping=True,
-    pool_recycle=3600
+    pool_recycle=3600,
+    connect_args={
+        "sslmode": "require"
+    }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -125,7 +128,8 @@ def test_db_connection():
     """Verificar conexión a la base de datos"""
     try:
         with engine.connect() as connection:
-            connection.execute("SELECT 1")
+            from sqlalchemy import text
+            connection.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error(f"Error de conexión a la base de datos: {e}")

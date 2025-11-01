@@ -1,0 +1,244 @@
+name: Desplegar Microservicios en AWS
+
+on:
+  push:
+    branches: [ main, release ]
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed-services: ${{ steps.detect.outputs.changed-services }}
+      has-changes: ${{ steps.detect.outputs.has-changes }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Detectar servicios modificados
+      id: detect
+      run: |
+        chmod +x aws-deployment/detect-changes.sh
+        ./aws-deployment/detect-changes.sh
+        
+        # Leer servicios modificados del archivo generado
+        if [ -f .env.changes ]; then
+          CHANGED_SERVICES=$(grep "CHANGED_SERVICES=" .env.changes | cut -d'=' -f2-)
+          echo "changed-services=$CHANGED_SERVICES" >> $GITHUB_OUTPUT
+          
+          if [ -n "$CHANGED_SERVICES" ] && [ "$CHANGED_SERVICES" != "[]" ]; then
+            echo "has-changes=true" >> $GITHUB_OUTPUT
+            echo "🚀 Servicios a desplegar: $CHANGED_SERVICES"
+          else
+            echo "has-changes=false" >> $GITHUB_OUTPUT
+            echo "✅ No hay servicios que necesiten despliegue"
+          fi
+        else
+          echo "changed-services=[]" >> $GITHUB_OUTPUT
+          echo "has-changes=false" >> $GITHUB_OUTPUT
+        fi
+
+  deploy-services:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.changed-services) }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Extraer versión del servicio
+      id: version
+      run: |
+        VERSION=$(grep -o 'version="[^"]*"' ${{ matrix.service }}/main.py | sed 's/version="\(.*\)"/\1/')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📦 Versión detectada para ${{ matrix.service }}: $VERSION"
+
+    - name: Create ECR repository if not exists
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_NAME=${{ matrix.service }}
+        
+        echo "🔍 Verificando si el repositorio $SERVICE_NAME existe en ECR"
+        
+        # Verificar si el repositorio existe
+        if aws ecr describe-repositories --repository-names $SERVICE_NAME --region us-east-1 >/dev/null 2>&1; then
+          echo "✅ Repositorio $SERVICE_NAME ya existe"
+        else
+          echo "📦 Creando repositorio $SERVICE_NAME en ECR"
+          aws ecr create-repository \
+            --repository-name $SERVICE_NAME \
+            --region us-east-1 \
+            --image-scanning-configuration scanOnPush=true \
+            --encryption-configuration encryptionType=AES256
+          echo "✅ Repositorio $SERVICE_NAME creado exitosamente"
+        fi
+
+    - name: Construir y subir imagen Docker
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_VERSION=${{ steps.version.outputs.version }}
+        
+        echo "🏗️ Construyendo imagen para ${{ matrix.service }} versión $SERVICE_VERSION"
+        
+        # Construir imagen con versión específica
+        docker build -t $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION ./${{ matrix.service }}/
+        docker build -t $ECR_REGISTRY/${{ matrix.service }}:latest ./${{ matrix.service }}/
+        
+        # Subir ambas versiones
+        docker push $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION
+        docker push $ECR_REGISTRY/${{ matrix.service }}:latest
+        
+        echo "✅ Imagen desplegada: $ECR_REGISTRY/${{ matrix.service }}:$SERVICE_VERSION"
+
+    - name: Desplegar en ECS
+      run: |
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        SERVICE_VERSION=${{ steps.version.outputs.version }}
+        
+        # Configurar variables de entorno
+        export ECR_REGISTRY
+        export POSTGRES_DB=postgres
+        export POSTGRES_USER=postgres
+        export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+        export POSTGRES_HOST=${{ secrets.RDS_ENDPOINT }}
+        export POSTGRES_PORT=5432
+        export NIT_DATABASE_URL=postgresql+psycopg://nit_service:nit_password@${{ secrets.RDS_ENDPOINT }}:5432/nit_db
+        export USER_DATABASE_URL=postgresql+psycopg://user_service:user_password@${{ secrets.RDS_ENDPOINT }}:5432/user_db
+        export AUDIT_DATABASE_URL=postgresql+psycopg://audit_service:audit_password@${{ secrets.RDS_ENDPOINT }}:5432/audit_db
+        export REDIS_URL=redis://${{ secrets.REDIS_ENDPOINT }}:6379
+        export REDIS_TTL=3600
+        export JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
+        export JWT_EXPIRE_MINUTES=60
+        
+        # Instalar ecs-cli
+        sudo curl -o /usr/local/bin/ecs-cli https://amazon-ecs-cli.s3.amazonaws.com/ecs-cli-linux-amd64-latest
+        sudo chmod +x /usr/local/bin/ecs-cli
+        
+        # Configurar ECS CLI
+        ecs-cli configure --cluster microservices-cluster --region us-east-1 --default-launch-type FARGATE
+        
+        # Crear cluster ECS si no existe
+        echo "🔍 Verificando si el cluster microservices-cluster existe"
+        if aws ecs describe-clusters --clusters microservices-cluster --region us-east-1 --query 'clusters[0].status' --output text | grep -q "ACTIVE"; then
+          echo "✅ Cluster microservices-cluster ya existe y está activo"
+        else
+          echo "📦 Creando cluster microservices-cluster"
+          aws ecs create-cluster \
+            --cluster-name microservices-cluster \
+            --region us-east-1 \
+            --capacity-providers FARGATE \
+            --default-capacity-provider-strategy capacityProvider=FARGATE,weight=1
+          echo "✅ Cluster microservices-cluster creado exitosamente"
+        fi
+        
+        # Crear grupo de logs de CloudWatch si no existe
+        echo "🔍 Verificando grupo de logs /ecs/${{ matrix.service }}"
+        if aws logs describe-log-groups --log-group-name-prefix "/ecs/${{ matrix.service }}" --region us-east-1 --query 'logGroups[0].logGroupName' --output text | grep -q "/ecs/${{ matrix.service }}"; then
+          echo "✅ Grupo de logs /ecs/${{ matrix.service }} ya existe"
+        else
+          echo "📦 Creando grupo de logs /ecs/${{ matrix.service }}"
+          aws logs create-log-group \
+            --log-group-name "/ecs/${{ matrix.service }}" \
+            --region us-east-1
+          echo "✅ Grupo de logs /ecs/${{ matrix.service }} creado exitosamente"
+        fi
+        
+        # Crear VPC y subnets si no existen (requerido para awsvpc)
+        echo "🔍 Verificando VPC para microservicios"
+        VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=microservices-vpc" --query 'Vpcs[0].VpcId' --output text --region us-east-1)
+        
+        if [ "$VPC_ID" = "None" ] || [ -z "$VPC_ID" ]; then
+          echo "📦 Creando VPC para microservicios"
+          VPC_ID=$(aws ec2 create-vpc --cidr-block 10.0.0.0/16 --region us-east-1 --query 'Vpc.VpcId' --output text)
+          aws ec2 create-tags --resources $VPC_ID --tags Key=Name,Value=microservices-vpc --region us-east-1
+          aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-hostnames --region us-east-1
+          aws ec2 modify-vpc-attribute --vpc-id $VPC_ID --enable-dns-support --region us-east-1
+          echo "✅ VPC $VPC_ID creada exitosamente"
+        else
+          echo "✅ VPC $VPC_ID ya existe"
+        fi
+        
+        # Crear subnets si no existen
+        echo "🔍 Verificando subnets para microservicios"
+        SUBNET_ID=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=microservices-subnet" --query 'Subnets[0].SubnetId' --output text --region us-east-1)
+        
+        if [ "$SUBNET_ID" = "None" ] || [ -z "$SUBNET_ID" ]; then
+          echo "📦 Creando subnet para microservicios"
+          SUBNET_ID=$(aws ec2 create-subnet --vpc-id $VPC_ID --cidr-block 10.0.1.0/24 --availability-zone us-east-1a --region us-east-1 --query 'Subnet.SubnetId' --output text)
+          aws ec2 create-tags --resources $SUBNET_ID --tags Key=Name,Value=microservices-subnet --region us-east-1
+          aws ec2 modify-subnet-attribute --subnet-id $SUBNET_ID --map-public-ip-on-launch --region us-east-1
+          echo "✅ Subnet $SUBNET_ID creada exitosamente"
+        else
+          echo "✅ Subnet $SUBNET_ID ya existe"
+        fi
+        
+        # Crear Security Group si no existe
+        echo "🔍 Verificando Security Group para microservicios"
+        SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=microservices-sg" "Name=vpc-id,Values=$VPC_ID" --query 'SecurityGroups[0].GroupId' --output text --region us-east-1)
+        
+        if [ "$SG_ID" = "None" ] || [ -z "$SG_ID" ]; then
+          echo "📦 Creando Security Group para microservicios"
+          SG_ID=$(aws ec2 create-security-group --group-name microservices-sg --description "Security group for microservices" --vpc-id $VPC_ID --region us-east-1 --query 'GroupId' --output text)
+          aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 8000 --cidr 0.0.0.0/0 --region us-east-1
+          aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 22 --cidr 0.0.0.0/0 --region us-east-1
+          echo "✅ Security Group $SG_ID creado exitosamente"
+        else
+          echo "✅ Security Group $SG_ID ya existe"
+        fi
+        
+        # Configurar variables de entorno para el docker-compose
+        export VPC_ID
+        export SUBNET_ID
+        export SG_ID
+        export SERVICE_NAME=${{ matrix.service }}
+        
+        # Desplegar el servicio usando docker-compose.aws.yml
+        ecs-cli compose -f docker-compose.aws.yml up ${{ matrix.service }} --create-log-groups --force-update --launch-type FARGATE
+
+    - name: Verificar despliegue
+      run: |
+        echo "🔍 Verificando despliegue de ${{ matrix.service }}..."
+        
+        # Esperar un momento para que el servicio se estabilice
+        sleep 30
+        
+        # Verificar que el servicio esté ejecutándose
+        aws ecs describe-services \
+          --cluster microservices-cluster \
+          --services ${{ matrix.service }} \
+          --query 'services[0].status' \
+          --output text
+        
+        echo "✅ Despliegue de ${{ matrix.service }} completado"
+
+  notify-completion:
+    needs: [detect-changes, deploy-services]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Notificar resultado
+      run: |
+        if [ "${{ needs.detect-changes.outputs.has-changes }}" = "true" ]; then
+          echo "🎉 Despliegue completado para: ${{ needs.detect-changes.outputs.changed-services }}"
+        else
+          echo "✅ No se requirió despliegue - todos los servicios están actualizados"
+        fi
