@@ -1,0 +1,92 @@
+name: CI - Test and Build
+
+on:
+  push:
+    branches: [ main, develop, release ]
+  pull_request:
+    branches: [ main, release ]
+
+jobs:
+  test-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [nit-validation-service, user-service, audit-service, auth-service]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        cd ${{ matrix.service }}
+        pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        cd ${{ matrix.service }}
+        if [ -f "pytest.ini" ]; then
+          # Excluir tests de integración que requieren servicios ejecutándose
+          python -m pytest tests/ -v --ignore=tests/test_integration.py --ignore=tests/test_*_integration.py
+        else
+          echo "No pytest configuration found for ${{ matrix.service }}"
+        fi
+
+    - name: Build Docker image
+      run: |
+        cd ${{ matrix.service }}
+        docker build -t ${{ matrix.service }}:test .
+
+  lint-code:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install linting tools
+      run: |
+        pip install flake8
+
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+  codeql-analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+    
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"

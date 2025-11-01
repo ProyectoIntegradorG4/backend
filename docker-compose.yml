@@ -168,7 +168,7 @@ services:
 
   # Auth Service
   auth-service:
-    build: 
+    build:
       context: ./auth-service
       dockerfile: Dockerfile
     container_name: auth-service
@@ -240,6 +240,7 @@ services:
           memory: 256M
 
   # Product Service (HU-WEB-003) - Carga individual de productos
+  # Product Service
   product-service:
     build:
       context: ./product-service
@@ -263,10 +264,14 @@ services:
       DB_CONNECT_TIMEOUT: "10"
       SQL_ECHO: "false"
 
+      DATABASE_URL: ${PRODUCT_DATABASE_URL}
+      REDIS_URL: "redis://redis-cache:6379"
     ports:
       - "${PRODUCT_SERVICE_PORT}:8005"
     depends_on:
       postgres-db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - microservices-network
@@ -442,6 +447,7 @@ services:
       - auth-service
       - proveedor-service
       - pedidos-service
+      - product-service
     networks:
       - microservices-network
     restart: unless-stopped
