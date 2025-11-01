@@ -68,6 +68,12 @@ class InstitucionResponse(BaseModel):
     activo: bool
     model_config = {'from_attributes': True}
 
+class InstitucionCreateRequest(BaseModel):
+    nit: str = Field(..., min_length=8, max_length=20, description="NIT de la institución")
+    nombre_institucion: str = Field(..., min_length=1, max_length=255, description="Nombre de la institución")
+    pais: str = Field(..., description="País de la institución")
+    activo: bool = Field(default=True, description="Estado activo de la institución")
+
 # Modelos para respuestas de error tipificadas
 class NITError(BaseModel):
     codigo: str = Field(..., description="Código de error")

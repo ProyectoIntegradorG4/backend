@@ -85,6 +85,10 @@ def crear_producto(
         registroSanitario=getattr(entity, "registroSanitario", None),
         estado_producto=getattr(entity, "estado_producto", "activo"),
         actualizado_en=getattr(entity, "actualizado_en", None),
+        sku=getattr(entity, "sku", None),
+        location=getattr(entity, "location", None),
+        ubicacion=getattr(entity, "ubicacion", None),
+        stock=getattr(entity, "stock", None),
     )
 
     if cache_key and redis_client is not None:
