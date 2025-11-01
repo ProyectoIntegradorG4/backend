@@ -45,36 +45,35 @@ def ensure_database_exists():
         return False
 
 engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    poolclass=QueuePool,
-    pool_size=20,
-    max_overflow=40,
-    pool_pre_ping=True,
-    pool_recycle=1800,
-    pool_timeout=30,
-    connect_args={"connect_timeout": 10},
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False}  # necesario para SQLite + threads
 )
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
-EntitiesBase = declarative_base()
+# Base para modelos
+Base = declarative_base()
+# Alias esperado por algunos archivos existentes
+EntitiesBase = Base
 
-def get_db():
-    db: Session = SessionLocal()
+def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
+def init_db() -> None:
+    """
+    Crea las tablas. Importa modelos para que queden registradas en Base.metadata.
+    """
+    # Importar modelos para registrar mapeos antes del create_all
+    from app.models import product, category  # noqa: F401
+    Base.metadata.create_all(bind=engine)
+
 def test_db_connection() -> bool:
     try:
         with engine.connect() as conn:
-            conn.exec_driver_sql("SELECT 1")
+            conn.execute("SELECT 1")
         return True
     except Exception:
         return False
-
-async def init_db():
-    from app.models import Producto, CategoriaProducto  # registra mapeos
-    from app.database.seed import seed_categories       # opcional: seed en startup
-    EntitiesBase.metadata.create_all(bind=engine)

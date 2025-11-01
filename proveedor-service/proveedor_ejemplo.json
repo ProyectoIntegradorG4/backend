@@ -1,0 +1,14 @@
+{
+  "razon_social": "Farmacéutica Colombiana S.A.",
+  "nit": "800123456-1",
+  "tipo_proveedor": "laboratorio",
+  "email": "info@farmacolombiana.com",
+  "telefono": "+57-1-2345678",
+  "direccion": "Cra. 7 # 32-15, Bogotá",
+  "ciudad": "Bogotá",
+  "pais": "colombia",
+  "certificaciones": ["ISO 9001:2015", "ISO 13485:2016", "GMP"],
+  "estado": "activo",
+  "calificacion": 4.5,
+  "tiempo_entrega_promedio": 3
+}

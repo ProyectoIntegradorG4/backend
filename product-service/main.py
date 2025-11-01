@@ -1,3 +1,4 @@
+# app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.products import router as products_router
@@ -5,6 +6,7 @@ from app.database.connection import init_db, test_db_connection, SessionLocal, e
 from app.database.seed import seed_categories
 import asyncio
 import logging
+
 
 logger = logging.getLogger("uvicorn")
 
@@ -14,6 +16,10 @@ app = FastAPI(
     version="1.1.7"
 )
 
+# Endpoints “legacy” sin prefijo
+app.include_router(products_router)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -23,6 +29,7 @@ app.add_middleware(
     max_age=3600,
 )
 
+# Endpoints públicos versión v1
 app.include_router(products_router, prefix="/api/v1", tags=["products"])
 
 @app.on_event("startup")
@@ -41,6 +48,7 @@ async def startup_event():
         logger.error("❌ No se pudo conectar a la BD. Continuando sin seed.")
         return
 
+    # Migraciones/creación de tablas y seed de categorías
     await init_db()
     with SessionLocal() as db:
         seed_categories(db)

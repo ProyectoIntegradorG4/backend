@@ -10,9 +10,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV PYTHONPATH=/app
-
-
 EXPOSE 8005
 
 # Healthcheck para ECS
@@ -21,4 +18,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8005", "--workers", "1", "--loop", "uvloop", "--no-access-log", "--log-level", "warning"]
 
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8005"]
 

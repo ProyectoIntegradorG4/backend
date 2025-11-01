@@ -298,12 +298,35 @@ uvicorn main:app --host 0.0.0.0 --port 8002 --reload
 
 ## Pruebas
 
-### Script de pruebas automatizadas
+### Tests Unitarios con Coverage (Docker)
+
+Para ejecutar tests unitarios con cobertura de código desde Docker:
 
 ```bash
-# Ejecutar suite completa de pruebas
+# Comando completo con PYTHONPATH
+docker-compose exec nit-validation-service env PYTHONPATH=/app pytest tests --cov=app --cov-report=html --cov-report=term
+```
+
+El reporte HTML se genera en `htmlcov/index.html` dentro del contenedor. Para copiarlo localmente:
+```bash
+docker cp nit-validation-service:/app/htmlcov ./nit-validation-service/
+```
+
+### Tests Unitarios Locales
+
+En desarrollo local (asumiendo que tienes las dependencias instaladas):
+```bash
+env PYTHONPATH=/app pytest tests --cov=app --cov-report=html --cov-report=term
+```
+
+### Script de pruebas de integración manual
+
+```bash
+# Ejecutar suite completa de pruebas de integración
 python test_service.py
 ```
+
+**Nota**: `test_service.py` requiere que el servicio esté ejecutándose (en Docker o localmente).
 
 ### Pruebas manuales desde PowerShell (Windows)
 

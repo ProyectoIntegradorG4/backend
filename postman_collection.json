@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "backend-microservices-collection-v2",
-		"name": "Backend Microservices - User & Audit Services v2",
-		"description": "Colección completa de Postman para los microservicios de usuarios y auditoría con variables configurables",
+		"name": "Backend Microservices - User, Audit & Provider Services",
+		"description": "Colección completa de Postman para los microservicios de usuarios, auditoría y proveedores con variables configurables",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -337,6 +337,499 @@
 					}
 				}
 			]
+		},
+		{
+			"name": "Provider Service",
+			"item": [
+				{
+					"name": "Registrar Proveedor - Sin X-Idempotency-Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razon_social\": \"{{proveedor_razon_social}}\",\n    \"nit\": \"{{proveedor_nit}}\",\n    \"tipo_proveedor\": \"laboratorio\",\n    \"email\": \"{{proveedor_email}}\",\n    \"telefono\": \"{{proveedor_telefono}}\",\n    \"direccion\": \"{{proveedor_direccion}}\",\n    \"ciudad\": \"Bogota\",\n    \"pais\": \"colombia\",\n    \"certificaciones\": [\"ISO 9001\"],\n    \"estado\": \"activo\",\n    \"calificacion\": 4.5,\n    \"tiempo_entrega_promedio\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							]
+						},
+						"description": "Intenta registrar un proveedor sin el header X-Idempotency-Key - debe retornar 400"
+					}
+				},
+				{
+					"name": "Registrar Proveedor - Exitoso",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Idempotency-Key",
+								"value": "{{$guid}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razon_social\": \"{{proveedor_razon_social}}\",\n    \"nit\": \"{{proveedor_nit}}\",\n    \"tipo_proveedor\": \"laboratorio\",\n    \"email\": \"{{proveedor_email}}\",\n    \"telefono\": \"{{proveedor_telefono}}\",\n    \"direccion\": \"{{proveedor_direccion}}\",\n    \"ciudad\": \"Bogota\",\n    \"pais\": \"colombia\",\n    \"certificaciones\": [\"ISO 9001\"],\n    \"estado\": \"activo\",\n    \"calificacion\": 4.5,\n    \"tiempo_entrega_promedio\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							]
+						},
+						"description": "Registra un nuevo proveedor con todos los campos requeridos y X-Idempotency-Key"
+					}
+				},
+				{
+					"name": "Registrar Proveedor - NIT Duplicado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Idempotency-Key",
+								"value": "{{$guid}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razon_social\": \"Otro Nombre\",\n    \"nit\": \"{{proveedor_nit_existente}}\",\n    \"tipo_proveedor\": \"laboratorio\",\n    \"email\": \"otro@example.com\",\n    \"telefono\": \"+57-1-9998888\",\n    \"direccion\": \"Otra Calle 789\",\n    \"ciudad\": \"Bogota\",\n    \"pais\": \"colombia\",\n    \"certificaciones\": [\"ISO 9001\"],\n    \"estado\": \"activo\",\n    \"calificacion\": 4.0,\n    \"tiempo_entrega_promedio\": 4\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							]
+						},
+						"description": "Intenta registrar un proveedor con un NIT que ya existe - debe retornar 409"
+					}
+				},
+				{
+					"name": "Registrar Proveedor - Reintento con misma Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Idempotency-Key",
+								"value": "{{proveedor_idempotency_key}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"razon_social\": \"{{proveedor_razon_social}}\",\n    \"nit\": \"{{proveedor_nit}}\",\n    \"tipo_proveedor\": \"laboratorio\",\n    \"email\": \"{{proveedor_email}}\",\n    \"telefono\": \"{{proveedor_telefono}}\",\n    \"direccion\": \"{{proveedor_direccion}}\",\n    \"ciudad\": \"Bogota\",\n    \"pais\": \"colombia\",\n    \"certificaciones\": [\"ISO 9001\"],\n    \"estado\": \"activo\",\n    \"calificacion\": 4.5,\n    \"tiempo_entrega_promedio\": 3\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							]
+						},
+						"description": "Reintenta el registro con la misma X-Idempotency-Key - debe retornar la misma respuesta"
+					}
+				},
+				{
+					"name": "Listar Proveedores",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores?skip=0&limit=10",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "0"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Lista todos los proveedores registrados con paginación"
+					}
+				},
+				{
+					"name": "Verificar Existencia Proveedor",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/proveedores/exists?nit={{proveedor_nit}}",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"api",
+								"proveedores",
+								"exists"
+							],
+							"query": [
+								{
+									"key": "nit",
+									"value": "{{proveedor_nit}}"
+								}
+							]
+						},
+						"description": "Verifica si existe un proveedor por NIT y valida el NIT"
+					}
+				},
+				{
+					"name": "Health Check Provider Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/health",
+							"host": [
+								"{{provider_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verifica el estado de salud del microservicio de proveedores"
+					}
+				}
+			]
+		},
+		{
+			"name": "Pedidos Service",
+			"item": [
+				{
+					"name": "Crear Pedido - Cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{pedido_usuario_id_cliente}}",
+								"type": "text"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "usuario_institucional",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nit\": \"{{pedido_nit_cliente}}\",\n  \"productos\": [\n    {\n      \"producto_id\": \"{{producto_id_1}}\",\n      \"cantidad_solicitada\": 5\n    },\n    {\n      \"producto_id\": \"{{producto_id_2}}\",\n      \"cantidad_solicitada\": 10\n    },\n    {\n      \"producto_id\": \"{{producto_id_3}}\",\n      \"cantidad_solicitada\": 8\n    }\n  ],\n  \"observaciones\": \"Pedido urgente\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos"
+							]
+						},
+						"description": "Crea un nuevo pedido como cliente institucional"
+					},
+					"response": []
+				},
+				{
+					"name": "Crear Pedido - Gerente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{pedido_usuario_id_gerente}}",
+								"type": "text"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "admin",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nit\": \"{{pedido_nit_gerente}}\",\n  \"productos\": [\n    {\n      \"producto_id\": \"{{producto_id_1}}\",\n      \"cantidad_solicitada\": 8\n    },\n    {\n      \"producto_id\": \"{{producto_id_2}}\",\n      \"cantidad_solicitada\": 12\n    },\n    {\n      \"producto_id\": \"{{producto_id_3}}\",\n      \"cantidad_solicitada\": 6\n    }\n  ],\n  \"observaciones\": \"Pedido creado por gerente\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos"
+							]
+						},
+						"description": "Crea un nuevo pedido como gerente/admin para un cliente"
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Pedido",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos/{{pedido_id}}",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos",
+								"{{pedido_id}}"
+							]
+						},
+						"description": "Obtiene los detalles de un pedido específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Pedidos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos?pagina=1&por_pagina=10",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos"
+							],
+							"query": [
+								{
+									"key": "pagina",
+									"value": "1"
+								},
+								{
+									"key": "por_pagina",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Lista todos los pedidos con paginación"
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Pedidos por NIT",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos?nit={{pedido_nit_cliente}}&pagina=1&por_pagina=10",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos"
+							],
+							"query": [
+								{
+									"key": "nit",
+									"value": "{{pedido_nit_cliente}}"
+								},
+								{
+									"key": "pagina",
+									"value": "1"
+								},
+								{
+									"key": "por_pagina",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Filtra pedidos por NIT específico"
+					},
+					"response": []
+				},
+				{
+					"name": "Validar Inventario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productos\": [\n    {\n      \"producto_id\": \"{{producto_id_1}}\",\n      \"cantidad_solicitada\": 5\n    },\n    {\n      \"producto_id\": \"{{producto_id_2}}\",\n      \"cantidad_solicitada\": 10\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos/validar-inventario",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos",
+								"validar-inventario"
+							]
+						},
+						"description": "Valida disponibilidad de inventario"
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Estado Pedido",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nuevo_estado\": \"confirmado\",\n  \"observaciones\": \"Pedido confirmado\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/pedidos/{{pedido_id}}/estado",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"pedidos",
+								"{{pedido_id}}",
+								"estado"
+							]
+						},
+						"description": "Actualiza el estado de un pedido"
+					},
+					"response": []
+				},
+				{
+					"name": "Health Check Pedidos Service",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/health",
+							"host": [
+								"{{pedidos_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Verifica el estado de salud del microservicio de pedidos"
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"event": [
@@ -345,8 +838,20 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					"// Script para generar valores dinámicos si es necesario",
-					"console.log('Ejecutando pruebas de microservicios...');"
+					"// Script para generar valores dinámicos para proveedores",
+					"if (!pm.collectionVariables.get('proveedor_idempotency_key')) {",
+					"    pm.collectionVariables.set('proveedor_idempotency_key', pm.variables.replaceIn('{{$guid}}'));",
+					"}",
+					"",
+					"// Generar datos aleatorios para proveedores si no existen",
+					"if (!pm.collectionVariables.get('proveedor_nit')) {",
+					"    const timestamp = new Date().getTime();",
+					"    pm.collectionVariables.set('proveedor_razon_social', 'Proveedor Test ' + timestamp);",
+					"    pm.collectionVariables.set('proveedor_nit', '900' + timestamp.toString().slice(-6));",
+					"    pm.collectionVariables.set('proveedor_email', 'test.' + timestamp + '@example.com');",
+					"    pm.collectionVariables.set('proveedor_telefono', '+57-1-' + Math.floor(Math.random() * 10000000));",
+					"    pm.collectionVariables.set('proveedor_direccion', 'Calle Test ' + Math.floor(Math.random() * 1000));",
+					"}"
 				]
 			}
 		},
@@ -355,19 +860,87 @@
 			"script": {
 				"type": "text/javascript",
 				"exec": [
-					"// Tests automáticos que se pueden añadir",
+					"// Tests automáticos para verificar respuestas",
 					"pm.test('Response time is less than 2000ms', function () {",
 					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
 					"});",
 					"",
-					"pm.test('Content-Type header is present', function () {",
-					"    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
-					"});"
+					"pm.test('Status code is handled appropriately', function () {",
+					"    // Verificar códigos de estado específicos",
+					"    switch (pm.response.code) {",
+					"        case 200:",
+					"        case 201:",
+					"            pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+					"            break;",
+					"        case 400:",
+					"            pm.expect(pm.response.json()).to.have.property('detail');",
+					"            break;",
+					"        case 409:",
+					"            pm.expect(pm.response.json().detail).to.include('NIT duplicado');",
+					"            break;",
+					"    }",
+					"});",
+					"",
+					"// Guardar NIT existente para pruebas de duplicados",
+					"if (pm.response.code === 201) {",
+					"    const responseData = pm.response.json();",
+					"    if (responseData.nit) {",
+					"        pm.collectionVariables.set('proveedor_nit_existente', responseData.nit);",
+					"    }",
+					"}"
 				]
 			}
 		}
 	],
 	"variable": [
+		{
+			"key": "proveedor_razon_social",
+			"value": "",
+			"type": "string",
+			"description": "Razón social del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_nit",
+			"value": "",
+			"type": "string",
+			"description": "NIT del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_nit_existente",
+			"value": "",
+			"type": "string",
+			"description": "NIT de un proveedor ya registrado para pruebas de duplicidad"
+		},
+		{
+			"key": "proveedor_email",
+			"value": "",
+			"type": "string",
+			"description": "Email del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_telefono",
+			"value": "",
+			"type": "string",
+			"description": "Teléfono del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_direccion",
+			"value": "",
+			"type": "string",
+			"description": "Dirección del proveedor para pruebas"
+		},
+		{
+			"key": "proveedor_idempotency_key",
+			"value": "",
+			"type": "string",
+			"description": "X-Idempotency-Key para pruebas de reintento de registro"
+		},
+		{
+			"key": "provider_url",
+			"value": "http://localhost:8006",
+			"type": "string",
+			"description": "URL base del Provider Service"
+		},
 		{
 			"key": "base_url",
 			"value": "http://localhost:8001",
@@ -487,6 +1060,60 @@
 			"value": "email",
 			"type": "string",
 			"description": "Tipo de acción para auditoría"
+		},
+		{
+			"key": "pedidos_url",
+			"value": "http://localhost:8007",
+			"type": "string",
+			"description": "URL base del Pedidos Service"
+		},
+		{
+			"key": "pedido_usuario_id_cliente",
+			"value": "1",
+			"type": "string",
+			"description": "ID del usuario cliente para pruebas de pedidos"
+		},
+		{
+			"key": "pedido_usuario_id_gerente",
+			"value": "2",
+			"type": "string",
+			"description": "ID del usuario gerente para pruebas de pedidos"
+		},
+		{
+			"key": "pedido_nit_cliente",
+			"value": "900123456",
+			"type": "string",
+			"description": "NIT del cliente institucional para pruebas de pedidos"
+		},
+		{
+			"key": "pedido_nit_gerente",
+			"value": "800654321",
+			"type": "string",
+			"description": "NIT del cliente para pruebas de gerente en pedidos"
+		},
+		{
+			"key": "producto_id_1",
+			"value": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "string",
+			"description": "ID del primer producto"
+		},
+		{
+			"key": "producto_id_2",
+			"value": "550e8400-e29b-41d4-a716-446655440001",
+			"type": "string",
+			"description": "ID del segundo producto"
+		},
+		{
+			"key": "producto_id_3",
+			"value": "550e8400-e29b-41d4-a716-446655440002",
+			"type": "string",
+			"description": "ID del tercer producto"
+		},
+		{
+			"key": "pedido_id",
+			"value": "",
+			"type": "string",
+			"description": "ID del pedido creado (se obtiene de la respuesta)"
 		}
 	]
 }
