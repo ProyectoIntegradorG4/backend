@@ -1,15 +1,22 @@
-
 FROM python:3.12-slim
-
 
 WORKDIR /app
 
-# Copia dependencias
-COPY requirements.txt ./
+# Instalar curl para healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia todo el contenido del servicio
 COPY . .
 
-# Levanta la app FastAPI
-CMD ["uvicorn", "app.main", "--host", "0.0.0.0", "--port", "8012"]
+EXPOSE 8012
+
+# Healthcheck
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:8012/health || exit 1
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8012"]
+
+
+

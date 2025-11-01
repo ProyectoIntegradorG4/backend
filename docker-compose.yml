@@ -93,9 +93,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./nit-validation-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 30s
@@ -110,7 +110,7 @@ services:
     container_name: user-service
     environment:
       DATABASE_URL: ${USER_DATABASE_URL}
-      REDIS_URL: "redis://redis-cache:6379"
+      REDIS_URL: ${REDIS_URL}
     ports:
       - "${USER_SERVICE_PORT}:8001"
     depends_on:
@@ -124,9 +124,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./user-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 10s  # Reducido de 30s
@@ -157,9 +157,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./audit-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -185,9 +185,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./auth-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
       interval: 10s
@@ -211,7 +211,7 @@ services:
     container_name: proveedor-service
     environment:
       DATABASE_URL: ${PROVEEDOR_DATABASE_URL}
-      REDIS_URL: "redis://redis-cache:6379"
+      REDIS_URL: ${REDIS_URL}
     ports:
       - "${PROVEEDOR_SERVICE_PORT}:8006"
     depends_on:
@@ -221,9 +221,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./proveedor-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
       interval: 10s
@@ -270,9 +270,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./product-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
       interval: 10s
@@ -325,9 +325,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./pedidos-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
       interval: 10s
@@ -362,9 +362,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./ingestion-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
       interval: 10s
@@ -390,14 +390,15 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./validator-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
       interval: 10s
       timeout: 5s
       retries: 3
+  
 
   # Upserter Service (pasa de staging a final)
   upserter-service:
@@ -418,9 +419,9 @@ services:
         condition: service_healthy
     networks:
       - microservices-network
-    restart: unless-stopped
     volumes:
       - ./upserter-service:/app
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
       interval: 10s

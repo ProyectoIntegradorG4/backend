@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime
-from .models import ProductsStg, Products
+from app.models import ProductsStg, Products
 
 def upsert_valid_products(db: Session, processed_by="upserter_service"):
 

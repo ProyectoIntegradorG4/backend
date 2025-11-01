@@ -31,7 +31,7 @@ def _decode_jwt(token: str):
         raise HTTPException(status_code=500, detail="JWT_SECRET_KEY faltante en configuración")
 
     try:
-        import jwt  # PyJWT
+        import jwt 
     except Exception:
         raise HTTPException(status_code=500, detail="PyJWT no instalado")
 
