@@ -85,6 +85,17 @@ PEDIDOS_DB_PASSWORD=pedidos_password
 PEDIDOS_DATABASE_URL=postgresql+psycopg://pedidos_service:pedidos_password@postgres-db:5432/pedidos_db
 
 ########################################
+# Cliente Service (HU-MOV-002)
+########################################
+CLIENTE_SERVICE_PORT=8013
+CLIENTE_DB_NAME=cliente_db
+CLIENTE_DB_USER=cliente_service
+CLIENTE_DB_PASSWORD=cliente_password
+CLIENTE_DATABASE_URL=postgresql+psycopg://cliente_service:cliente_password@postgres-db:5432/cliente_db
+
+
+
+########################################
 # ========================================
 # SERVICIOS DE CARGA MASIVA - ETL PIPELINE
 # ========================================
@@ -93,8 +104,7 @@ PEDIDOS_DATABASE_URL=postgresql+psycopg://pedidos_service:pedidos_password@postg
 # --- Ingestion Service (Carga masiva CSV) ---
 INGESTION_SERVICE_PORT=8010
 # DATABASE_URL compartida para ingestion, validator y upserter
-# Usar psycopg2 porque es lo que tienen instalado (psycopg2-binary)
-DATABASE_URL=postgresql+psycopg2://postgres:grupo4@postgres-db:5432/postgres
+DATABASE_URL=postgresql+psycopg://postgres:grupo4@postgres-db:5432/postgres
 
 # --- Validator Service (Validación de staging) ---
 VALIDATOR_SERVICE_PORT=8011
@@ -135,3 +145,4 @@ NGINX_PORT=80
 # sslmode = os.getenv("DB_SSL_MODE", "disable")
 # 
 ########################################
+

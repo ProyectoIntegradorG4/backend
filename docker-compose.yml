@@ -369,6 +369,69 @@ services:
         reservations:
           cpus: "0.5"
           memory: 256M
+
+  # Cliente Service (HU-MOV-002)
+  cliente-service:
+    build:
+      context: ./cliente-service
+      dockerfile: Dockerfile
+    container_name: cliente-service
+    environment:
+      # --- Base de datos ---
+      CLIENTE_DB_NAME: ${CLIENTE_DB_NAME}
+      CLIENTE_DB_USER: ${CLIENTE_DB_USER}
+      CLIENTE_DB_PASSWORD: ${CLIENTE_DB_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      # Permite override completo si se desea
+      CLIENTE_DATABASE_URL: ${CLIENTE_DATABASE_URL}
+      
+      # --- Cross-database access (para seed de gerentes) ---
+      USER_DATABASE_URL: ${USER_DATABASE_URL}
+      
+      # --- JWT Configuration ---
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      
+      # --- Redis ---
+      REDIS_URL: "redis://redis-cache:6379"
+      
+      # --- Pool / tuning ---
+      DB_POOL_SIZE: "20"
+      DB_MAX_OVERFLOW: "40"
+      DB_POOL_RECYCLE: "1800"
+      DB_POOL_TIMEOUT: "30"
+      DB_CONNECT_TIMEOUT: "10"
+      SQL_ECHO: "false"
+      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+    
+    ports:
+      - "${CLIENTE_SERVICE_PORT}:8013"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./cliente-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
   
   # Ingestion Service (carga masiva)
   ingestion-service:
@@ -500,6 +563,7 @@ services:
       - proveedor-service
       - pedidos-service
       - product-service
+      - cliente-service
     networks:
       - microservices-network
     restart: unless-stopped

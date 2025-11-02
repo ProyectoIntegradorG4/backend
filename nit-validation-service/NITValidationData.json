@@ -44,7 +44,7 @@
 {"nit":"78-449-0701","nombre_institucion":"Wolf, Glover and Lynch","pais":"Peru","fecha_registro":"9/14/2024","activo":false},
 {"nit":"87-519-4367","nombre_institucion":"Wehner and Sons","pais":"Ecuador","fecha_registro":"7/19/2025","activo":true},
 {"nit":"01-860-7439","nombre_institucion":"Jacobi-Lubowitz","pais":"Colombia","fecha_registro":"5/24/2025","activo":true},
-{"nit":"87-477-5195","nombre_institucion":"Bergnaum, Schuster and Schuppe","pais":"Mexico","fecha_registro":"7/30/2025","activo":true},
-{"nit":"99-618-7953","nombre_institucion":"Halvorson-Corwin","pais":"Colombia","fecha_registro":"4/7/2025","activo":false},
-{"nit":"91-326-4653","nombre_institucion":"Ferry, Gerhold and Kuvalis","pais":"Colombia","fecha_registro":"9/14/2024","activo":false},
-{"nit":"02-257-6162","nombre_institucion":"Renner-Trantow","pais":"Peru","fecha_registro":"6/19/2025","activo":true}]
+{"nit":"111111111-4","nombre_institucion":"MediSupply","pais":"Ecuador","fecha_registro":"1/1/2010","activo":true},
+{"nit":"111111111-1","nombre_institucion":"MediSupply","pais":"Colombia","fecha_registro":"1/1/2010","activo":true},
+{"nit":"111111111-2","nombre_institucion":"MediSupply","pais":"Mexico","fecha_registro":"1/1/2010","activo":true},
+{"nit":"111111111-3","nombre_institucion":"MediSupply","pais":"Peru","fecha_registro":"1/1/2010","activo":true}]
