@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime,date
 
 # Request de creación (HU)
 class ProductoCreate(BaseModel):
@@ -20,6 +20,7 @@ class ProductoCreate(BaseModel):
     location: Optional[str] = Field(None, max_length=200)
     ubicacion: Optional[str] = Field(None, max_length=200)
     stock: Optional[str] = Field(None, max_length=50)
+    fechaVencimiento: Optional[date] = None
 
 # Response 201 (HU)
 class ProductoCreatedResponse(BaseModel):
@@ -34,6 +35,7 @@ class ProductoCreatedResponse(BaseModel):
     location: Optional[str] = None
     ubicacion: Optional[str] = None
     stock: Optional[str] = None
+    fechaVencimiento: date
 
 # Listar productos
 class ProductoOut(BaseModel):
@@ -45,6 +47,7 @@ class ProductoOut(BaseModel):
     registroSanitario: Optional[str]
     estado_producto: str
     actualizado_en: datetime
+    fechaVencimiento:date
 
     class Config:
         model_config = ConfigDict(from_attributes=True)
