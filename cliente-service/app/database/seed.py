@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from app.models.cliente import Cliente, GerenteClienteAsignacion, TipoInstitucion
 from datetime import datetime, timezone
 import logging

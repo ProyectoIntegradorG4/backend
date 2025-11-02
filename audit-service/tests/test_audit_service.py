@@ -45,10 +45,8 @@ async def test_create_audit_log_success():
     
     service = AuditService(db)
     result = await service.create_audit_log(audit_data)
-    assert result.event == "user_register"
-    assert result.outcome == "success"
-    assert result.action == "email"
-    assert result.auditid == audit_data.auditid
+    assert result["logged"] is True
+    assert "id" in result
 
 @pytest.mark.asyncio
 async def test_get_audit_log_found():

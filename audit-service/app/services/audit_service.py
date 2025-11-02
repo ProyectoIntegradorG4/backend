@@ -40,3 +40,15 @@ class AuditService:
             self.db.rollback()
             raise e
 
+    async def get_audit_log(self, audit_id: str):
+        """
+        Obtener un registro de auditoría por ID
+
+        Args:
+            audit_id: ID del registro de auditoría
+
+        Returns:
+            AuditLog si existe, None si no se encuentra
+        """
+        return self.db.query(AuditLog).filter(AuditLog.id == audit_id).first()
+
