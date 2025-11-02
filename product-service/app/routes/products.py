@@ -16,14 +16,9 @@ from app.service.rbac import (
 
 router = APIRouter()
 
-# Para tests de idempotencia: lo monkeypatchean con FakeRedis
 redis_client = None
 
 
-# ---------------------------
-# LEGACY: GET /productos
-# Requiere Authorization + rol correcto (403 si falta/incorrecto)
-# ---------------------------
 @router.get("/productos", response_model=ProductosResponse)
 def listar_productos_legacy(
     _auth=Depends(require_auth_token),
@@ -48,10 +43,6 @@ def listar_productos_legacy(
     )
 
 
-# ---------------------------
-# LEGACY: POST /productos
-# Rechaza por falta de headers ANTES de validar el body
-# ---------------------------
 @router.post(
     "/productos",
     status_code=status.HTTP_201_CREATED,
@@ -97,11 +88,7 @@ def crear_producto(
     return resp
 
 
-# ---------------------------
-# API v1: GET /api/v1/productos
-# NO exige token (los tests overridean el RBAC). Se normaliza productoId a str y
-# se responde con JSONResponse para evitar validación de Pydantic sobre UUID.
-# ---------------------------
+
 @router.get("/api/v1/productos", response_model=ProductosResponse)
 def listar_productos_v1(
     _rbac=Depends(require_role_admincompras),

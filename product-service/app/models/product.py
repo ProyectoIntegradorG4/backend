@@ -1,12 +1,15 @@
 # app/models/product.py
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from pydantic import BaseModel as PydBaseModel
 
 from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 
 from pydantic import BaseModel
+
+from sqlalchemy.orm import relationship
 
 from app.database.connection import Base  # tu Base de SQLAlchemy (declarative_base)
 
@@ -80,3 +83,21 @@ class ProductosResponse(BaseModel):
     items: List[ProductoOut]
     page: int
     page_size: int
+
+
+# Relación con lotes
+Producto.lotes = relationship(
+    "InventarioLote",
+    back_populates="producto",
+    cascade="all, delete-orphan",
+    lazy="selectin"  # carga eficiente para listados
+)
+
+# ---- Nuevos DTOs de salida compatibles ----
+class LoteOut(PydBaseModel):
+    loteId: str
+    bodegaId: str
+    bodega: str
+    pais: str
+    stock: int
+    fechaVencimiento: Optional[date] = None
