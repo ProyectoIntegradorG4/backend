@@ -616,7 +616,7 @@ def seed_asignaciones(db: Session):
             # Obtener clientes que cumplen la condición
             clientes = db.query(Cliente).filter(
                 Cliente.pais == pais,
-                text(condicion)
+                text(condicion) # type: ignore
             ).all()
             
             for cliente in clientes:
