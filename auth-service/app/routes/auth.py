@@ -11,10 +11,6 @@ router = APIRouter()
 
 @router.post("/login", response_model=LoginResponse)
 async def login(login_request: LoginRequest, db: Session = Depends(get_db)):
-    """
-    Endpoint de login con JWT
-    Recibe email y password, retorna token JWT y datos del usuario
-    """
     try:
         auth_service = AuthService(db)
         

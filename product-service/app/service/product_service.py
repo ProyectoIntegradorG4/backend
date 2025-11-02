@@ -1,20 +1,19 @@
+# app/service/product_service.py
 from typing import List, Optional, Tuple
 
 from sqlalchemy import asc, desc, func, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from uuid import uuid4
 
 from app.models.product import Producto, ProductoCreate, ProductoOut, ProductosResponse
 from app.models.category import CategoriaProducto
+from app.models.inventory import InventarioLote
+from app.models.warehouse import Bodega  
 
 
 class ProductoService:
     @staticmethod
     def sku_visible(producto_id: str) -> str:
-        """
-        Formato visible del SKU usado en tests.
-        Toma los primeros 8 caracteres del id.
-        """
         return f"SKU-{str(producto_id)[:8]}"
 
     @staticmethod
@@ -22,7 +21,7 @@ class ProductoService:
         # Validar categoría si se proporciona
         categoria_id = data.get("categoriaId")
         if categoria_id:
-            categoria: CategoriaProducto = db.query(CategoriaProducto).get(categoria_id)
+            categoria: CategoriaProducto = db.get(CategoriaProducto, categoria_id)
             if not categoria:
                 raise ValueError("categoriaId inexistente")
         else:
@@ -38,6 +37,7 @@ class ProductoService:
             requierePrescripcion=data.get("requierePrescripcion", False),
             registroSanitario=data.get("registroSanitario"),
             sku=data.get("sku"),
+            # Semántica acordada: location = bodega (legacy), ubicacion = estante (legacy)
             location=data.get("location"),
             ubicacion=data.get("ubicacion"),
             stock=data.get("stock"),
@@ -67,11 +67,15 @@ class ProductoService:
         order: str,
         page: int,
         page_size: int,
-    ) -> ProductosResponse:
+    ):
 
         page, page_size, offset = ProductoService._normalize_pagination(page, page_size)
 
-        qry = db.query(Producto)
+        # Cargar categoría y lotes + bodega (evitar N+1)
+        qry = db.query(Producto).options(
+            joinedload(Producto.categoria),
+            joinedload(Producto.lotes).joinedload(InventarioLote.bodega),
+        )
 
         if q:
             term = f"%{q.lower()}%"
@@ -113,7 +117,7 @@ class ProductoService:
 
         rows: List[Producto] = qry.order_by(sort_fn(sort_col)).offset(offset).limit(page_size).all()
 
-        items: List[ProductoOut] = []
+        items: List[dict] = []
         for r in rows:
             if hasattr(r, "categoria") and getattr(r, "categoria") is not None and hasattr(r.categoria, "nombre"):
                 categoria_nombre = r.categoria.nombre
@@ -127,29 +131,45 @@ class ProductoService:
                 estado_val = "activo" if estado_val else "inactivo"
 
             actualizado_en = getattr(r, "actualizado_en", None) or getattr(r, "updatedAt", None) or getattr(r, "createdAt", None)
-
             pid = getattr(r, "productoId", None) or getattr(r, "id", None) or getattr(r, "uuid", None)
 
-            items.append(
-                ProductoOut(
-                    productoId=str(pid) if pid is not None else "",
-                    nombre=r.nombre,
-                    categoria=categoria_nombre,
-                    formaFarmaceutica=getattr(r, "formaFarmaceutica", getattr(r, "forma_farmaceutica", "")),
-                    requierePrescripcion=getattr(r, "requierePrescripcion", getattr(r, "requiere_prescripcion", False)),
-                    registroSanitario=getattr(r, "registroSanitario", getattr(r, "registro_sanitario", None)),
-                    estado_producto=estado_val or "activo",
-                    actualizado_en=actualizado_en,
-                    sku=getattr(r, "sku", None),
-                    location=getattr(r, "location", None),
-                    ubicacion=getattr(r, "ubicacion", None),
-                    stock=getattr(r, "stock", None),
+            lotes_out: List[dict] = []
+            for lote in getattr(r, "lotes", []) or []:
+                bod = getattr(lote, "bodega", None)
+                lotes_out.append(
+                    {
+                        "loteId": str(lote.loteId),
+                        "bodegaId": str(lote.bodegaId),
+                        "bodega": (bod.nombre if bod else ""), 
+                        "pais": str(lote.pais),
+                        "stock": int(lote.stock or 0),
+                        "fechaVencimiento": getattr(lote, "fechaVencimiento", None),
+                    }
                 )
+
+            items.append(
+                {
+                    "productoId": str(pid) if pid is not None else "",
+                    "nombre": r.nombre,  # Visibilidad explícita del nombre
+                    "categoria": categoria_nombre,
+                    "formaFarmaceutica": getattr(r, "formaFarmaceutica", getattr(r, "forma_farmaceutica", "")),
+                    "requierePrescripcion": getattr(r, "requierePrescripcion", getattr(r, "requiere_prescripcion", False)),
+                    "registroSanitario": getattr(r, "registroSanitario", getattr(r, "registro_sanitario", None)),
+                    "estado_producto": estado_val or "activo",
+                    "actualizado_en": actualizado_en,
+                    "sku": getattr(r, "sku", None),
+                    "location": getattr(r, "location", None),
+                    "ubicacion": getattr(r, "ubicacion", None),
+                    "stock": getattr(r, "stock", None),
+                    **({"lotes": lotes_out} if lotes_out else {}),
+                }
             )
 
-        return ProductosResponse(
-            total=total,
-            items=items,
-            page=page,
-            page_size=page_size,
-        )
+        result = {
+            "total": total,
+            "items": items,
+            "page": page,
+            "page_size": page_size,
+        }
+
+        return result
