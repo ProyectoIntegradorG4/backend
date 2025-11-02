@@ -9,13 +9,12 @@ import asyncio
 import logging
 
 
-
 logger = logging.getLogger("uvicorn")
 
 app = FastAPI(
     title="Product Service (HU-WEB-003)",
     description="Microservicio de carga individual de productos médicos",
-    version="1.1.6",
+    version="1.1.7"
 )
 
 # Endpoints “legacy” sin prefijo

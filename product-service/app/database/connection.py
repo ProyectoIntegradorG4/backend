@@ -93,6 +93,7 @@ engine = create_engine(
     connect_args=connect_args,
     pool_pre_ping=True,  # evita conexiones rotas en el pool
 )
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -118,7 +119,7 @@ def init_db() -> None:
 def test_db_connection() -> bool:
     try:
         with engine.connect() as conn:
-            conn.exec_driver_sql("SELECT 1")
+            conn.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.warning(f"Test de conexión a BD falló: {e}")

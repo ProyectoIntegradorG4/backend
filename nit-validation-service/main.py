@@ -6,7 +6,7 @@ from app.database.connection import init_db
 app = FastAPI(
     title="NIT Validation Service",
     description="Microservicio para validación de NIT contra instituciones asociadas",
-    version="1.1.0"
+    version="1.1.1"
 )
 
 # Configuración de CORS

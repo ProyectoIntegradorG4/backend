@@ -12,9 +12,6 @@ from app.models.warehouse import Bodega
 
 from datetime import date
 
-
-
-
 class ProductoService:
     @staticmethod
     def sku_visible(producto_id: str) -> str:

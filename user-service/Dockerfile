@@ -19,9 +19,9 @@ COPY . .
 # Exponer el puerto
 EXPOSE 8001
 
-# Healthcheck
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+# Healthcheck para ECS
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8001/health || exit 1
 
 # Comando para ejecutar la aplicación
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
