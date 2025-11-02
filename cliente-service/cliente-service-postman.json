@@ -1,0 +1,222 @@
+{
+  "info": {
+    "name": "Cliente Service - HU-MOV-002",
+    "description": "Consulta de clientes para gerentes de cuenta",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get All Clientes (30 total)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"]
+        }
+      }
+    },
+    {
+      "name": "2. Get Clientes Gerente 1 (Colombia - 5)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes?gerente_id=1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"],
+          "query": [
+            {
+              "key": "gerente_id",
+              "value": "1",
+              "description": "ID del gerente (Juan - Colombia)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Get Clientes Gerente 2 (Colombia - 5)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes?gerente_id=2",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"],
+          "query": [
+            {
+              "key": "gerente_id",
+              "value": "2",
+              "description": "ID del gerente (María - Colombia)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Get Clientes Gerente 3 (Peru - 4)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes?gerente_id=3",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"],
+          "query": [
+            {
+              "key": "gerente_id",
+              "value": "3",
+              "description": "ID del gerente (Carlos - Peru)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Get Clientes Gerente 5 (Mexico - 4)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes?gerente_id=5",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"],
+          "query": [
+            {
+              "key": "gerente_id",
+              "value": "5",
+              "description": "ID del gerente (Roberto - Mexico)"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Filter: Solo Colombia",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes?pais=Colombia",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"],
+          "query": [
+            {
+              "key": "pais",
+              "value": "Colombia"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Filter: Solo Hospitales",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes?tipo_institucion=Hospital",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"],
+          "query": [
+            {
+              "key": "tipo_institucion",
+              "value": "Hospital"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Search: Bogotá",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes?search=Bogotá",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"],
+          "query": [
+            {
+              "key": "search",
+              "value": "Bogotá"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Pagination: Page 1, Limit 5",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/mis-clientes?page=1&limit=5",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "mis-clientes"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Get Cliente Detail - ID 1",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "1"]
+        }
+      }
+    },
+    {
+      "name": "11. Get Tipos Institucion",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/api/v1/clientes/tipos-institucion",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["api", "v1", "clientes", "tipos-institucion"]
+        }
+      }
+    },
+    {
+      "name": "12. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost/health/cliente",
+          "protocol": "http",
+          "host": ["localhost"],
+          "path": ["health", "cliente"]
+        }
+      }
+    }
+  ]
+}
+
