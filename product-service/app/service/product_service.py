@@ -10,6 +10,10 @@ from app.models.category import CategoriaProducto
 from app.models.inventory import InventarioLote
 from app.models.warehouse import Bodega  
 
+from datetime import date
+
+
+
 
 class ProductoService:
     @staticmethod
@@ -28,6 +32,10 @@ class ProductoService:
             # Si no se proporciona categoría, usar una por defecto o crear una genérica
             categoria_id = "default"
 
+        fv = data.get("fechaVencimiento")
+        if isinstance(fv, str):
+          fv = date.fromisoformat(fv)  # 'YYYY-MM-DD'    
+          
         entity = Producto(
             productoId=str(uuid4()),
             nombre=data["nombre"],
@@ -42,6 +50,8 @@ class ProductoService:
             ubicacion=data.get("ubicacion"),
             stock=data.get("stock"),
             estado_producto="activo",
+            fechaVencimiento=fv,
+
         )
         db.add(entity)
         db.commit()
@@ -157,6 +167,7 @@ class ProductoService:
                     "registroSanitario": getattr(r, "registroSanitario", getattr(r, "registro_sanitario", None)),
                     "estado_producto": estado_val or "activo",
                     "actualizado_en": actualizado_en,
+                    "fechaVencimiento": getattr(r, "fechaVencimiento", None),
                     "sku": getattr(r, "sku", None),
                     "location": getattr(r, "location", None),
                     "ubicacion": getattr(r, "ubicacion", None),

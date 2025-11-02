@@ -80,6 +80,7 @@ def crear_producto(
         location=getattr(entity, "location", None),
         ubicacion=getattr(entity, "ubicacion", None),
         stock=getattr(entity, "stock", None),
+        fechaVencimiento=getattr(entity,"fechaVencimiento",None)
     )
 
     if cache_key and redis_client is not None:
