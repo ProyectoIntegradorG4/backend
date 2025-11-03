@@ -15,11 +15,23 @@ class RedisCache:
     def init_redis(self):
         """Inicializa la conexión a Redis"""
         redis_url = os.getenv("REDIS_URL", "redis://redis-cache:6379")
-        self.redis_client = redis.from_url(redis_url)
+        try:
+            self.redis_client = redis.from_url(redis_url, socket_connect_timeout=2)
+            # Intentar ping para verificar conectividad
+            self.redis_client.ping()
+            self.redis_enabled = True
+            print(f"✅ Redis connected: {redis_url}")
+        except Exception as e:
+            print(f"⚠️ Redis not available: {str(e)}. Running without cache.")
+            self.redis_client = None
+            self.redis_enabled = False
+
         self.default_ttl = int(os.getenv("REDIS_TTL", "3600"))  # 1 hora por defecto
 
     async def get(self, key: str) -> Optional[Any]:
         """Obtiene un valor del caché"""
+        if not self.redis_enabled:
+            return None
         try:
             value = self.redis_client.get(key)
             if value:
@@ -31,6 +43,8 @@ class RedisCache:
 
     async def set(self, key: str, value: Any, ttl: int = None) -> bool:
         """Guarda un valor en el caché"""
+        if not self.redis_enabled:
+            return False
         try:
             ttl = ttl or self.default_ttl
             return self.redis_client.setex(
@@ -44,6 +58,8 @@ class RedisCache:
 
     async def delete(self, key: str) -> bool:
         """Elimina un valor del caché"""
+        if not self.redis_enabled:
+            return False
         try:
             return self.redis_client.delete(key) > 0
         except Exception as e:
@@ -52,6 +68,8 @@ class RedisCache:
 
     async def exists(self, key: str) -> bool:
         """Verifica si una clave existe en el caché"""
+        if not self.redis_enabled:
+            return False
         try:
             return self.redis_client.exists(key) > 0
         except Exception as e:
