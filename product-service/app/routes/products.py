@@ -121,14 +121,23 @@ def listar_productos_v1(
 
     # Normalización a dict + productoId como str
     def normalize_dict(d: dict) -> dict:
+        from datetime import datetime
+
+        def convert_value(val):
+            if isinstance(val, datetime):
+                return val.isoformat()
+            elif not isinstance(val, str) and val is not None:
+                return str(val)
+            return val
+
         out = dict(d)
         items = out.get("items", [])
         norm_items = []
         for it in items:
             it = dict(it)
-            pid = it.get("productoId")
-            if pid is not None and not isinstance(pid, str):
-                it["productoId"] = str(pid)
+            # Convert all values in the item
+            for key, value in it.items():
+                it[key] = convert_value(value)
             norm_items.append(it)
         out["items"] = norm_items
         return out
