@@ -1,5 +1,6 @@
 import logging
 import json
+import os
 from typing import Optional, Tuple, List
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
@@ -21,8 +22,16 @@ class ProveedorService:
         self.nit_service_url = "http://nit-validation-service:8002/api/v1"
         self.timeout = 5.0
         self._http_client = None
-        # Inicializar Redis
-        self.redis = redis.from_url("redis://redis-cache:6379", decode_responses=True)
+        # Inicializar Redis con URL desde env
+        redis_url = os.getenv("REDIS_URL", "redis://redis-cache:6379")
+        try:
+            self.redis = redis.from_url(redis_url, decode_responses=True, socket_connect_timeout=2)
+            self.redis_enabled = True
+            logger.info(f"✅ Redis conectado: {redis_url}")
+        except Exception as e:
+            logger.warning(f"⚠️ Redis no disponible: {str(e)}. Funcionando sin caché.")
+            self.redis = None
+            self.redis_enabled = False
     
     async def get_http_client(self):
         """Obtener cliente HTTP reutilizable"""
@@ -38,13 +47,17 @@ class ProveedorService:
         """Crear un nuevo proveedor con validaciones e idempotency"""
         try:
             # Verificar idempotency: si la key existe, retornar respuesta previa
-            cached_response = await self.redis.get(f"idempotency:{idempotency_key}")
-            if cached_response:
-                logger.info(f"Idempotency hit for key: {idempotency_key}")
-                if cached_response.startswith('{"error":'):
-                    return None, ErrorDetail.model_validate_json(cached_response)
-                else:
-                    return ProveedorResponse.model_validate_json(cached_response), None
+            if self.redis_enabled:
+                try:
+                    cached_response = await self.redis.get(f"idempotency:{idempotency_key}")
+                    if cached_response:
+                        logger.info(f"Idempotency hit for key: {idempotency_key}")
+                        if cached_response.startswith('{"error":'):
+                            return None, ErrorDetail.model_validate_json(cached_response)
+                        else:
+                            return ProveedorResponse.model_validate_json(cached_response), None
+                except Exception as e:
+                    logger.warning(f"Error al verificar caché: {str(e)}")
 
             # 1. Verificar NIT único
             proveedor_existente = self.db.query(Proveedor).filter(Proveedor.nit == proveedor_data.nit).first()
@@ -54,7 +67,11 @@ class ProveedorService:
                     detalles={"nit": f"El NIT {proveedor_data.nit} ya existe en el sistema"}
                 )
                 # Cachear la respuesta de error
-                await self.redis.setex(f"idempotency:{idempotency_key}", 3600, error.model_dump_json())
+                if self.redis_enabled:
+                    try:
+                        await self.redis.setex(f"idempotency:{idempotency_key}", 3600, error.model_dump_json())
+                    except Exception as e:
+                        logger.warning(f"Error al guardar en caché: {str(e)}")
                 return None, error
 
             # 2. Crear instancia de Proveedor
@@ -81,7 +98,11 @@ class ProveedorService:
 
             success_response = ProveedorResponse.model_validate(nuevo_proveedor)
             # Cachear la respuesta exitosa
-            await self.redis.setex(f"idempotency:{idempotency_key}", 3600, success_response.model_dump_json())
+            if self.redis_enabled:
+                try:
+                    await self.redis.setex(f"idempotency:{idempotency_key}", 3600, success_response.model_dump_json())
+                except Exception as e:
+                    logger.warning(f"Error al guardar en caché: {str(e)}")
 
             logger.info(f"Proveedor creado exitosamente: {nuevo_proveedor.proveedor_id}")
             return success_response, None
@@ -94,7 +115,11 @@ class ProveedorService:
                 detalles={"message": "Datos duplicados o inválidos"}
             )
             # Cachear la respuesta de error
-            await self.redis.setex(f"idempotency:{idempotency_key}", 3600, error.model_dump_json())
+            if self.redis_enabled:
+                try:
+                    await self.redis.setex(f"idempotency:{idempotency_key}", 3600, error.model_dump_json())
+                except Exception as e:
+                    logger.warning(f"Error al guardar en caché: {str(e)}")
             return None, error
         except Exception as e:
             self.db.rollback()
@@ -104,7 +129,11 @@ class ProveedorService:
                 detalles={"message": str(e)}
             )
             # Cachear la respuesta de error
-            await self.redis.setex(f"idempotency:{idempotency_key}", 3600, error.model_dump_json())
+            if self.redis_enabled:
+                try:
+                    await self.redis.setex(f"idempotency:{idempotency_key}", 3600, error.model_dump_json())
+                except Exception as e:
+                    logger.warning(f"Error al guardar en caché: {str(e)}")
             return None, error
 
     async def check_exists(self, nit: str) -> ProveedorExistsResponse:
@@ -144,4 +173,5 @@ class ProveedorService:
         """Cerrar conexiones"""
         if self._http_client:
             await self._http_client.aclose()
-        await self.redis.close()
+        if self.redis:
+            await self.redis.close()
