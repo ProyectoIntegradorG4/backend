@@ -1,5 +1,6 @@
 from typing import Optional
 from uuid import UUID
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
 from app.models.product import ProductoCreate, ProductosResponse, ProductoOut
+from app.schemas.product import InventarioResponse
 from app.service.product_service import ProductoService
 from app.service.rbac import (
     require_auth_token,
@@ -14,6 +16,7 @@ from app.service.rbac import (
     require_role_admincompras,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 redis_client = None
@@ -94,7 +97,8 @@ def crear_producto(
 def listar_productos_v1(
     _rbac=Depends(require_role_admincompras),
     db: Session = Depends(get_db),
-    q: Optional[str] = Query(None, max_length=100),
+    q: Optional[str] = Query(None, max_length=100, description="Búsqueda por nombre o código de barras"),
+    sku: Optional[str] = Query(None, max_length=100, description="Búsqueda específica por SKU"),
     categoriaId: Optional[str] = Query(None),
     estado_producto: Optional[str] = Query(None, pattern="^(activo|inactivo)$"),
     sort: Optional[str] = Query("nombre"),
@@ -108,9 +112,14 @@ def listar_productos_v1(
         except Exception:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="categoriaId inválido")
 
+    # Si se proporciona SKU, agregarlo a la búsqueda
+    busqueda_texto = q
+    if sku:
+        busqueda_texto = sku
+
     resp = ProductoService.listar_productos(
         db=db,
-        q=q,
+        q=busqueda_texto,
         categoria_id=categoriaId,
         estado=estado_producto,
         sort=sort,
@@ -148,3 +157,115 @@ def listar_productos_v1(
         return JSONResponse(content=data)
     except Exception:
         return resp
+
+
+@router.get("/api/productos/{producto_id}/inventario", response_model=InventarioResponse)
+def obtener_inventario_producto(
+    producto_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene el inventario en tiempo real de un producto.
+    Retorna cantidad disponible desde la columna stock de la tabla producto, precio y fecha de vencimiento.
+    """
+    try:
+        cantidad_disponible, precio, fecha_vencimiento_lote = ProductoService.obtener_inventario_producto(
+            db, producto_id
+        )
+        
+        return InventarioResponse(
+            cantidad_disponible=cantidad_disponible,
+            precio=precio,
+            fecha_vencimiento_lote=fecha_vencimiento_lote
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener inventario: {str(e)}"
+        )
+
+
+@router.patch("/api/v1/productos/{producto_id}/stock", status_code=status.HTTP_200_OK)
+def actualizar_stock_producto(
+    producto_id: str,
+    cantidad_a_restar: int = Query(..., ge=1, description="Cantidad a restar del stock"),
+    _rbac=Depends(require_role_admincompras),  # Opcional: permite llamadas internas sin autenticación estricta
+    db: Session = Depends(get_db),
+):
+    """
+    Actualiza el stock de un producto restando la cantidad especificada.
+    Usado internamente por pedidos-service al confirmar pedidos.
+    
+    Nota: Este endpoint permite llamadas sin autenticación estricta para servicios internos.
+    """
+    try:
+        exito, stock_actualizado, mensaje = ProductoService.actualizar_stock_producto(
+            db, producto_id, cantidad_a_restar
+        )
+        
+        if not exito:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=mensaje
+            )
+        
+        return {
+            "producto_id": producto_id,
+            "stock_anterior": stock_actualizado + cantidad_a_restar,
+            "cantidad_restada": cantidad_a_restar,
+            "stock_actualizado": stock_actualizado,
+            "mensaje": mensaje
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error actualizando stock: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar stock: {str(e)}"
+        )
+
+
+@router.get("/api/v1/productos/{producto_id}", response_model=ProductoOut)
+def obtener_producto_por_id(
+    producto_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Obtiene un producto individual por su ID con toda su información.
+    """
+    try:
+        producto = ProductoService.obtener_producto_por_id(db, producto_id)
+        
+        if not producto:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Producto con ID {producto_id} no encontrado"
+            )
+        
+        # Obtener nombre de categoría
+        categoria_nombre = producto.categoria.nombre if producto.categoria else str(producto.categoriaId)
+        
+        return ProductoOut(
+            productoId=str(producto.productoId),
+            nombre=producto.nombre,
+            categoria=categoria_nombre,
+            formaFarmaceutica=producto.formaFarmaceutica,
+            requierePrescripcion=producto.requierePrescripcion,
+            registroSanitario=producto.registroSanitario,
+            estado_producto=producto.estado_producto,
+            actualizado_en=producto.actualizado_en,
+            sku=producto.sku,
+            location=producto.location,
+            ubicacion=producto.ubicacion,
+            stock=producto.stock,
+            precio=producto.precio,
+            fechaVencimiento=producto.fechaVencimiento
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener producto: {str(e)}"
+        )

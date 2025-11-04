@@ -20,6 +20,7 @@ class ProductoCreate(BaseModel):
     location: Optional[str] = Field(None, max_length=200)
     ubicacion: Optional[str] = Field(None, max_length=200)
     stock: Optional[str] = Field(None, max_length=50)
+    precio: Optional[float] = Field(None, ge=0.0, description="Precio unitario del producto")
     fechaVencimiento: Optional[date] = None
 
 # Response 201 (HU)
@@ -57,5 +58,13 @@ class ProductosResponse(BaseModel):
     page: int
     page_size: int
     total: int
-    items: List[ProductoOut]   
+    items: List[ProductoOut]
+
+
+# Schema para respuesta de inventario en tiempo real
+class InventarioResponse(BaseModel):
+    """Respuesta del endpoint de inventario en tiempo real"""
+    cantidad_disponible: int = Field(..., description="Cantidad total disponible en todos los lotes")
+    precio: float = Field(default=0.0, description="Precio unitario del producto (por defecto 0.0)")
+    fecha_vencimiento_lote: Optional[date] = Field(None, description="Fecha de vencimiento del lote más próximo")   
 

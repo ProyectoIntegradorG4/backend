@@ -80,6 +80,32 @@ class PedidosService:
             return False, 0, 0.0, f"Error: {str(e)}"
     
     @staticmethod
+    async def actualizar_stock_producto(producto_id: str, cantidad_a_restar: int) -> bool:
+        """
+        Actualiza el stock de un producto en product-service restando la cantidad especificada.
+        
+        Retorna: True si se actualizó correctamente, False en caso contrario
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/v1/productos/{producto_id}/stock"
+                response = await client.patch(url, params={"cantidad_a_restar": cantidad_a_restar})
+                
+                if response.status_code == 200:
+                    logger.info(f"Stock actualizado para producto {producto_id}: restado {cantidad_a_restar}")
+                    return True
+                else:
+                    logger.error(f"Error actualizando stock para {producto_id}: {response.status_code} - {response.text}")
+                    return False
+                    
+        except httpx.TimeoutException:
+            logger.error(f"Timeout al actualizar stock para {producto_id}")
+            return False
+        except Exception as e:
+            logger.error(f"Error actualizando stock para {producto_id}: {e}")
+            return False
+    
+    @staticmethod
     async def obtener_info_producto(producto_id: str) -> Optional[Dict]:
         """Obtiene la información completa de un producto"""
         try:
@@ -209,6 +235,29 @@ class PedidosService:
             db.add(pedido)
             db.commit()
             db.refresh(pedido)
+            
+            # Actualizar stock de los productos después de confirmar el pedido
+            productos_con_error = []
+            for producto in request.productos:
+                exito_actualizacion = await PedidosService.actualizar_stock_producto(
+                    producto.producto_id,
+                    producto.cantidad_solicitada
+                )
+                
+                if not exito_actualizacion:
+                    productos_con_error.append(producto.producto_id)
+                    logger.warning(f"Error actualizando stock para producto {producto.producto_id}")
+            
+            # Si hay errores al actualizar stock, registrar pero no fallar el pedido
+            # (el pedido ya está creado y confirmado)
+            if productos_con_error:
+                logger.error(f"Pedido {numero_pedido} creado pero error actualizando stock para productos: {productos_con_error}")
+                # Opcional: Podrías marcar el pedido con un estado especial o agregar una observación
+                if pedido.observaciones:
+                    pedido.observaciones += f"\n[ADVERTENCIA] Error actualizando stock para productos: {', '.join(productos_con_error)}"
+                else:
+                    pedido.observaciones = f"[ADVERTENCIA] Error actualizando stock para productos: {', '.join(productos_con_error)}"
+                db.commit()
             
             # Convertir a response
             pedido_response = PedidoResponse(

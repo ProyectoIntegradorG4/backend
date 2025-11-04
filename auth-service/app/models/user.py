@@ -31,6 +31,7 @@ class LoginResponse(BaseModel):
     isActive: bool
     roles: List[str]
     token: str
+    nit: Optional[str] = None  # NIT del usuario para uso en pedidos
 
     class Config:
         from_attributes = True

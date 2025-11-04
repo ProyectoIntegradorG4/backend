@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from .models import Base, ProductStaging, ProductStagingErrors
-from .validator import process_pending_products
-from .database import SessionLocal, engine
+from app.models import Base, ProductStaging, ProductStagingErrors
+from app.validator import process_pending_products
+from app.database import SessionLocal, engine
 import os
 from datetime import datetime
 
