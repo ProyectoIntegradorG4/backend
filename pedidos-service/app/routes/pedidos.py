@@ -26,7 +26,7 @@ router = APIRouter(prefix="/pedidos", tags=["pedidos"])
 async def crear_pedido(
     request: CrearPedidoRequest,
     usuario_id: int = Header(..., alias="usuario-id", description="ID del usuario desde el token JWT"),
-    rol_usuario: str = Header(..., alias="rol-usuario", description="Rol del usuario: 'usuario_institucional' o 'admin'"),
+    rol_usuario: str = Header(..., alias="rol-usuario", description="Rol del usuario: 'usuario_institucional', 'gerente_cuenta' o 'admin'"),
     db: Session = Depends(get_db)
 ):
     """
@@ -34,8 +34,8 @@ async def crear_pedido(
     
     **Requerimientos:**
     - usuario_id: Obtenido del token JWT
-    - rol_usuario: 'usuario_institucional' o 'admin' (vendedor)
-    - nit: NIT asociado al usuario
+    - rol_usuario: 'usuario_institucional', 'gerente_cuenta' o 'admin'
+    - nit: NIT asociado al usuario (o del cliente si es gerente)
     - productos: Lista de productos con cantidad solicitada
     
     **Respuesta:**
@@ -44,10 +44,10 @@ async def crear_pedido(
     """
     try:
         # Validar que el rol sea correcto
-        if rol_usuario not in ['usuario_institucional', 'admin']:
+        if rol_usuario not in ['usuario_institucional', 'gerente_cuenta', 'admin']:
             raise HTTPException(
                 status_code=400,
-                detail="Rol inválido. Debe ser 'usuario_institucional' o 'admin'"
+                detail="Rol inválido. Debe ser 'usuario_institucional', 'gerente_cuenta' o 'admin'"
             )
         
         # Validar que haya productos
@@ -75,6 +75,18 @@ async def crear_pedido(
             )
         else:
             # Hay inventario insuficiente
+            # Convertir ValidacionInventarioResult a diccionarios para serialización JSON
+            validaciones_dict = [
+                {
+                    "producto_id": v.producto_id,
+                    "disponible": v.disponible,
+                    "cantidad_disponible": v.cantidad_disponible,
+                    "cantidad_solicitada": v.cantidad_solicitada,
+                    "mensaje": v.mensaje
+                }
+                for v in validaciones
+            ]
+            
             sugerencias = [
                 {
                     "producto_id": v.producto_id,
@@ -89,7 +101,7 @@ async def crear_pedido(
                 detail={
                     "error": "INVENTARIO_INSUFICIENTE",
                     "mensaje": mensaje,
-                    "validaciones": validaciones,
+                    "validaciones": validaciones_dict,
                     "sugerencias": sugerencias
                 }
             )
@@ -138,6 +150,9 @@ async def listar_pedidos(
     estado: Optional[str] = Query(None, description="Filtrar por estado del pedido"),
     pagina: int = Query(1, ge=1, description="Número de página"),
     por_pagina: int = Query(10, ge=1, le=100, description="Registros por página"),
+    usuario_id_header: Optional[int] = Header(None, alias="usuario-id", description="ID del usuario desde el token JWT"),
+    rol_usuario: Optional[str] = Header(None, alias="rol-usuario", description="Rol del usuario"),
+    nit_usuario: Optional[str] = Header(None, alias="nit-usuario", description="NIT del usuario desde el token"),
     db: Session = Depends(get_db)
 ):
     """
@@ -147,8 +162,25 @@ async def listar_pedidos(
     - usuario_id: ID del usuario
     - nit: NIT asociado
     - estado: Estado del pedido (pendiente, confirmado, en_proceso, enviado, entregado, cancelado, rechazado)
+    
+    **Filtrado automático por rol:**
+    - Si rol_usuario es 'usuario_institucional', se filtra automáticamente por el NIT del usuario
+    - Si rol_usuario es 'gerente_cuenta', se pueden mostrar pedidos de sus clientes
     """
     try:
+        # Si el usuario es usuario_institucional, filtrar automáticamente por su NIT
+        nit_filtro = nit
+        if rol_usuario == "usuario_institucional":
+            if nit_usuario:
+                nit_filtro = nit_usuario
+                logger.info(f"Filtrando pedidos por NIT del usuario_institucional: {nit_filtro}")
+            elif usuario_id_header:
+                # Si no viene el NIT en el header, intentar obtenerlo del usuario
+                # Por ahora, usar el parámetro nit si está disponible, sino usar usuario_id
+                if not nit_filtro:
+                    # El NIT debería venir en el header, pero si no, usamos usuario_id como fallback
+                    logger.warning(f"NIT no proporcionado para usuario_institucional {usuario_id_header}, usando usuario_id")
+        
         # Convertir estado a enum si se proporciona
         estado_enum = None
         if estado:
@@ -160,9 +192,12 @@ async def listar_pedidos(
                     detail=f"Estado inválido. Estados válidos: {[e.value for e in EstadoPedido]}"
                 )
         
+        # Usar usuario_id_header si se proporciona y no hay usuario_id en query params
+        usuario_id_filtro = usuario_id if usuario_id is not None else usuario_id_header
+        
         pedidos, total = PedidosService.listar_pedidos(
-            usuario_id=usuario_id,
-            nit=nit,
+            usuario_id=usuario_id_filtro,
+            nit=nit_filtro,
             estado=estado_enum,
             pagina=pagina,
             por_pagina=por_pagina,
@@ -248,7 +283,7 @@ async def actualizar_estado_pedido(
 async def validar_inventario_productos(
     request: CrearPedidoRequest,
     usuario_id: int = Header(..., alias="usuario-id"),
-    rol_usuario: str = Header(..., alias="rol-usuario"),
+    rol_usuario: str = Header(..., alias="rol-usuario", description="Rol del usuario: 'usuario_institucional', 'gerente_cuenta' o 'admin'"),
     db: Session = Depends(get_db)
 ):
     """

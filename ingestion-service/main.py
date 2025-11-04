@@ -10,9 +10,9 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status, R
 from sqlalchemy.orm import Session
 from tempfile import NamedTemporaryFile
 
-from .database import SessionLocal, engine
-from .models import Base, ProductStaging
-from .utils import read_csv
+from app.database import SessionLocal, engine
+from app.models import Base, ProductStaging
+from app.utils import read_csv
 
 # =========================
 #  Auth mínima por header
