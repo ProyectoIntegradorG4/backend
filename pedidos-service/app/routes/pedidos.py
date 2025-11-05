@@ -27,6 +27,7 @@ async def crear_pedido(
     request: CrearPedidoRequest,
     usuario_id: int = Header(..., alias="usuario-id", description="ID del usuario desde el token JWT"),
     rol_usuario: str = Header(..., alias="rol-usuario", description="Rol del usuario: 'usuario_institucional', 'gerente_cuenta' o 'admin'"),
+    nit_usuario: Optional[str] = Header(None, alias="nit-usuario", description="NIT del usuario desde el token (requerido para usuario_institucional)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -62,6 +63,7 @@ async def crear_pedido(
             request=request,
             usuario_id=usuario_id,
             rol_usuario=rol_usuario,
+            nit_usuario=nit_usuario,
             db=db
         )
         
@@ -159,27 +161,54 @@ async def listar_pedidos(
     Lista todos los pedidos con opciones de filtrado y paginación.
     
     **Parámetros de filtrado:**
-    - usuario_id: ID del usuario
-    - nit: NIT asociado
+    - nit: NIT específico (opcional para gerente_cuenta, ignorado para usuario_institucional)
     - estado: Estado del pedido (pendiente, confirmado, en_proceso, enviado, entregado, cancelado, rechazado)
     
     **Filtrado automático por rol:**
-    - Si rol_usuario es 'usuario_institucional', se filtra automáticamente por el NIT del usuario
-    - Si rol_usuario es 'gerente_cuenta', se pueden mostrar pedidos de sus clientes
+    - usuario_institucional: Ve TODOS los pedidos de su NIT (sin importar quién los creó)
+    - gerente_cuenta: Ve TODOS los pedidos de sus clientes asignados (filtro opcional por NIT específico)
+    
+    **Nota importante:** Los pedidos se filtran por NIT, no por creador. Esto permite que
+    múltiples usuarios (institucionales y gerentes) vean todos los pedidos de un NIT y
+    eviten duplicar pedidos del mismo producto.
     """
     try:
         # Si el usuario es usuario_institucional, filtrar automáticamente por su NIT
         nit_filtro = nit
+        
         if rol_usuario == "usuario_institucional":
             if nit_usuario:
                 nit_filtro = nit_usuario
                 logger.info(f"Filtrando pedidos por NIT del usuario_institucional: {nit_filtro}")
-            elif usuario_id_header:
-                # Si no viene el NIT en el header, intentar obtenerlo del usuario
-                # Por ahora, usar el parámetro nit si está disponible, sino usar usuario_id
+            else:
+                # Para usuario_institucional, el NIT es obligatorio
+                logger.warning(f"NIT no proporcionado para usuario_institucional {usuario_id_header}")
+                # Intentar usar el NIT del parámetro si está disponible
                 if not nit_filtro:
-                    # El NIT debería venir en el header, pero si no, usamos usuario_id como fallback
-                    logger.warning(f"NIT no proporcionado para usuario_institucional {usuario_id_header}, usando usuario_id")
+                    logger.warning(f"Sin NIT para filtrar pedidos de usuario_institucional")
+        
+        elif rol_usuario == "gerente_cuenta":
+            # Para gerente_cuenta, validar que el NIT pertenezca a sus clientes si se proporciona
+            if nit_filtro:
+                # Validar que el NIT pertenece al gerente
+                nit_valido, error_msg = await PedidosService.validar_nit_gerente_cuenta(
+                    nit_filtro, usuario_id_header
+                )
+                if not nit_valido:
+                    logger.warning(f"NIT {nit_filtro} no válido para gerente {usuario_id_header}: {error_msg}")
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"No tiene permiso para ver pedidos del NIT {nit_filtro}"
+                    )
+                logger.info(f"Filtrando pedidos por NIT {nit_filtro} del gerente_cuenta {usuario_id_header}")
+            else:
+                # Si no se proporciona NIT, obtener todos los NITs del gerente y filtrar por ellos
+                nits_gerente = await PedidosService.obtener_nits_gerente(usuario_id_header)
+                if nits_gerente:
+                    logger.info(f"Filtrando pedidos por todos los NITs del gerente {usuario_id_header}: {nits_gerente}")
+                    # No establecer nit_filtro aquí, lo manejaremos en el servicio
+                else:
+                    logger.warning(f"Gerente {usuario_id_header} no tiene clientes asignados")
         
         # Convertir estado a enum si se proporciona
         estado_enum = None
@@ -192,12 +221,18 @@ async def listar_pedidos(
                     detail=f"Estado inválido. Estados válidos: {[e.value for e in EstadoPedido]}"
                 )
         
-        # Usar usuario_id_header si se proporciona y no hay usuario_id en query params
-        usuario_id_filtro = usuario_id if usuario_id is not None else usuario_id_header
+        # Para gerente_cuenta sin NIT específico, obtener sus NITs
+        nits_gerente = None
+        if rol_usuario == "gerente_cuenta" and not nit_filtro and usuario_id_header:
+            nits_gerente = await PedidosService.obtener_nits_gerente(usuario_id_header)
         
+        # NO filtrar por usuario_id para que todos vean todos los pedidos del NIT
+        # Esto permite que múltiples usuarios (institucional + gerentes) vean todos
+        # los pedidos del mismo NIT y eviten duplicaciones
         pedidos, total = PedidosService.listar_pedidos(
-            usuario_id=usuario_id_filtro,
+            usuario_id=None,  # Cambiado: no filtrar por creador, solo por NIT
             nit=nit_filtro,
+            nits_gerente=nits_gerente,
             estado=estado_enum,
             pagina=pagina,
             por_pagina=por_pagina,

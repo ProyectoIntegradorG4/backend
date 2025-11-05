@@ -125,6 +125,46 @@ async def get_mis_clientes(
         )
 
 
+@router.get("/mis-nits", response_model=dict)
+async def get_gerente_nits(
+    gerente_id: int = Query(..., description="ID del gerente"),
+    db: Session = Depends(get_db)
+):
+    """
+    Obtener lista de NITs de los clientes asignados a un gerente.
+    
+    - **gerente_id**: ID del gerente (requerido)
+    
+    **No requiere autenticación** (modo desarrollo)
+    
+    Retorna lista de NITs únicos de los clientes asignados al gerente.
+    Usado por pedidos-service para validar que un NIT pertenece a los clientes del gerente.
+    """
+    try:
+        cliente_service = ClienteService(db)
+        
+        # Obtener NITs del gerente
+        nits = cliente_service.get_gerente_nits(gerente_id=gerente_id)
+        
+        logger.info(f"✅ NITs del gerente {gerente_id} retornados: {len(nits)} NITs")
+        return {
+            "gerente_id": gerente_id,
+            "nits": nits,
+            "total": len(nits)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en get_gerente_nits: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno al obtener NITs del gerente"
+        )
+
+
 @router.get("/{cliente_id}", response_model=ClienteResponse)
 async def get_cliente_detail(
     cliente_id: int,

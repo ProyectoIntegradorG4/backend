@@ -20,18 +20,32 @@ class TipoInstitucion(str, Enum):
 class Cliente(Base):
     """
     Modelo de cliente institucional (hospitales, clínicas, etc.)
-    que son atendidos por MediSupply
+    que son atendidos por MediSupply.
+    
+    Esta tabla representa las SEDES de las instituciones asociadas.
+    Cada institución en instituciones_asociadas puede tener múltiples sedes
+    (clientes) en diferentes departamentos y ciudades del mismo país.
+    
+    IMPORTANTE: El campo 'nit' debe existir en la tabla instituciones_asociadas
+    (en nit_db). Esta relación se mantiene a nivel lógico ya que las tablas
+    están en bases de datos diferentes.
     """
     __tablename__ = "clientes"
 
     cliente_id = Column(Integer, primary_key=True, autoincrement=True)
-    nit = Column(String(20), unique=True, nullable=False, index=True)
-    nombre_comercial = Column(String(255), nullable=False)
-    razon_social = Column(String(255), nullable=False)
+    nit = Column(String(20), nullable=False, index=True, 
+                comment="NIT de la institución asociada. Debe existir en instituciones_asociadas. Puede repetirse para múltiples sedes.")
+    nombre_comercial = Column(String(255), nullable=False, 
+                              comment="Nombre comercial de la sede")
+    razon_social = Column(String(255), nullable=False,
+                         comment="Razón social de la sede")
     tipo_institucion = Column(String(100), nullable=False)
-    pais = Column(String(100), nullable=False)
-    departamento = Column(String(100), nullable=True)
-    ciudad = Column(String(100), nullable=True)
+    pais = Column(String(100), nullable=False,
+                 comment="País de la sede (debe coincidir con el país de la institución asociada)")
+    departamento = Column(String(100), nullable=True,
+                         comment="Departamento/Estado de la sede")
+    ciudad = Column(String(100), nullable=True,
+                   comment="Ciudad de la sede")
     direccion = Column(Text, nullable=True)
     telefono = Column(String(50), nullable=True)
     email = Column(String(255), nullable=True)
@@ -47,10 +61,14 @@ class Cliente(Base):
     asignaciones = relationship("GerenteClienteAsignacion", back_populates="cliente", cascade="all, delete-orphan")
 
     # Índices compuestos para optimización
+    # Nota: El índice único garantiza que no haya dos sedes con el mismo NIT en el mismo departamento y ciudad
     __table_args__ = (
         Index('idx_pais_activo', 'pais', 'activo'),
         Index('idx_tipo_institucion', 'tipo_institucion'),
         Index('idx_ciudad', 'ciudad'),
+        Index('idx_nit', 'nit'),
+        # Índice único: una institución no puede tener dos sedes idénticas en el mismo lugar
+        Index('idx_unique_nit_departamento_ciudad', 'nit', 'departamento', 'ciudad', unique=True),
     )
 
     def __repr__(self):
@@ -62,12 +80,18 @@ class GerenteClienteAsignacion(Base):
     Tabla de asignación de clientes a gerentes de cuenta
     Un gerente puede tener múltiples clientes, pero cada cliente
     solo está asignado a un gerente por país
+    
+    El campo 'nit' almacena el NIT de la institución asociada del cliente,
+    lo que permite búsquedas y filtros más eficientes sin necesidad de hacer
+    JOIN con la tabla clientes.
     """
     __tablename__ = "gerente_cuenta_clientes"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     gerente_id = Column(Integer, nullable=False, index=True, comment="FK a usuarios.id")
     cliente_id = Column(Integer, ForeignKey("clientes.cliente_id", ondelete="CASCADE"), nullable=False, index=True)
+    nit = Column(String(20), nullable=True, index=True, 
+                comment="NIT de la institución asociada del cliente (denormalizado para optimización)")
     pais = Column(String(100), nullable=False, comment="País para filtrado rápido")
     fecha_asignacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     activo = Column(Boolean, default=True, nullable=False)
@@ -79,6 +103,7 @@ class GerenteClienteAsignacion(Base):
     __table_args__ = (
         Index('idx_gerente_pais_activo', 'gerente_id', 'pais', 'activo'),
         Index('idx_unique_gerente_cliente', 'gerente_id', 'cliente_id', unique=True),
+        Index('idx_gerente_cuenta_clientes_nit', 'nit'),  # Índice para búsquedas por NIT
     )
 
     def __repr__(self):
@@ -159,6 +184,7 @@ class GerenteClienteAsignacionCreate(BaseModel):
     """Modelo para crear asignación de cliente a gerente"""
     gerente_id: int
     cliente_id: int
+    nit: Optional[str] = None  # Opcional: se puede calcular del cliente si no se proporciona
     pais: str
     activo: bool = True
 
@@ -168,6 +194,7 @@ class GerenteClienteAsignacionResponse(BaseModel):
     id: int
     gerente_id: int
     cliente_id: int
+    nit: Optional[str] = None  # NIT de la institución asociada (denormalizado)
     pais: str
     fecha_asignacion: datetime
     activo: bool
