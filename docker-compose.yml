@@ -334,6 +334,7 @@ services:
       
       # --- URLs de servicios ---
       PRODUCT_SERVICE_URL: "http://product-service:8005"
+      CLIENTE_SERVICE_URL: "http://cliente-service:8013"
       
       # --- Pool / tuning ---
       DB_POOL_SIZE: "20"
@@ -386,8 +387,9 @@ services:
       # Permite override completo si se desea
       CLIENTE_DATABASE_URL: ${CLIENTE_DATABASE_URL}
       
-      # --- Cross-database access (para seed de gerentes) ---
+      # --- Cross-database access (para seed de gerentes y validación de NITs) ---
       USER_DATABASE_URL: ${USER_DATABASE_URL}
+      NIT_DATABASE_URL: ${NIT_DATABASE_URL}
       
       # --- JWT Configuration ---
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}

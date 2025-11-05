@@ -21,6 +21,7 @@ class PedidosService:
     """Servicio para gestionar pedidos y validar inventario"""
     
     PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://product-service:8005")
+    CLIENTE_SERVICE_URL = os.getenv("CLIENTE_SERVICE_URL", "http://cliente-service:8003")
     REQUEST_TIMEOUT = 10.0
     
     @staticmethod
@@ -124,6 +125,80 @@ class PedidosService:
             return None
     
     @staticmethod
+    async def obtener_nits_gerente(gerente_id: int) -> List[str]:
+        """
+        Obtiene la lista de NITs asignados a un gerente desde el cliente-service
+        
+        Args:
+            gerente_id: ID del gerente
+            
+        Returns:
+            Lista de NITs asignados al gerente
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.CLIENTE_SERVICE_URL}/api/v1/clientes/mis-nits"
+                response = await client.get(url, params={"gerente_id": gerente_id})
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    nits = data.get("nits", [])
+                    logger.info(f"NITs del gerente {gerente_id}: {nits}")
+                    return nits
+                else:
+                    logger.warning(f"Error al obtener NITs del gerente {gerente_id}: {response.status_code}")
+                    return []
+                    
+        except httpx.TimeoutException:
+            logger.error(f"Timeout al obtener NITs del gerente {gerente_id}")
+            return []
+        except Exception as e:
+            logger.error(f"Error obteniendo NITs del gerente {gerente_id}: {e}")
+            return []
+    
+    @staticmethod
+    async def validar_nit_usuario_institucional(nit_request: str, nit_usuario: str) -> Tuple[bool, str]:
+        """
+        Valida que el NIT en la solicitud coincida con el NIT del usuario institucional
+        
+        Args:
+            nit_request: NIT enviado en la solicitud
+            nit_usuario: NIT del usuario desde el token/header
+            
+        Returns:
+            Tuple[bool, str]: (es_valido, mensaje_error)
+        """
+        if not nit_usuario:
+            return False, "NIT de usuario no proporcionado en los headers"
+        
+        if nit_request != nit_usuario:
+            return False, f"El NIT proporcionado ({nit_request}) no coincide con el NIT del usuario ({nit_usuario})"
+        
+        return True, ""
+    
+    @staticmethod
+    async def validar_nit_gerente_cuenta(nit_request: str, gerente_id: int) -> Tuple[bool, str]:
+        """
+        Valida que el NIT en la solicitud pertenezca a uno de los clientes asignados al gerente
+        
+        Args:
+            nit_request: NIT enviado en la solicitud
+            gerente_id: ID del gerente
+            
+        Returns:
+            Tuple[bool, str]: (es_valido, mensaje_error)
+        """
+        nits_gerente = await PedidosService.obtener_nits_gerente(gerente_id)
+        
+        if not nits_gerente:
+            return False, f"El gerente {gerente_id} no tiene clientes asignados"
+        
+        if nit_request not in nits_gerente:
+            return False, f"El NIT proporcionado ({nit_request}) no pertenece a los clientes asignados al gerente"
+        
+        return True, ""
+    
+    @staticmethod
     async def validar_pedido(
         request: CrearPedidoRequest,
         usuario_id: int,
@@ -167,6 +242,7 @@ class PedidosService:
         request: CrearPedidoRequest,
         usuario_id: int,
         rol_usuario: str,
+        nit_usuario: Optional[str],
         db: Session
     ) -> Tuple[bool, Optional[PedidoResponse], str, List[ValidacionInventarioResult]]:
         """
@@ -175,6 +251,23 @@ class PedidosService:
         Retorna: (exito, pedido_response, mensaje, validaciones)
         """
         try:
+            # Validar NIT según el rol del usuario
+            if rol_usuario == 'usuario_institucional':
+                nit_valido, error_msg = await PedidosService.validar_nit_usuario_institucional(
+                    request.nit, nit_usuario
+                )
+                if not nit_valido:
+                    logger.warning(f"Validación NIT fallida para usuario_institucional {usuario_id}: {error_msg}")
+                    return False, None, error_msg, []
+            
+            elif rol_usuario == 'gerente_cuenta':
+                nit_valido, error_msg = await PedidosService.validar_nit_gerente_cuenta(
+                    request.nit, usuario_id
+                )
+                if not nit_valido:
+                    logger.warning(f"Validación NIT fallida para gerente_cuenta {usuario_id}: {error_msg}")
+                    return False, None, error_msg, []
+            
             # Validar el pedido
             valido, validaciones, error_msg = await PedidosService.validar_pedido(
                 request, usuario_id, rol_usuario
@@ -333,20 +426,36 @@ class PedidosService:
     def listar_pedidos(
         usuario_id: int = None,
         nit: str = None,
+        nits_gerente: List[str] = None,
         estado: EstadoPedido = None,
         pagina: int = 1,
         por_pagina: int = 10,
         db: Session = None
     ) -> Tuple[List[PedidoResponse], int]:
-        """Lista pedidos con filtros opcionales"""
+        """
+        Lista pedidos con filtros opcionales
+        
+        Args:
+            usuario_id: Filtrar por ID de usuario
+            nit: Filtrar por NIT específico
+            nits_gerente: Lista de NITs del gerente (para mostrar todos sus clientes)
+            estado: Filtrar por estado
+            pagina: Número de página
+            por_pagina: Registros por página
+            db: Sesión de base de datos
+        """
         try:
             query = db.query(Pedido)
             
             if usuario_id:
                 query = query.filter(Pedido.usuario_id == usuario_id)
             
+            # Filtrar por NIT específico o por lista de NITs del gerente
             if nit:
                 query = query.filter(Pedido.nit == nit)
+            elif nits_gerente:
+                # Para gerente_cuenta, mostrar pedidos de todos sus clientes
+                query = query.filter(Pedido.nit.in_(nits_gerente))
             
             if estado:
                 query = query.filter(Pedido.estado == estado)
