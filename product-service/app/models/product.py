@@ -4,7 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 from pydantic import BaseModel as PydBaseModel
 
-from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Date,Integer
+from sqlalchemy import Column, String, Boolean, ForeignKey, DateTime, Date, Integer, Float
 from sqlalchemy.orm import relationship
 
 from pydantic import BaseModel
@@ -37,6 +37,7 @@ class Producto(Base):
     location = Column(String, nullable=True)
     ubicacion = Column(String, nullable=True)
     stock = Column(Integer, nullable=True)
+    precio = Column(Float, nullable=True, default=0.0, comment="Precio unitario del producto")
 
     # estado como texto para tests ("activo"/"inactivo")
     estado_producto = Column(String, default="activo")
@@ -66,6 +67,7 @@ class ProductoCreate(BaseModel):
     location: Optional[str] = Field(None, max_length=200)
     ubicacion: Optional[str] = Field(None, max_length=200)
     stock: Optional[int] = None
+    precio: Optional[float] = Field(None, ge=0.0, description="Precio unitario del producto")
     fechaVencimiento: Optional[date] = None
 
 
@@ -94,6 +96,7 @@ class ProductoOut(BaseModel):
     location: Optional[str] = None
     ubicacion: Optional[str] = None
     stock: Optional[int] = None
+    precio: Optional[float] = None
     fechaVencimiento: Optional[date] = None
 
     model_config = {

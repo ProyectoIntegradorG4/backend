@@ -18,6 +18,12 @@ USER_DB_URL = os.getenv(
     "postgresql+psycopg://user_service:user_password@postgres-db:5432/user_db"
 )
 
+# Conexión a nit_db para validar instituciones asociadas
+NIT_DB_URL = os.getenv(
+    "NIT_DATABASE_URL",
+    "postgresql+psycopg://nit_service:nit_password@postgres-db:5432/nit_db"
+)
+
 
 class ClienteService:
     """
@@ -26,6 +32,52 @@ class ClienteService:
     
     def __init__(self, db: Session):
         self.db = db
+
+    def validate_nit_institucion(self, nit: str, pais: Optional[str] = None) -> Tuple[bool, Optional[str]]:
+        """
+        Validar que un NIT existe en la tabla instituciones_asociadas.
+        
+        Esta validación garantiza que solo se pueden crear clientes (sedes)
+        para instituciones que están registradas en instituciones_asociadas.
+        
+        Args:
+            nit: NIT a validar
+            pais: País opcional para validar que coincide con la institución
+            
+        Returns:
+            Tuple[bool, Optional[str]]: (es_valido, mensaje_error)
+            - Si es válido: (True, None)
+            - Si no es válido: (False, mensaje de error)
+        """
+        try:
+            nit_engine = create_engine(NIT_DB_URL)
+            with nit_engine.connect() as conn:
+                query = text("""
+                    SELECT nit, nombre_institucion, pais, activo 
+                    FROM instituciones_asociadas 
+                    WHERE nit = :nit
+                """)
+                result = conn.execute(query, {"nit": nit}).fetchone()
+            
+            nit_engine.dispose()
+            
+            if not result:
+                return (False, f"El NIT {nit} no existe en instituciones_asociadas")
+            
+            # Validar que la institución esté activa
+            if not result.activo:
+                return (False, f"La institución con NIT {nit} ({result.nombre_institucion}) está inactiva")
+            
+            # Validar que el país coincida si se proporciona
+            if pais and result.pais != pais:
+                return (False, f"El país '{pais}' no coincide con el país de la institución '{result.pais}'")
+            
+            logger.info(f"✅ NIT {nit} validado correctamente: {result.nombre_institucion} ({result.pais})")
+            return (True, None)
+            
+        except Exception as e:
+            logger.error(f"Error al validar NIT {nit}: {str(e)}")
+            return (False, f"Error al validar NIT: {str(e)}")
 
     def get_gerente_pais(self, gerente_id: int) -> Optional[str]:
         """
@@ -345,6 +397,34 @@ class ClienteService:
         except Exception as e:
             logger.error(f"Error al buscar cliente por NIT {nit}: {str(e)}")
             return None
+
+    def get_gerente_nits(self, gerente_id: int) -> List[str]:
+        """
+        Obtener lista de NITs únicos de los clientes asignados a un gerente.
+        
+        Args:
+            gerente_id: ID del gerente
+            
+        Returns:
+            Lista de NITs únicos de los clientes asignados al gerente
+        """
+        try:
+            # Obtener NITs únicos de los clientes asignados al gerente
+            nits = self.db.query(GerenteClienteAsignacion.nit).filter(
+                GerenteClienteAsignacion.gerente_id == gerente_id,
+                GerenteClienteAsignacion.activo == True,
+                GerenteClienteAsignacion.nit.isnot(None)
+            ).distinct().all()
+            
+            # Extraer valores de las tuplas
+            nits_list = [nit[0] for nit in nits if nit[0]]
+            
+            logger.info(f"✅ NITs del gerente {gerente_id}: {nits_list}")
+            return nits_list
+            
+        except Exception as e:
+            logger.error(f"Error al obtener NITs del gerente {gerente_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error al obtener NITs del gerente")
 
     def create_asignacion(
         self,

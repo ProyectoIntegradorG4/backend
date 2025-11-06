@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from .database import SessionLocal, engine
-from .models import Base, ProductStaging, Products
+from app.database import SessionLocal, engine
+from app.models import Base, ProductStaging, Products
 from typing import List, Optional
 from pydantic import BaseModel
 from pydantic import ConfigDict
