@@ -21,8 +21,8 @@ class UserService:
         self.db = db
         self.secret_key = "your-secret-key-here"  # En producción, usar variable de entorno
         self.algorithm = "HS256"
-        self.nit_service_url = os.getenv("API_URL", "http://nit-validation-service:8002/api/v1")
-        self.audit_service_url = os.getenv("API_URL", "http://audit-service:8003/api/v1")
+        self.nit_service_url = os.getenv("API_URL", "http://nit-validation-service:8002")
+        self.audit_service_url = os.getenv("API_URL", "http://audit-service:8003")
         self.timeout = 5.0
         
         # Cliente HTTP reutilizable con configuración optimizada
@@ -48,8 +48,9 @@ class UserService:
     async def get_redis_client(self):
         if self._redis_client is None:
             try:
+                redis_url = os.getenv("REDIS_URL", "redis://redis-cache:6379")
                 self._redis_client = redis.from_url(
-                    "redis://redis-cache:6379",
+                    redis_url,
                     decode_responses=True,
                     max_connections=20
                 )
@@ -96,7 +97,7 @@ class UserService:
         # Si no está en cache, hacer request HTTP
         try:
             http_client = await self.get_http_client()
-            response = await http_client.get(f"{self.nit_service_url}/validate/{nit}")
+            response = await http_client.get(f"{self.nit_service_url}/api/v1/validate/{nit}")
             
             if response.status_code == 200:
                 data = response.json()
@@ -166,7 +167,7 @@ class UserService:
         try:
             http_client = await self.get_http_client()
             await http_client.post(
-                f"{self.audit_service_url}/audit",
+                f"{self.audit_service_url}/api/v1/audit",
                 json=audit_data,
                 headers={"Content-Type": "application/json"}
             )

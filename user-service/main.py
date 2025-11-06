@@ -6,7 +6,7 @@ from app.database.connection import init_db
 app = FastAPI(
     title="User Service",
     description="Microservicio de gestión de usuarios con orquestador de registro optimizado",
-    version="2.2.9"
+    version="2.2.10"
 )
 
 # Configuración de CORS optimizada
