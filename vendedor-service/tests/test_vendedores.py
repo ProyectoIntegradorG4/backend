@@ -1,7 +1,7 @@
 # tests/test_vendedores.py
 import pytest
 
-BASE = "/api/vendedores"
+BASE = "/api/v1/vendedores"
 
 def test_listar_vacio(client):
     r = client.get(f"{BASE}")

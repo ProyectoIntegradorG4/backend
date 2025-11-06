@@ -16,7 +16,7 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(
     title="Vendedores Service",
     description="Microservicio de Registro y Gestión de Vendedores (JWT + RBAC)",
-    version="1.0.0",
+    version="1.0.1",
 )
 
 
