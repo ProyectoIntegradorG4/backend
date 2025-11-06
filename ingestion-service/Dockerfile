@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries=5 -r requirements
 # Copia todo el contenido del servicio
 COPY . .
 
+# Set PYTHONPATH to include /app
+ENV PYTHONPATH=/app
+
 # Levanta la app FastAPI
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8010"]
 

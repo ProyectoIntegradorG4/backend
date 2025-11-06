@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries=5 -r requirements
 # Copiar el código de la aplicación
 COPY . .
 
+# Set PYTHONPATH to include /app
+ENV PYTHONPATH=/app
+
 # Exponer el puerto
 EXPOSE 8001
 
