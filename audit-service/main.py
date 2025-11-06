@@ -6,7 +6,7 @@ from app.database.connection import init_db
 app = FastAPI(
     title="Audit Service",
     description="Microservicio para auditoría y logs del sistema",
-    version="1.1.3"
+    version="1.1.4"
 )
 
 # Configuración de CORS
