@@ -30,7 +30,7 @@ jobs:
       id: tag
       run: |
         # Define all services
-        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service" "product-service" "proveedor-service" "pedidos-service" "ingestion-service" "validator-service" "upserter-service")
+        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service" "product-service" "proveedor-service" "pedidos-service" "ingestion-service" "validator-service" "upserter-service" "cliente-service" "vendedor-service")
         TAGGED_SERVICES=()
 
         echo "🔍 Detecting changed services..."
@@ -246,6 +246,14 @@ jobs:
             PORT=8012
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db?sslmode=require"
             ;;
+          "cliente-service")
+            PORT=8013
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/cliente_db?sslmode=require"
+            ;;
+          "vendedor-service")
+            PORT=8014
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/vendedor_db?sslmode=require"
+            ;;
         esac
 
         LOG_GROUP="/ecs/$SERVICE_NAME"
@@ -255,6 +263,13 @@ jobs:
           --log-group-name "$LOG_GROUP" \
           --region us-east-1 \
           2>/dev/null || echo "Log group exists"
+
+        # Build additional environment variables based on service
+        EXTRA_ENV_VARS=""
+        if [ "$SERVICE_NAME" = "vendedor-service" ]; then
+          USER_DB_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
+          EXTRA_ENV_VARS=",{\"name\": \"USER_DATABASE_URL\", \"value\": \"$USER_DB_URL\"}"
+        fi
 
         # Create task definition with proper variable substitution
         cat > task-definition.json <<EOFTASK
@@ -284,7 +299,7 @@ jobs:
                 {"name": "DATABASE_URL", "value": "$DATABASE_URL"},
                 {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
                 {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
-                {"name": "JWT_EXPIRE_MINUTES", "value": "60"}
+                {"name": "JWT_EXPIRE_MINUTES", "value": "60"}$EXTRA_ENV_VARS
               ],
               "logConfiguration": {
                 "logDriver": "awslogs",

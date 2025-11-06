@@ -10,7 +10,7 @@ logger = logging.getLogger("uvicorn")
 
 # Configuración de la base de datos desde variables de entorno
 DATABASE_URL = os.getenv(
-    "CLIENTE_DATABASE_URL",
+    "DATABASE_URL",
     "postgresql+psycopg://cliente_service:cliente_password@postgres-db:5432/cliente_db"
 )
 

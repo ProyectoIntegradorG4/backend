@@ -16,7 +16,7 @@ from app.schemas.vendedor import (
     VendedorListItem,
 )
 
-router = APIRouter(prefix="/api/vendedores", tags=["vendedores"])
+router = APIRouter(prefix="/api/v1/vendedores", tags=["vendedores"])
 
 
 def _norm(v: Optional[str]) -> Optional[str]:
@@ -30,7 +30,7 @@ def _norm(v: Optional[str]) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------
-# GET /api/vendedores  (lista paginada con filtros opcionales)
+# GET /api/v1/vendedores  (lista paginada con filtros opcionales)
 # ---------------------------------------------------------------------
 @router.get("", response_model=VendedoresResponse, status_code=200)
 @router.get("/", response_model=VendedoresResponse, status_code=200)

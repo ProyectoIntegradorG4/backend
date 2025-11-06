@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [nit-validation-service, user-service, audit-service, auth-service]
+        service: [nit-validation-service, user-service, audit-service, auth-service, cliente-service, vendedor-service]
     
     steps:
     - name: Checkout code
