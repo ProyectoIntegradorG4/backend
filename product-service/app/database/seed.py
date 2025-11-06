@@ -30,6 +30,31 @@ SEED_CATEGORIES = [
         "requiereCadenaFrio": False,
         "requiereRegistroSanitario": False,
     },
+    # Categorías del CSV de productos médicos
+    {
+        "categoriaId": "CAT-MED-001",
+        "nombre": "Medicamento",
+        "requiereCadenaFrio": False,
+        "requiereRegistroSanitario": True,
+    },
+    {
+        "categoriaId": "CAT-EQU-001",
+        "nombre": "Equipo Médico",
+        "requiereCadenaFrio": False,
+        "requiereRegistroSanitario": True,
+    },
+    {
+        "categoriaId": "CAT-INS-001",
+        "nombre": "Insumo Quirúrgico",
+        "requiereCadenaFrio": False,
+        "requiereRegistroSanitario": True,
+    },
+    {
+        "categoriaId": "CAT-CON-001",
+        "nombre": "Consumible",
+        "requiereCadenaFrio": False,
+        "requiereRegistroSanitario": False,
+    },
 ]
 
 def seed_categories(db: Session) -> None:

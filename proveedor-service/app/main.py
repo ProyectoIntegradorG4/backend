@@ -12,4 +12,4 @@ app = FastAPI(
 async def health_check():
     return JSONResponse({"status": "healthy"})
 
-app.include_router(proveedores.router, prefix="/api/proveedores")
+app.include_router(proveedores.router, prefix="/api/v1/proveedores")

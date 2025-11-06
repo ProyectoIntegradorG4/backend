@@ -121,7 +121,8 @@ class AuthService:
                 fullName=user.nombre,
                 isActive=user.activo,
                 roles=[user.rol] if user.rol else [],
-                token=access_token
+                token=access_token,
+                nit=user.nit  # Incluir NIT del usuario
             )
             
             logger.info(f"Login exitoso para usuario: {user.correo_electronico}")

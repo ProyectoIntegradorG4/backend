@@ -221,11 +221,16 @@ class UserService:
         # 4. Crear usuario con hash de contraseña en thread separado
         password_hash = await asyncio.to_thread(self.get_password_hash, user.password)
         
+        # 4.1 Determinar rol basado en NIT
+        GERENTE_NITS = ['111111111-1', '111111111-2', '111111111-3', '111111111-4']
+        user_rol = 'gerente_cuenta' if user.nit in GERENTE_NITS else 'usuario_institucional'
+        
         db_user = User(
             nombre=user.nombre,
             correo_electronico=user.email,
             password_hash=password_hash,
-            nit=user.nit
+            nit=user.nit,
+            rol=user_rol
         )
 
         try:
