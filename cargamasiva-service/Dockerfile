@@ -17,12 +17,12 @@ RUN pip install --no-cache-dir --default-timeout=100 --retries=5 -r requirements
 COPY . .
 
 # Exponer el puerto
-EXPOSE 8010
+EXPOSE 8015
 
 # Healthcheck
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD curl -f http://localhost:8010/health || exit 1
+    CMD curl -f http://localhost:8015/health || exit 1
 
 # Comando para ejecutar la aplicación
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8010", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8015", "--reload"]
 
