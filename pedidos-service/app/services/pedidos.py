@@ -230,7 +230,8 @@ class PedidosService:
         """Obtiene la información completa de un producto"""
         try:
             async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
-                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/productos/{producto_id}"
+                # Usar la ruta correcta del product-service
+                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/v1/productos/{producto_id}"
                 response = await client.get(url)
                 
                 if response.status_code == 200:
@@ -242,6 +243,30 @@ class PedidosService:
         except Exception as e:
             logger.error(f"Error obteniendo info de producto: {e}")
             return None
+    
+    @staticmethod
+    def _nombre_producto_enriquecido(producto_id: str, nombre_snapshot: Optional[str]) -> str:
+        """
+        Devuelve el nombre del producto. Si el snapshot viene vacío o como 'Producto desconocido',
+        intenta obtenerlo del product-service de forma síncrona solo para la respuesta.
+        """
+        # Si ya tenemos un nombre válido en el snapshot, úsalo tal cual
+        if nombre_snapshot and nombre_snapshot.strip().lower() != "producto desconocido":
+            return nombre_snapshot
+        # Fallback de sólo lectura para enriquecer la respuesta
+        try:
+            with httpx.Client(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/v1/productos/{producto_id}"
+                resp = client.get(url)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    nombre = data.get("nombre")
+                    if nombre:
+                        return nombre
+        except Exception as e:
+            logger.warning(f"No se pudo enriquecer nombre de producto {producto_id}: {e}")
+        # Último recurso, mantener snapshot o placeholder
+        return nombre_snapshot or "Producto desconocido"
     
     @staticmethod
     async def obtener_nits_gerente(gerente_id: int) -> List[str]:
@@ -582,7 +607,9 @@ class PedidosService:
                     DetallePedidoResponse(
                         detalle_id=str(d.detalle_id),
                         producto_id=str(d.producto_id),
-                        nombre_producto=d.nombre_producto,
+                        nombre_producto=PedidosService._nombre_producto_enriquecido(
+                            str(d.producto_id), d.nombre_producto
+                        ),
                         cantidad_solicitada=d.cantidad_solicitada,
                         cantidad_disponible_al_momento=d.cantidad_disponible_al_momento,
                         precio_unitario=d.precio_unitario,
@@ -660,7 +687,9 @@ class PedidosService:
                         DetallePedidoResponse(
                             detalle_id=str(d.detalle_id),
                             producto_id=str(d.producto_id),
-                            nombre_producto=d.nombre_producto,
+                            nombre_producto=PedidosService._nombre_producto_enriquecido(
+                                str(d.producto_id), d.nombre_producto
+                            ),
                             cantidad_solicitada=d.cantidad_solicitada,
                             cantidad_disponible_al_momento=d.cantidad_disponible_al_momento,
                             precio_unitario=d.precio_unitario,

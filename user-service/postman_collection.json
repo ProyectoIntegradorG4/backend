@@ -1,0 +1,55 @@
+{
+  "info": {
+    "_postman_id": "user-service-collection",
+    "name": "User Service",
+    "description": "Colección de pruebas para el User Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Juan Perez\",\n  \"correo_electronico\": \"juan.perez@example.com\",\n  \"password\": \"Password123!\",\n  \"nit\": \"900123456-7\",\n  \"rol\": \"usuario_institucional\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8001/register",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8001",
+          "path": [
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8001/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8001",
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}

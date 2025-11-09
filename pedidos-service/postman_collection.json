@@ -59,9 +59,16 @@
         "url": {
           "raw": "http://localhost:8007/api/v1/entregas/900123456?estado=programada&pagina=1&por_pagina=25",
           "protocol": "http",
-          "host": ["localhost"],
+          "host": [
+            "localhost"
+          ],
           "port": "8007",
-          "path": ["api", "v1", "entregas", "900123456"],
+          "path": [
+            "api",
+            "v1",
+            "entregas",
+            "900123456"
+          ],
           "query": [
             {
               "key": "estado",
@@ -87,9 +94,17 @@
         "url": {
           "raw": "http://localhost:8007/api/v1/entregas/550e8400-e29b-41d4-a716-446655440999/tracking",
           "protocol": "http",
-          "host": ["localhost"],
+          "host": [
+            "localhost"
+          ],
           "port": "8007",
-          "path": ["api", "v1", "entregas", "550e8400-e29b-41d4-a716-446655440999", "tracking"]
+          "path": [
+            "api",
+            "v1",
+            "entregas",
+            "550e8400-e29b-41d4-a716-446655440999",
+            "tracking"
+          ]
         }
       }
     },

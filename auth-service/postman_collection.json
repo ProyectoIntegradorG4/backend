@@ -1,0 +1,83 @@
+{
+  "info": {
+    "_postman_id": "auth-service-collection",
+    "name": "Auth Service",
+    "description": "Colección de pruebas para el Auth Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"gerente.ventas@medisupply.com\",\n  \"password\": \"password_seguro\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/api/v1/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8004",
+          "path": [
+            "api",
+            "v1",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify Token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8004/api/v1/verify-token?token=YOUR_JWT_TOKEN",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8004",
+          "path": [
+            "api",
+            "v1",
+            "verify-token"
+          ],
+          "query": [
+            {
+              "key": "token",
+              "value": "YOUR_JWT_TOKEN"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8004/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8004",
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}

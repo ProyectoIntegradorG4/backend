@@ -1,0 +1,301 @@
+{
+  "info": {
+    "_postman_id": "product-service-collection",
+    "name": "Product Service",
+    "description": "Colección de pruebas para el Product Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Listar Productos (Legacy)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN"
+          },
+          {
+            "key": "X-User-Roles",
+            "value": "Administrador de Compras"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8005/productos?q=ibuprofeno&categoriaId=some-uuid&sort=nombre&order=asc&page=1&page_size=10",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8005",
+          "path": [
+            "productos"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "ibuprofeno"
+            },
+            {
+              "key": "categoriaId",
+              "value": "some-uuid"
+            },
+            {
+              "key": "sort",
+              "value": "nombre"
+            },
+            {
+              "key": "order",
+              "value": "asc"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "page_size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Crear Producto (Legacy)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN"
+          },
+          {
+            "key": "X-User-Roles",
+            "value": "Administrador de Compras"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Idempotency-Key",
+            "value": "unique-key-for-request"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Producto de prueba\",\n  \"categoriaId\": \"a1b2c3d4-e5f6-7890-1234-567890abcdef\",\n  \"formaFarmaceutica\": \"Tableta\",\n  \"requierePrescripcion\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8005/productos",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8005",
+          "path": [
+            "productos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Listar Productos (v1)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8005/api/v1/productos?q=aspirina&sku=12345&categoriaId=some-uuid&estado_producto=activo&sort=nombre&order=desc&page=1&page_size=20",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8005",
+          "path": [
+            "api",
+            "v1",
+            "productos"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "aspirina"
+            },
+            {
+              "key": "sku",
+              "value": "12345"
+            },
+            {
+              "key": "categoriaId",
+              "value": "some-uuid"
+            },
+            {
+              "key": "estado_producto",
+              "value": "activo"
+            },
+            {
+              "key": "sort",
+              "value": "nombre"
+            },
+            {
+              "key": "order",
+              "value": "desc"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "page_size",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Obtener Inventario de Producto",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8005/api/v1/productos/some-product-id/inventario",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8005",
+          "path": [
+            "api",
+            "v1",
+            "productos",
+            "some-product-id",
+            "inventario"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Actualizar Stock de Producto",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8005/api/v1/productos/some-product-id/stock?cantidad_a_restar=10",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8005",
+          "path": [
+            "api",
+            "v1",
+            "productos",
+            "some-product-id",
+            "stock"
+          ],
+          "query": [
+            {
+              "key": "cantidad_a_restar",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Obtener Producto por ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8005/api/v1/productos/some-product-id",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8005",
+          "path": [
+            "api",
+            "v1",
+            "productos",
+            "some-product-id"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Listar Lotes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8005/api/v1/lotes?page=1&page_size=50&sort=fechaVencimiento&order=asc&producto_id=some-product-id&solo_con_stock=true",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8005",
+          "path": [
+            "api",
+            "v1",
+            "lotes"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "page_size",
+              "value": "50"
+            },
+            {
+              "key": "sort",
+              "value": "fechaVencimiento"
+            },
+            {
+              "key": "order",
+              "value": "asc"
+            },
+            {
+              "key": "producto_id",
+              "value": "some-product-id"
+            },
+            {
+              "key": "solo_con_stock",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8005/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8005",
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}
