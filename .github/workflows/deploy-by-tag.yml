@@ -31,10 +31,10 @@ jobs:
         echo "🔍 Validating tag: $TAG"
 
         # Check tag format: service-name-vX.Y.Z
-        if [[ ! "$TAG" =~ ^(user-service|auth-service|nit-validation-service|audit-service|product-service|proveedor-service|pedidos-service|ingestion-service|validator-service|upserter-service)-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if [[ ! "$TAG" =~ ^(user-service|auth-service|nit-validation-service|audit-service|product-service|proveedor-service|pedidos-service|ingestion-service|validator-service|upserter-service|cliente-service|vendedor-service|cargamasiva-service)-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
           echo "❌ Invalid tag format: $TAG"
           echo "Expected format: service-name-vX.Y.Z"
-          echo "Valid service names: user-service, auth-service, nit-validation-service, audit-service, product-service, proveedor-service, pedidos-service, ingestion-service, validator-service, upserter-service"
+          echo "Valid service names: user-service, auth-service, nit-validation-service, audit-service, product-service, proveedor-service, pedidos-service, ingestion-service, validator-service, upserter-service, cliente-service, vendedor-service, cargamasiva-service"
           echo "Example: user-service-v2.1.0"
           exit 1
         fi
@@ -188,6 +188,18 @@ jobs:
             ;;
           "upserter-service")
             PORT=8012
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db"
+            ;;
+          "cliente-service")
+            PORT=8013
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/cliente_db"
+            ;;
+          "vendedor-service")
+            PORT=8014
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/vendedor_db"
+            ;;
+          "cargamasiva-service")
+            PORT=8015
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db"
             ;;
         esac

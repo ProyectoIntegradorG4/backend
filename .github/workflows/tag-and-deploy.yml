@@ -30,7 +30,7 @@ jobs:
       id: tag
       run: |
         # Define all services
-        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service" "product-service" "proveedor-service" "pedidos-service" "ingestion-service" "validator-service" "upserter-service" "cliente-service" "vendedor-service")
+        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service" "product-service" "proveedor-service" "pedidos-service" "ingestion-service" "validator-service" "upserter-service" "cliente-service" "vendedor-service" "cargamasiva-service")
         TAGGED_SERVICES=()
 
         echo "🔍 Detecting changed services..."
@@ -253,6 +253,10 @@ jobs:
           "vendedor-service")
             PORT=8014
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/vendedor_db?sslmode=require"
+            ;;
+          "cargamasiva-service")
+            PORT=8015
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db?sslmode=require"
             ;;
         esac
 
