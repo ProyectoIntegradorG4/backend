@@ -10,7 +10,7 @@ from app.startup_seed import seed_default_categories
 app = FastAPI(
     title="MediSupply Loader (Single Endpoint)",
     description="Microservicio de carga masiva unificado (ingestion + validation + upsert)",
-    version="1.0.0"
+    version="1.0.1"
 )
 
 @app.on_event("startup")
