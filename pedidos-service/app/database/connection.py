@@ -49,7 +49,9 @@ def get_db() -> Generator[Session, None, None]:
 async def init_db():
     """Inicializar la base de datos creando las tablas."""
     try:
-        from app.models.pedido import Base as PedidoBase
+        # Importar modelos para asegurar su registro en el metadata
+        from app.models import pedido as _pedido_models  # noqa: F401
+        from app.models import entrega as _entrega_models  # noqa: F401
 
         # Crear tablas si no existen
         Base.metadata.create_all(bind=engine)

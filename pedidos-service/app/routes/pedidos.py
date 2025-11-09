@@ -15,9 +15,11 @@ from app.schemas.pedido import (
     ActualizarEstadoRequest,
     ActualizarEstadoResponse,
     EstadoPedidoSchema,
-    ValidacionInventarioResult
+    ValidacionInventarioResult,
+    PedidoEstadoHistorialItem,
+    ListarHistorialResponse
 )
-from app.models.pedido import EstadoPedido
+from app.models.pedido import EstadoPedido, Pedido
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
@@ -140,6 +142,39 @@ async def obtener_pedido(
         raise
     except Exception as e:
         logger.error(f"Error obtener_pedido: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "ERROR_INTERNO", "mensaje": str(e)}
+        )
+
+@router.get("/{pedido_id}/historial", response_model=ListarHistorialResponse)
+async def obtener_historial_pedido(
+    pedido_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene el historial de cambios de estado de un pedido.
+    """
+    try:
+        pedido = db.query(Pedido).filter(Pedido.pedido_id == pedido_id).first()
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        historial = sorted(pedido.historial, key=lambda h: h.fecha_cambio)
+        return ListarHistorialResponse(
+            pedido_id=pedido_id,
+            historial=[
+                PedidoEstadoHistorialItem(
+                    estado_anterior=h.estado_anterior,
+                    estado_nuevo=h.estado_nuevo,
+                    fecha_cambio=h.fecha_cambio,
+                    comentario=h.comentario
+                ) for h in historial
+            ]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obtener_historial_pedido: {e}")
         raise HTTPException(
             status_code=500,
             detail={"error": "ERROR_INTERNO", "mensaje": str(e)}

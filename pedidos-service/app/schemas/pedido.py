@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import datetime
 import uuid
 from enum import Enum
+from typing import Optional
 
 class EstadoPedidoSchema(str, Enum):
     """
@@ -21,6 +22,11 @@ class EstadoPedidoSchema(str, Enum):
     ENVIADO = "enviado"
     ENTREGADO = "entregado"
     CANCELADO = "cancelado"
+
+class CanalPedidoSchema(str, Enum):
+    """Canales posibles del pedido"""
+    MOVIL_VENTAS = "movil_ventas"
+    MOVIL_CLIENTE = "movil_cliente"
 
 # ========================
 # Esquemas para crear pedido
@@ -66,10 +72,17 @@ class DetallePedidoResponse(BaseModel):
     detalle_id: str
     producto_id: str
     nombre_producto: str
+    sku: Optional[str] = None
     cantidad_solicitada: int
     cantidad_disponible_al_momento: int
+    cantidad_confirmada: Optional[int] = None
     precio_unitario: float
     subtotal: float
+    lote_id: Optional[str] = None
+    bodega_id: Optional[str] = None
+    bodega_nombre: Optional[str] = None
+    pais: Optional[str] = None
+    fecha_vencimiento_lote: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -90,6 +103,18 @@ class PedidoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PedidoEstadoHistorialItem(BaseModel):
+    """Item de historial de cambio de estado"""
+    estado_anterior: EstadoPedidoSchema
+    estado_nuevo: EstadoPedidoSchema
+    fecha_cambio: datetime
+    comentario: Optional[str] = None
+
+class ListarHistorialResponse(BaseModel):
+    """Respuesta de historial de un pedido"""
+    pedido_id: str
+    historial: List[PedidoEstadoHistorialItem]
 
 class CrearPedidoResponse(BaseModel):
     """Respuesta exitosa al crear un pedido"""

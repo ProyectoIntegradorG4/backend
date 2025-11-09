@@ -7,13 +7,14 @@ import logging
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.models.pedido import Pedido, DetallePedido, EstadoPedido
+from app.models.pedido import Pedido, DetallePedido, EstadoPedido, PedidoEstadoHistorial, CanalPedido
 from app.schemas.pedido import (
     CrearPedidoRequest, 
     ValidacionInventarioResult,
     PedidoResponse,
     DetallePedidoResponse
 )
+from app.models.entrega import Entrega, EstadoEntrega
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,62 @@ class PedidosService:
             nuevo_numero = 1
         
         return f"PED-{nuevo_numero:06d}"
+    
+    @staticmethod
+    def _canal_por_rol(rol_usuario: str) -> Optional[CanalPedido]:
+        """Determina canal según el rol del usuario"""
+        if rol_usuario == "gerente_cuenta":
+            return CanalPedido.MOVIL_VENTAS
+        if rol_usuario == "usuario_institucional":
+            return CanalPedido.MOVIL_CLIENTE
+        return None
+    
+    @staticmethod
+    def _registrar_historial(
+        db: Session,
+        pedido: Pedido,
+        estado_anterior: EstadoPedido,
+        estado_nuevo: EstadoPedido,
+        comentario: Optional[str] = None
+    ) -> None:
+        """Inserta un registro en el historial de estados del pedido"""
+        try:
+            historial = PedidoEstadoHistorial(
+                pedido_id=pedido.pedido_id,
+                estado_anterior=estado_anterior,
+                estado_nuevo=estado_nuevo,
+                comentario=comentario
+            )
+            db.add(historial)
+        except Exception as e:
+            logger.error(f"Error registrando historial de pedido {pedido.pedido_id}: {e}")
+    
+    @staticmethod
+    async def seleccionar_lote_fefo(producto_id: str) -> Optional[Dict]:
+        """
+        Selecciona el lote con fecha de vencimiento más próxima (FEFO) para el producto.
+        Retorna dict con info del lote o None si no hay.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/v1/lotes"
+                params = {
+                    "producto_id": producto_id,
+                    "sort": "fechaVencimiento",
+                    "order": "asc",
+                    "page": 1,
+                    "page_size": 1,
+                    "solo_con_stock": True,
+                }
+                resp = await client.get(url, params=params)
+                if resp.status_code == 200:
+                    items = resp.json().get("items", [])
+                    return items[0] if items else None
+                logger.warning(f"No se pudo obtener lote FEFO para producto {producto_id}: {resp.status_code}")
+                return None
+        except Exception as e:
+            logger.error(f"Error seleccionando lote FEFO para {producto_id}: {e}")
+            return None
     
     @staticmethod
     async def validar_inventario_producto(
@@ -286,6 +343,7 @@ class PedidosService:
                 rol_usuario=rol_usuario,
                 numero_pedido=numero_pedido,
                 estado=EstadoPedido.PENDIENTE,
+                canal=PedidosService._canal_por_rol(rol_usuario),
                 observaciones=request.observaciones
             )
             
@@ -307,17 +365,26 @@ class PedidosService:
                     logger.error(f"Inventario insuficiente para {producto.producto_id}")
                     raise Exception(f"Inventario insuficiente para {nombre_producto}")
                 
+                # Seleccionar lote FEFO (opcional)
+                lote = await PedidosService.seleccionar_lote_fefo(producto.producto_id)
+                
                 subtotal = producto.cantidad_solicitada * precio
                 monto_total += subtotal
                 
                 detalle = DetallePedido(
-                    pedido_id=pedido.pedido_id,
                     producto_id=producto.producto_id,
                     nombre_producto=nombre_producto,
+                    sku=info_producto.get("sku") if info_producto else None,
                     cantidad_solicitada=producto.cantidad_solicitada,
                     cantidad_disponible_al_momento=cantidad_disp,
+                    cantidad_confirmada=producto.cantidad_solicitada,
                     precio_unitario=precio,
-                    subtotal=subtotal
+                    subtotal=subtotal,
+                    lote_id=(lote or {}).get("loteId"),
+                    bodega_id=(lote or {}).get("bodegaId"),
+                    bodega_nombre=(lote or {}).get("bodegaNombre") or (lote or {}).get("bodega"),
+                    pais=(lote or {}).get("pais"),
+                    fecha_vencimiento_lote=(lote or {}).get("fechaVencimiento"),
                 )
                 
                 pedido.detalles.append(detalle)
@@ -326,6 +393,16 @@ class PedidosService:
             
             # Guardar en base de datos
             db.add(pedido)
+            # Asegurar que se asignen IDs (pedido_id) antes de registrar historial
+            db.flush()
+            # Registrar historial de creación (pendiente → pendiente)
+            PedidosService._registrar_historial(
+                db=db,
+                pedido=pedido,
+                estado_anterior=EstadoPedido.PENDIENTE,
+                estado_nuevo=EstadoPedido.PENDIENTE,
+                comentario="Creación de pedido"
+            )
             db.commit()
             db.refresh(pedido)
             
@@ -519,6 +596,35 @@ class PedidosService:
             if observaciones:
                 pedido.observaciones = (pedido.observaciones or "") + f"\n[{datetime.now(timezone.utc).isoformat()}] {observaciones}"
             
+            # Registrar historial de cambio de estado
+            PedidosService._registrar_historial(
+                db=db,
+                pedido=pedido,
+                estado_anterior=estado_anterior,
+                estado_nuevo=nuevo_estado,
+                comentario=observaciones
+            )
+            # Sincronizar con entregas
+            try:
+                if nuevo_estado == EstadoPedido.ENVIADO:
+                    # Crear entrega programada si no existe
+                    entrega = db.query(Entrega).filter(Entrega.pedido_id == pedido.pedido_id).first()
+                    if not entrega:
+                        entrega = Entrega(
+                            pedido_id=pedido.pedido_id,
+                            nit=pedido.nit,
+                            estado_entrega=EstadoEntrega.PROGRAMADA,
+                            fecha_hora_programada=datetime.now(timezone.utc),
+                        )
+                        db.add(entrega)
+                elif nuevo_estado == EstadoPedido.ENTREGADO:
+                    # Marcar entrega como ENTREGADA si existe
+                    entrega = db.query(Entrega).filter(Entrega.pedido_id == pedido.pedido_id).first()
+                    if entrega:
+                        entrega.estado_entrega = EstadoEntrega.ENTREGADA
+                        entrega.fecha_hora_entrega_real = datetime.now(timezone.utc)
+            except Exception as sync_err:
+                logger.error(f"Error sincronizando entregas para pedido {pedido_id}: {sync_err}")
             db.commit()
             db.refresh(pedido)
             

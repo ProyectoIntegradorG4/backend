@@ -38,6 +38,62 @@
       }
     },
     {
+      "name": "Historial de Pedido",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8007/api/v1/pedidos/550e8400-e29b-41d4-a716-446655440000/historial",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "pedidos", "550e8400-e29b-41d4-a716-446655440000", "historial"]
+        }
+      }
+    },
+    {
+      "name": "Listar Entregas por NIT",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8007/api/v1/entregas/900123456?estado=programada&pagina=1&por_pagina=25",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "entregas", "900123456"],
+          "query": [
+            {
+              "key": "estado",
+              "value": "programada"
+            },
+            {
+              "key": "pagina",
+              "value": "1"
+            },
+            {
+              "key": "por_pagina",
+              "value": "25"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Tracking de Entrega",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8007/api/v1/entregas/550e8400-e29b-41d4-a716-446655440999/tracking",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8007",
+          "path": ["api", "v1", "entregas", "550e8400-e29b-41d4-a716-446655440999", "tracking"]
+        }
+      }
+    },
+    {
       "name": "Crear Pedido - Cliente Institucional",
       "request": {
         "method": "POST",
