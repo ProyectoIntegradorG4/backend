@@ -30,6 +30,7 @@ async def crear_pedido(
     usuario_id: int = Header(..., alias="usuario-id", description="ID del usuario desde el token JWT"),
     rol_usuario: str = Header(..., alias="rol-usuario", description="Rol del usuario: 'usuario_institucional', 'gerente_cuenta' o 'admin'"),
     nit_usuario: Optional[str] = Header(None, alias="nit-usuario", description="NIT del usuario desde el token (requerido para usuario_institucional)"),
+    cliente_id_header: Optional[int] = Header(None, alias="cliente-id", description="ID del cliente desde el token (prioritario para usuario_institucional)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -66,6 +67,7 @@ async def crear_pedido(
             usuario_id=usuario_id,
             rol_usuario=rol_usuario,
             nit_usuario=nit_usuario,
+            cliente_id_header=cliente_id_header,
             db=db
         )
         
@@ -184,6 +186,7 @@ async def obtener_historial_pedido(
 async def listar_pedidos(
     usuario_id: Optional[int] = Query(None, description="Filtrar por usuario_id"),
     nit: Optional[str] = Query(None, description="Filtrar por NIT"),
+    cliente_id: Optional[int] = Query(None, description="Filtrar por cliente_id"),
     estado: Optional[str] = Query(None, description="Filtrar por estado del pedido"),
     pagina: int = Query(1, ge=1, description="Número de página"),
     por_pagina: int = Query(10, ge=1, le=100, description="Registros por página"),
@@ -268,6 +271,7 @@ async def listar_pedidos(
             usuario_id=None,  # Cambiado: no filtrar por creador, solo por NIT
             nit=nit_filtro,
             nits_gerente=nits_gerente,
+            cliente_id=cliente_id,
             estado=estado_enum,
             pagina=pagina,
             por_pagina=por_pagina,

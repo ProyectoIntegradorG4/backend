@@ -40,6 +40,7 @@ class ProductoEnPedidoCreate(BaseModel):
 class CrearPedidoRequest(BaseModel):
     """Request para crear un nuevo pedido"""
     nit: str = Field(..., description="NIT asociado al usuario (requerido)")
+    cliente_id: int = Field(..., description="ID del cliente (sede) asociado al NIT")
     productos: List[ProductoEnPedidoCreate] = Field(..., description="Lista de productos a pedir")
     observaciones: Optional[str] = Field(None, description="Observaciones adicionales del pedido")
 
@@ -47,6 +48,7 @@ class CrearPedidoRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "nit": "123456789",
+                "cliente_id": 101,
                 "productos": [
                     {"producto_id": "550e8400-e29b-41d4-a716-446655440000", "cantidad_solicitada": 5},
                     {"producto_id": "550e8400-e29b-41d4-a716-446655440001", "cantidad_solicitada": 10}
@@ -92,6 +94,7 @@ class PedidoResponse(BaseModel):
     pedido_id: str
     numero_pedido: str
     usuario_id: int
+    cliente_id: int
     nit: str
     rol_usuario: str
     estado: EstadoPedidoSchema

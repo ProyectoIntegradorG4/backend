@@ -71,6 +71,7 @@ class Pedido(Base):
     
     # Información del usuario/cliente
     usuario_id = Column(Integer, nullable=False, index=True)  # ID del usuario desde user-service
+    cliente_id = Column(Integer, nullable=False, index=True)  # ID del cliente desde cliente-service
     nit = Column(String(20), nullable=False, index=True)  # NIT asociado al usuario
     rol_usuario = Column(String(50), nullable=False)  # 'usuario_institucional' o 'admin' (vendedor)
     

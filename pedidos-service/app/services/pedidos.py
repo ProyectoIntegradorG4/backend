@@ -26,6 +26,68 @@ class PedidosService:
     REQUEST_TIMEOUT = 10.0
     
     @staticmethod
+    def _nit_normalizado(nit: Optional[str]) -> Optional[str]:
+        if nit is None:
+            return None
+        try:
+            import re
+            return re.sub(r"[^0-9A-Za-z]", "", str(nit))
+        except Exception:
+            return nit
+    
+    @staticmethod
+    def _nit_equals(nit_a: Optional[str], nit_b: Optional[str]) -> bool:
+        return PedidosService._nit_normalizado(nit_a) == PedidosService._nit_normalizado(nit_b)
+    
+    @staticmethod
+    async def obtener_cliente_por_id(cliente_id: int) -> Optional[Dict]:
+        """
+        Obtiene un cliente específico por su ID desde cliente-service.
+        Retorna dict con info del cliente o None si no existe.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.CLIENTE_SERVICE_URL}/api/v1/clientes/{cliente_id}"
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    return resp.json()
+                if resp.status_code == 404:
+                    logger.warning(f"Cliente {cliente_id} no encontrado en cliente-service")
+                    return None
+                logger.warning(f"Error obteniendo cliente {cliente_id}: {resp.status_code}")
+                return None
+        except httpx.TimeoutException:
+            logger.error(f"Timeout al obtener cliente {cliente_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Error obteniendo cliente por ID {cliente_id}: {e}")
+            return None
+    
+    @staticmethod
+    async def obtener_sedes_por_nit(nit: str) -> List[Dict]:
+        """
+        Obtiene la lista de sedes (clientes) asociados a un NIT desde cliente-service.
+        Retorna lista de dicts con al menos 'cliente_id' y 'nit'.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.CLIENTE_SERVICE_URL}/api/v1/clientes/por-nit"
+                resp = await client.get(url, params={"nit": nit})
+                if resp.status_code == 200:
+                    data = resp.json()
+                    # Se espera estructura: { "clientes": [ { cliente_id, nit, ... }, ... ] }
+                    clientes = data.get("clientes", [])
+                    return clientes
+                logger.warning(f"No se pudieron obtener sedes para NIT {nit}: {resp.status_code}")
+                return []
+        except httpx.TimeoutException:
+            logger.error(f"Timeout al obtener sedes para NIT {nit}")
+            return []
+        except Exception as e:
+            logger.error(f"Error obteniendo sedes por NIT {nit}: {e}")
+            return []
+    
+    @staticmethod
     def generar_numero_pedido(db: Session) -> str:
         """Genera un número de pedido secuencial único"""
         # Obtener el último número de pedido
@@ -300,6 +362,7 @@ class PedidosService:
         usuario_id: int,
         rol_usuario: str,
         nit_usuario: Optional[str],
+        cliente_id_header: Optional[int],
         db: Session
     ) -> Tuple[bool, Optional[PedidoResponse], str, List[ValidacionInventarioResult]]:
         """
@@ -316,6 +379,25 @@ class PedidosService:
                 if not nit_valido:
                     logger.warning(f"Validación NIT fallida para usuario_institucional {usuario_id}: {error_msg}")
                     return False, None, error_msg, []
+                # Para usuario_institucional, exigir cliente_id en header y priorizarlo
+                if cliente_id_header is None:
+                    msg = "cliente_id es requerido en el header para usuario_institucional"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                effective_cliente_id = cliente_id_header
+                # Validar que el cliente_id corresponda con el NIT indicado verificando por ID
+                cliente = await PedidosService.obtener_cliente_por_id(effective_cliente_id)
+                if not cliente:
+                    msg = f"Cliente {effective_cliente_id} no encontrado"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                cliente_nit = cliente.get("nit")
+                if not cliente_nit or not PedidosService._nit_equals(cliente_nit, request.nit):
+                    msg = f"El cliente_id {effective_cliente_id} no pertenece al NIT {request.nit}"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                # Forzar el cliente_id efectivo en el request para persistir
+                request.cliente_id = effective_cliente_id
             
             elif rol_usuario == 'gerente_cuenta':
                 nit_valido, error_msg = await PedidosService.validar_nit_gerente_cuenta(
@@ -324,6 +406,17 @@ class PedidosService:
                 if not nit_valido:
                     logger.warning(f"Validación NIT fallida para gerente_cuenta {usuario_id}: {error_msg}")
                     return False, None, error_msg, []
+                # Validar que el cliente_id corresponda con el NIT indicado verificando por ID
+                cliente = await PedidosService.obtener_cliente_por_id(request.cliente_id)
+                if not cliente:
+                    msg = f"Cliente {request.cliente_id} no encontrado"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                cliente_nit = cliente.get("nit")
+                if not cliente_nit or not PedidosService._nit_equals(cliente_nit, request.nit):
+                    msg = f"El cliente_id {request.cliente_id} no pertenece al NIT {request.nit}"
+                    logger.warning(msg)
+                    return False, None, msg, []
             
             # Validar el pedido
             valido, validaciones, error_msg = await PedidosService.validar_pedido(
@@ -339,6 +432,7 @@ class PedidosService:
             # Crear el pedido
             pedido = Pedido(
                 usuario_id=usuario_id,
+                cliente_id=request.cliente_id,
                 nit=request.nit,
                 rol_usuario=rol_usuario,
                 numero_pedido=numero_pedido,
@@ -434,6 +528,7 @@ class PedidosService:
                 pedido_id=str(pedido.pedido_id),
                 numero_pedido=pedido.numero_pedido,
                 usuario_id=pedido.usuario_id,
+                cliente_id=pedido.cliente_id,
                 nit=pedido.nit,
                 rol_usuario=pedido.rol_usuario,
                 estado=pedido.estado,
@@ -475,6 +570,7 @@ class PedidosService:
                 pedido_id=str(pedido.pedido_id),
                 numero_pedido=pedido.numero_pedido,
                 usuario_id=pedido.usuario_id,
+                cliente_id=pedido.cliente_id,
                 nit=pedido.nit,
                 rol_usuario=pedido.rol_usuario,
                 estado=pedido.estado,
@@ -504,6 +600,7 @@ class PedidosService:
         usuario_id: int = None,
         nit: str = None,
         nits_gerente: List[str] = None,
+        cliente_id: Optional[int] = None,
         estado: EstadoPedido = None,
         pagina: int = 1,
         por_pagina: int = 10,
@@ -537,6 +634,9 @@ class PedidosService:
             if estado:
                 query = query.filter(Pedido.estado == estado)
             
+            if cliente_id:
+                query = query.filter(Pedido.cliente_id == cliente_id)
+            
             total = query.count()
             
             pedidos = query.order_by(Pedido.fecha_creacion.desc()).offset(
@@ -548,6 +648,7 @@ class PedidosService:
                     pedido_id=str(p.pedido_id),
                     numero_pedido=p.numero_pedido,
                     usuario_id=p.usuario_id,
+                    cliente_id=p.cliente_id,
                     nit=p.nit,
                     rol_usuario=p.rol_usuario,
                     estado=p.estado,
@@ -632,6 +733,7 @@ class PedidosService:
                 pedido_id=str(pedido.pedido_id),
                 numero_pedido=pedido.numero_pedido,
                 usuario_id=pedido.usuario_id,
+                cliente_id=pedido.cliente_id,
                 nit=pedido.nit,
                 rol_usuario=pedido.rol_usuario,
                 estado=pedido.estado,
