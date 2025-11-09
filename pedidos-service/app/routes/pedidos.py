@@ -162,7 +162,7 @@ async def listar_pedidos(
     
     **Parámetros de filtrado:**
     - nit: NIT específico (opcional para gerente_cuenta, ignorado para usuario_institucional)
-    - estado: Estado del pedido (pendiente, confirmado, en_proceso, enviado, entregado, cancelado, rechazado)
+    - estado: Estado del pedido (pendiente, enviado, entregado, cancelado)
     
     **Filtrado automático por rol:**
     - usuario_institucional: Ve TODOS los pedidos de su NIT (sin importar quién los creó)

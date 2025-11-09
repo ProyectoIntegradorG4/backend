@@ -342,7 +342,7 @@ class PedidosService:
                     logger.warning(f"Error actualizando stock para producto {producto.producto_id}")
             
             # Si hay errores al actualizar stock, registrar pero no fallar el pedido
-            # (el pedido ya está creado y confirmado)
+            # (el pedido ya está creado con estado 'pendiente')
             if productos_con_error:
                 logger.error(f"Pedido {numero_pedido} creado pero error actualizando stock para productos: {productos_con_error}")
                 # Opcional: Podrías marcar el pedido con un estado especial o agregar una observación

@@ -5,14 +5,22 @@ import uuid
 from enum import Enum
 
 class EstadoPedidoSchema(str, Enum):
-    """Estados posibles de un pedido"""
+    """
+    Estados posibles de un pedido (Schema para validación Pydantic).
+    
+    Solo se permiten los siguientes 4 estados (alineados con el frontend móvil):
+    - pendiente: Estado inicial cuando se crea el pedido
+    - enviado: El pedido ha sido enviado
+    - entregado: El pedido ha sido entregado al cliente
+    - cancelado: El pedido ha sido cancelado
+    
+    Nota: Estados comentados (confirmado, en_proceso, rechazado) fueron removidos
+    para mantener consistencia con el frontend móvil que solo usa estos 4 estados.
+    """
     PENDIENTE = "pendiente"
-    CONFIRMADO = "confirmado"
-    EN_PROCESO = "en_proceso"
     ENVIADO = "enviado"
     ENTREGADO = "entregado"
     CANCELADO = "cancelado"
-    RECHAZADO = "rechazado"
 
 # ========================
 # Esquemas para crear pedido

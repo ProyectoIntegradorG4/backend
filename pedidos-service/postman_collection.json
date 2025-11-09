@@ -196,7 +196,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"nuevo_estado\": \"confirmado\",\n  \"observaciones\": \"Pedido confirmado por gerente de cuentas\"\n}"
+          "raw": "{\n  \"nuevo_estado\": \"enviado\",\n  \"observaciones\": \"Pedido enviado por logística\"\n}"
         },
         "url": {
           "raw": "http://localhost:8007/api/v1/pedidos/550e8400-e29b-41d4-a716-446655440000/estado",
