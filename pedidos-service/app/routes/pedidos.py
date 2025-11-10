@@ -239,14 +239,6 @@ async def listar_pedidos(
                         detail=f"No tiene permiso para ver pedidos del NIT {nit_filtro}"
                     )
                 logger.info(f"Filtrando pedidos por NIT {nit_filtro} del gerente_cuenta {usuario_id_header}")
-            else:
-                # Si no se proporciona NIT, obtener todos los NITs del gerente y filtrar por ellos
-                nits_gerente = await PedidosService.obtener_nits_gerente(usuario_id_header)
-                if nits_gerente:
-                    logger.info(f"Filtrando pedidos por todos los NITs del gerente {usuario_id_header}: {nits_gerente}")
-                    # No establecer nit_filtro aquí, lo manejaremos en el servicio
-                else:
-                    logger.warning(f"Gerente {usuario_id_header} no tiene clientes asignados")
         
         # Convertir estado a enum si se proporciona
         estado_enum = None
@@ -259,19 +251,27 @@ async def listar_pedidos(
                     detail=f"Estado inválido. Estados válidos: {[e.value for e in EstadoPedido]}"
                 )
         
-        # Para gerente_cuenta sin NIT específico, obtener sus NITs
-        nits_gerente = None
+        # Para gerente_cuenta sin NIT específico, obtener sus cliente_ids asignados
+        cliente_ids_gerente = None
         if rol_usuario == "gerente_cuenta" and not nit_filtro and usuario_id_header:
-            nits_gerente = await PedidosService.obtener_nits_gerente(usuario_id_header)
+            cliente_ids_gerente = await PedidosService.obtener_cliente_ids_gerente(usuario_id_header)
+            if cliente_ids_gerente:
+                logger.info(f"Filtrando pedidos por cliente_ids del gerente {usuario_id_header}: {cliente_ids_gerente}")
+            else:
+                logger.warning(f"Gerente {usuario_id_header} no tiene sedes asignadas")
+
+        # Para gerente_cuenta, ignorar el filtro cliente_id manual para usar cliente_ids_gerente
+        cliente_id_filtro = cliente_id if rol_usuario != "gerente_cuenta" else None
         
-        # NO filtrar por usuario_id para que todos vean todos los pedidos del NIT
+        # NO filtrar por usuario_id para que todos vean todos los pedidos del NIT/cliente
         # Esto permite que múltiples usuarios (institucional + gerentes) vean todos
         # los pedidos del mismo NIT y eviten duplicaciones
         pedidos, total = PedidosService.listar_pedidos(
-            usuario_id=None,  # Cambiado: no filtrar por creador, solo por NIT
+            usuario_id=None,  # Cambiado: no filtrar por creador, solo por NIT/cliente_id
             nit=nit_filtro,
-            nits_gerente=nits_gerente,
-            cliente_id=cliente_id,
+            nits_gerente=None,  # Ya no usar NITs, preferir cliente_ids
+            cliente_ids_gerente=cliente_ids_gerente,
+            cliente_id=cliente_id_filtro,
             estado=estado_enum,
             pagina=pagina,
             por_pagina=por_pagina,

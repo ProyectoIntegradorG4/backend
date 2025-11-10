@@ -301,6 +301,38 @@ class PedidosService:
             return []
     
     @staticmethod
+    async def obtener_cliente_ids_gerente(gerente_id: int) -> List[int]:
+        """
+        Obtiene la lista de cliente_ids (sedes) asignados a un gerente desde el cliente-service
+        
+        Args:
+            gerente_id: ID del gerente
+            
+        Returns:
+            Lista de cliente_ids de las sedes asignadas al gerente
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.CLIENTE_SERVICE_URL}/api/v1/clientes/mis-cliente-ids"
+                response = await client.get(url, params={"gerente_id": gerente_id})
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    cliente_ids = data.get("cliente_ids", [])
+                    logger.info(f"Cliente IDs del gerente {gerente_id}: {cliente_ids}")
+                    return cliente_ids
+                else:
+                    logger.warning(f"Error al obtener cliente_ids del gerente {gerente_id}: {response.status_code}")
+                    return []
+                    
+        except httpx.TimeoutException:
+            logger.error(f"Timeout al obtener cliente_ids del gerente {gerente_id}")
+            return []
+        except Exception as e:
+            logger.error(f"Error obteniendo cliente_ids del gerente {gerente_id}: {e}")
+            return []
+    
+    @staticmethod
     async def validar_nit_usuario_institucional(nit_request: str, nit_usuario: str) -> Tuple[bool, str]:
         """
         Valida que el NIT en la solicitud coincida con el NIT del usuario institucional
@@ -627,6 +659,7 @@ class PedidosService:
         usuario_id: int = None,
         nit: str = None,
         nits_gerente: List[str] = None,
+        cliente_ids_gerente: List[int] = None,
         cliente_id: Optional[int] = None,
         estado: EstadoPedido = None,
         pagina: int = 1,
@@ -639,7 +672,9 @@ class PedidosService:
         Args:
             usuario_id: Filtrar por ID de usuario
             nit: Filtrar por NIT específico
-            nits_gerente: Lista de NITs del gerente (para mostrar todos sus clientes)
+            nits_gerente: Lista de NITs del gerente (DEPRECATED, usar cliente_ids_gerente)
+            cliente_ids_gerente: Lista de cliente_ids asignados al gerente (para mostrar solo sus sedes)
+            cliente_id: Filtrar por cliente_id específico
             estado: Filtrar por estado
             pagina: Número de página
             por_pagina: Registros por página
@@ -651,11 +686,14 @@ class PedidosService:
             if usuario_id:
                 query = query.filter(Pedido.usuario_id == usuario_id)
             
-            # Filtrar por NIT específico o por lista de NITs del gerente
+            # Filtrar por NIT específico o por lista de cliente_ids del gerente
             if nit:
                 query = query.filter(Pedido.nit == nit)
+            elif cliente_ids_gerente:
+                # Para gerente_cuenta, mostrar pedidos SOLO de las sedes asignadas
+                query = query.filter(Pedido.cliente_id.in_(cliente_ids_gerente))
             elif nits_gerente:
-                # Para gerente_cuenta, mostrar pedidos de todos sus clientes
+                # DEPRECATED: Mantener por compatibilidad pero preferir cliente_ids_gerente
                 query = query.filter(Pedido.nit.in_(nits_gerente))
             
             if estado:

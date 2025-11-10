@@ -426,6 +426,33 @@ class ClienteService:
             logger.error(f"Error al obtener NITs del gerente {gerente_id}: {str(e)}")
             raise HTTPException(status_code=500, detail="Error al obtener NITs del gerente")
 
+    def get_gerente_cliente_ids(self, gerente_id: int) -> List[int]:
+        """
+        Obtener lista de cliente_ids (sedes) asignados a un gerente.
+        
+        Args:
+            gerente_id: ID del gerente
+            
+        Returns:
+            Lista de cliente_ids de las sedes asignadas al gerente
+        """
+        try:
+            # Obtener cliente_ids de los clientes asignados al gerente
+            cliente_ids = self.db.query(GerenteClienteAsignacion.cliente_id).filter(
+                GerenteClienteAsignacion.gerente_id == gerente_id,
+                GerenteClienteAsignacion.activo == True
+            ).all()
+            
+            # Extraer valores de las tuplas
+            cliente_ids_list = [cid[0] for cid in cliente_ids if cid[0]]
+            
+            logger.info(f"✅ Cliente IDs del gerente {gerente_id}: {cliente_ids_list}")
+            return cliente_ids_list
+            
+        except Exception as e:
+            logger.error(f"Error al obtener cliente_ids del gerente {gerente_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error al obtener cliente_ids del gerente")
+
     def create_asignacion(
         self,
         gerente_id: int,
