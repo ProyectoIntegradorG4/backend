@@ -1,0 +1,100 @@
+{
+  "info": {
+    "_postman_id": "ingestion-service-collection",
+    "name": "Ingestion Service",
+    "description": "Colección de pruebas para el Ingestion Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Upload CSV",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "/path/to/your/file.csv"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8010/upload-csv?created_by=postman",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8010",
+          "path": [
+            "upload-csv"
+          ],
+          "query": [
+            {
+              "key": "created_by",
+              "value": "postman"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Staging Products",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8010/staging-products?limit=10&offset=0",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8010",
+          "path": [
+            "staging-products"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8010/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8010",
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}

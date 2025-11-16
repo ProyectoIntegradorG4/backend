@@ -39,8 +39,10 @@ class TestCrearPedidoGerente:
             "precio": producto_disponible["precio"]
         }
         
+        cliente_id_ok = 101
         payload = {
             "nit": usuario_vendedor["nit"],
+            "cliente_id": cliente_id_ok,
             "productos": [
                 {
                     "producto_id": producto_disponible["producto_id"],
@@ -49,13 +51,15 @@ class TestCrearPedidoGerente:
             ]
         }
         
-        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar:
+        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar, \
+             patch("app.services.pedidos.PedidosService.obtener_sedes_por_nit") as mock_sedes:
             mock_validar.return_value = (
                 True,
                 producto_disponible["cantidad_disponible"],
                 producto_disponible["precio"],
                 "Inventario disponible"
             )
+            mock_sedes.return_value = [{"cliente_id": cliente_id_ok, "nit": usuario_vendedor["nit"]}]
             
             with patch("app.services.pedidos.PedidosService.obtener_info_producto") as mock_info:
                 mock_info.return_value = mock_response
@@ -77,6 +81,7 @@ class TestCrearPedidoGerente:
         assert data["mensaje"] == f"Pedido creado exitosamente con número #{data['numero_pedido']}"
         assert data["pedido"]["estado"] == "pendiente"
         assert data["pedido"]["nit"] == usuario_vendedor["nit"]
+        assert data["pedido"]["cliente_id"] == cliente_id_ok
         assert data["pedido"]["rol_usuario"] == "admin"
         assert len(data["pedido"]["detalles"]) == 1
     
@@ -93,8 +98,10 @@ class TestCrearPedidoGerente:
         - When: Selecciona producto con cantidad > disponible
         - Then: Sistema muestra error y ofrece sugerencia
         """
+        cliente_id_ok = 101
         payload = {
             "nit": usuario_vendedor["nit"],
+            "cliente_id": cliente_id_ok,
             "productos": [
                 {
                     "producto_id": producto_stock_bajo["producto_id"],
@@ -103,13 +110,15 @@ class TestCrearPedidoGerente:
             ]
         }
         
-        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar:
+        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar, \
+             patch("app.services.pedidos.PedidosService.obtener_sedes_por_nit") as mock_sedes:
             mock_validar.return_value = (
                 False,
                 producto_stock_bajo["cantidad_disponible"],  # 5
                 producto_stock_bajo["precio"],
                 f"Inventario insuficiente. Disponible: {producto_stock_bajo['cantidad_disponible']}"
             )
+            mock_sedes.return_value = [{"cliente_id": cliente_id_ok, "nit": usuario_vendedor["nit"]}]
             
             response = client.post(
                 "/api/v1/pedidos/",
@@ -146,8 +155,10 @@ class TestCrearPedidoClienteInstitucional:
         - When: Selecciona productos con inventario disponible y confirma
         - Then: Pedido se registra exitosamente con número generado
         """
+        cliente_id_ok = 201
         payload = {
             "nit": usuario_institucional["nit"],
+            "cliente_id": cliente_id_ok,
             "productos": [
                 {
                     "producto_id": producto_disponible["producto_id"],
@@ -156,13 +167,15 @@ class TestCrearPedidoClienteInstitucional:
             ]
         }
         
-        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar:
+        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar, \
+             patch("app.services.pedidos.PedidosService.obtener_cliente_por_id") as mock_cliente:
             mock_validar.return_value = (
                 True,
                 producto_disponible["cantidad_disponible"],
                 producto_disponible["precio"],
                 "Inventario disponible"
             )
+            mock_cliente.return_value = {"cliente_id": cliente_id_ok, "nit": usuario_institucional["nit"]}
             
             with patch("app.services.pedidos.PedidosService.obtener_info_producto") as mock_info:
                 mock_info.return_value = {
@@ -185,6 +198,7 @@ class TestCrearPedidoClienteInstitucional:
         assert "numero_pedido" in data
         assert data["pedido"]["rol_usuario"] == "usuario_institucional"
         assert data["pedido"]["nit"] == usuario_institucional["nit"]
+        assert data["pedido"]["cliente_id"] == cliente_id_ok
     
     @pytest.mark.asyncio
     async def test_intentar_pedir_producto_sin_stock(
@@ -199,8 +213,10 @@ class TestCrearPedidoClienteInstitucional:
         - When: Selecciona producto con cantidad = 0
         - Then: Sistema muestra error "Producto sin disponibilidad"
         """
+        cliente_id_ok = 201
         payload = {
             "nit": usuario_institucional["nit"],
+            "cliente_id": cliente_id_ok,
             "productos": [
                 {
                     "producto_id": producto_sin_stock["producto_id"],
@@ -209,13 +225,15 @@ class TestCrearPedidoClienteInstitucional:
             ]
         }
         
-        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar:
+        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar, \
+             patch("app.services.pedidos.PedidosService.obtener_cliente_por_id") as mock_cliente:
             mock_validar.return_value = (
                 False,
                 0,  # Sin stock
                 producto_sin_stock["precio"],
                 "Producto sin disponibilidad"
             )
+            mock_cliente.return_value = {"cliente_id": cliente_id_ok, "nit": usuario_institucional["nit"]}
             
             response = client.post(
                 "/api/v1/pedidos/",
@@ -244,8 +262,10 @@ class TestCrearPedidoClienteInstitucional:
         - When: Ingresa cantidad > disponible en inventario
         - Then: Sistema muestra error y sugiere cantidad máxima
         """
+        cliente_id_ok = 201
         payload = {
             "nit": usuario_institucional["nit"],
+            "cliente_id": cliente_id_ok,
             "productos": [
                 {
                     "producto_id": producto_stock_bajo["producto_id"],
@@ -254,13 +274,15 @@ class TestCrearPedidoClienteInstitucional:
             ]
         }
         
-        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar:
+        with patch("app.services.pedidos.PedidosService.validar_inventario_producto") as mock_validar, \
+             patch("app.services.pedidos.PedidosService.obtener_cliente_por_id") as mock_cliente:
             mock_validar.return_value = (
                 False,
                 producto_stock_bajo["cantidad_disponible"],
                 producto_stock_bajo["precio"],
                 "Cantidad solicitada supera inventario disponible"
             )
+            mock_cliente.return_value = {"cliente_id": cliente_id_ok, "nit": usuario_institucional["nit"]}
             
             response = client.post(
                 "/api/v1/pedidos/",
@@ -294,6 +316,7 @@ class TestObtenerPedido:
         pedido = Pedido(
             pedido_id=uuid4(),
             usuario_id=1,
+            cliente_id=101,
             nit="900123456",
             rol_usuario="usuario_institucional",
             numero_pedido="PED-000001",
@@ -340,6 +363,7 @@ class TestListarPedidos:
         pedido1 = Pedido(
             pedido_id=uuid4(),
             usuario_id=1,
+            cliente_id=101,
             nit="900123456",
             rol_usuario="usuario_institucional",
             numero_pedido="PED-000001",
@@ -350,6 +374,7 @@ class TestListarPedidos:
         pedido2 = Pedido(
             pedido_id=uuid4(),
             usuario_id=2,
+            cliente_id=102,
             nit="900654321",
             rol_usuario="usuario_institucional",
             numero_pedido="PED-000002",

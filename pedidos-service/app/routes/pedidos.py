@@ -15,9 +15,11 @@ from app.schemas.pedido import (
     ActualizarEstadoRequest,
     ActualizarEstadoResponse,
     EstadoPedidoSchema,
-    ValidacionInventarioResult
+    ValidacionInventarioResult,
+    PedidoEstadoHistorialItem,
+    ListarHistorialResponse
 )
-from app.models.pedido import EstadoPedido
+from app.models.pedido import EstadoPedido, Pedido
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/pedidos", tags=["pedidos"])
@@ -28,6 +30,7 @@ async def crear_pedido(
     usuario_id: int = Header(..., alias="usuario-id", description="ID del usuario desde el token JWT"),
     rol_usuario: str = Header(..., alias="rol-usuario", description="Rol del usuario: 'usuario_institucional', 'gerente_cuenta' o 'admin'"),
     nit_usuario: Optional[str] = Header(None, alias="nit-usuario", description="NIT del usuario desde el token (requerido para usuario_institucional)"),
+    cliente_id_header: Optional[int] = Header(None, alias="cliente-id", description="ID del cliente desde el token (prioritario para usuario_institucional)"),
     db: Session = Depends(get_db)
 ):
     """
@@ -64,6 +67,7 @@ async def crear_pedido(
             usuario_id=usuario_id,
             rol_usuario=rol_usuario,
             nit_usuario=nit_usuario,
+            cliente_id_header=cliente_id_header,
             db=db
         )
         
@@ -145,10 +149,44 @@ async def obtener_pedido(
             detail={"error": "ERROR_INTERNO", "mensaje": str(e)}
         )
 
+@router.get("/{pedido_id}/historial", response_model=ListarHistorialResponse)
+async def obtener_historial_pedido(
+    pedido_id: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene el historial de cambios de estado de un pedido.
+    """
+    try:
+        pedido = db.query(Pedido).filter(Pedido.pedido_id == pedido_id).first()
+        if not pedido:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        historial = sorted(pedido.historial, key=lambda h: h.fecha_cambio)
+        return ListarHistorialResponse(
+            pedido_id=pedido_id,
+            historial=[
+                PedidoEstadoHistorialItem(
+                    estado_anterior=h.estado_anterior,
+                    estado_nuevo=h.estado_nuevo,
+                    fecha_cambio=h.fecha_cambio,
+                    comentario=h.comentario
+                ) for h in historial
+            ]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error obtener_historial_pedido: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "ERROR_INTERNO", "mensaje": str(e)}
+        )
+
 @router.get("/", response_model=ListarPedidosResponse)
 async def listar_pedidos(
     usuario_id: Optional[int] = Query(None, description="Filtrar por usuario_id"),
     nit: Optional[str] = Query(None, description="Filtrar por NIT"),
+    cliente_id: Optional[int] = Query(None, description="Filtrar por cliente_id"),
     estado: Optional[str] = Query(None, description="Filtrar por estado del pedido"),
     pagina: int = Query(1, ge=1, description="Número de página"),
     por_pagina: int = Query(10, ge=1, le=100, description="Registros por página"),
@@ -162,7 +200,7 @@ async def listar_pedidos(
     
     **Parámetros de filtrado:**
     - nit: NIT específico (opcional para gerente_cuenta, ignorado para usuario_institucional)
-    - estado: Estado del pedido (pendiente, confirmado, en_proceso, enviado, entregado, cancelado, rechazado)
+    - estado: Estado del pedido (pendiente, enviado, entregado, cancelado)
     
     **Filtrado automático por rol:**
     - usuario_institucional: Ve TODOS los pedidos de su NIT (sin importar quién los creó)
@@ -201,14 +239,6 @@ async def listar_pedidos(
                         detail=f"No tiene permiso para ver pedidos del NIT {nit_filtro}"
                     )
                 logger.info(f"Filtrando pedidos por NIT {nit_filtro} del gerente_cuenta {usuario_id_header}")
-            else:
-                # Si no se proporciona NIT, obtener todos los NITs del gerente y filtrar por ellos
-                nits_gerente = await PedidosService.obtener_nits_gerente(usuario_id_header)
-                if nits_gerente:
-                    logger.info(f"Filtrando pedidos por todos los NITs del gerente {usuario_id_header}: {nits_gerente}")
-                    # No establecer nit_filtro aquí, lo manejaremos en el servicio
-                else:
-                    logger.warning(f"Gerente {usuario_id_header} no tiene clientes asignados")
         
         # Convertir estado a enum si se proporciona
         estado_enum = None
@@ -221,18 +251,27 @@ async def listar_pedidos(
                     detail=f"Estado inválido. Estados válidos: {[e.value for e in EstadoPedido]}"
                 )
         
-        # Para gerente_cuenta sin NIT específico, obtener sus NITs
-        nits_gerente = None
+        # Para gerente_cuenta sin NIT específico, obtener sus cliente_ids asignados
+        cliente_ids_gerente = None
         if rol_usuario == "gerente_cuenta" and not nit_filtro and usuario_id_header:
-            nits_gerente = await PedidosService.obtener_nits_gerente(usuario_id_header)
+            cliente_ids_gerente = await PedidosService.obtener_cliente_ids_gerente(usuario_id_header)
+            if cliente_ids_gerente:
+                logger.info(f"Filtrando pedidos por cliente_ids del gerente {usuario_id_header}: {cliente_ids_gerente}")
+            else:
+                logger.warning(f"Gerente {usuario_id_header} no tiene sedes asignadas")
+
+        # Para gerente_cuenta, ignorar el filtro cliente_id manual para usar cliente_ids_gerente
+        cliente_id_filtro = cliente_id if rol_usuario != "gerente_cuenta" else None
         
-        # NO filtrar por usuario_id para que todos vean todos los pedidos del NIT
+        # NO filtrar por usuario_id para que todos vean todos los pedidos del NIT/cliente
         # Esto permite que múltiples usuarios (institucional + gerentes) vean todos
         # los pedidos del mismo NIT y eviten duplicaciones
         pedidos, total = PedidosService.listar_pedidos(
-            usuario_id=None,  # Cambiado: no filtrar por creador, solo por NIT
+            usuario_id=None,  # Cambiado: no filtrar por creador, solo por NIT/cliente_id
             nit=nit_filtro,
-            nits_gerente=nits_gerente,
+            nits_gerente=None,  # Ya no usar NITs, preferir cliente_ids
+            cliente_ids_gerente=cliente_ids_gerente,
+            cliente_id=cliente_id_filtro,
             estado=estado_enum,
             pagina=pagina,
             por_pagina=por_pagina,

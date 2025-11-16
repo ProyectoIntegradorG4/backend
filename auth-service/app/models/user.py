@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, text
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr
@@ -18,6 +18,7 @@ class User(Base):
     rol = Column(String(50), default='usuario_institucional')
     fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     activo = Column(Boolean, default=True)
+    cliente_id = Column(Integer, nullable=False, server_default=text('1'))
 
 # Pydantic models para autenticación
 class LoginRequest(BaseModel):
@@ -32,6 +33,7 @@ class LoginResponse(BaseModel):
     roles: List[str]
     token: str
     nit: Optional[str] = None  # NIT del usuario para uso en pedidos
+    clienteId: int
 
     class Config:
         from_attributes = True

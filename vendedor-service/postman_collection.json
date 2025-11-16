@@ -1,0 +1,117 @@
+{
+  "info": {
+    "_postman_id": "vendedor-service-collection",
+    "name": "Vendedor Service",
+    "description": "Colección de pruebas para el Vendedor Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Listar Vendedores",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8014/api/v1/vendedores?q=Juan&estado=ACTIVO&page=1&page_size=10",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8014",
+          "path": [
+            "api",
+            "v1",
+            "vendedores"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "Juan"
+            },
+            {
+              "key": "estado",
+              "value": "ACTIVO"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "page_size",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Obtener Vendedor",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8014/api/v1/vendedores/VEN-SOMEID",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8014",
+          "path": [
+            "api",
+            "v1",
+            "vendedores",
+            "VEN-SOMEID"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Crear Vendedor",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombres\": \"Carlos\",\n  \"apellidos\": \"Santana\",\n  \"tipoDocumento\": \"CC\",\n  \"numeroDocumento\": \"12345679\",\n  \"email\": \"carlos.s@example.com\",\n  \"telefono\": \"+573009876543\",\n  \"pais\": \"Colombia\",\n  \"territorioId\": \"TER-COL-CUN\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8014/api/v1/vendedores/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8014",
+          "path": [
+            "api",
+            "v1",
+            "vendedores",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8014/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8014",
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "info": {
+    "_postman_id": "audit-service-collection",
+    "name": "Audit Service",
+    "description": "Colección de pruebas para el Audit Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register Audit Log",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event\": \"user_login\",\n  \"request\": {\n    \"nombreusuario\": \"testuser\",\n    \"useremail\": \"test@example.com\",\n    \"nit\": \"123456789\"\n  },\n  \"outcome\": \"success\",\n  \"action\": \"other\",\n  \"timestamp\": \"2025-11-09T12:00:00Z\",\n  \"auditid\": \"f47ac10b-58cc-4372-a567-0e02b2c3d479\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8003/audit/register",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8003",
+          "path": [
+            "audit",
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8003/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8003",
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}

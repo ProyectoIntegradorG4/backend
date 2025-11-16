@@ -1,0 +1,148 @@
+{
+  "info": {
+    "_postman_id": "cliente-service-collection",
+    "name": "Cliente Service",
+    "description": "Colección de pruebas para el Cliente Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Tipos de Institucion",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8013/api/v1/clientes/tipos-institucion",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8013",
+          "path": [
+            "api",
+            "v1",
+            "clientes",
+            "tipos-institucion"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Mis Clientes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8013/api/v1/clientes/mis-clientes?gerente_id=1&pais=Colombia&tipo_institucion=Hospital&search=Clinica&page=1&limit=10&activo=true",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8013",
+          "path": [
+            "api",
+            "v1",
+            "clientes",
+            "mis-clientes"
+          ],
+          "query": [
+            {
+              "key": "gerente_id",
+              "value": "1"
+            },
+            {
+              "key": "pais",
+              "value": "Colombia"
+            },
+            {
+              "key": "tipo_institucion",
+              "value": "Hospital"
+            },
+            {
+              "key": "search",
+              "value": "Clinica"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "activo",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Mis NITs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8013/api/v1/clientes/mis-nits?gerente_id=1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8013",
+          "path": [
+            "api",
+            "v1",
+            "clientes",
+            "mis-nits"
+          ],
+          "query": [
+            {
+              "key": "gerente_id",
+              "value": "1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Cliente Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8013/api/v1/clientes/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8013",
+          "path": [
+            "api",
+            "v1",
+            "clientes",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8013/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8013",
+          "path": [
+            "health"
+          ]
+        }
+      }
+    }
+  ]
+}
