@@ -277,6 +277,12 @@ services:
       POSTGRES_PORT: ${POSTGRES_PORT}
       # Permite override completo si se desea (toma prioridad)
       DATABASE_URL: ${PRODUCT_DATABASE_URL}
+      
+      # --- Cross-database access (para validación de vendedores) ---
+      USER_DATABASE_URL: ${USER_DATABASE_URL}
+      
+      # --- JWT Configuration (para validación de tokens) ---
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
 
       # --- Pool / tuning opcional (iguales a tu estilo optimizado) ---
       DB_POOL_SIZE: "20"

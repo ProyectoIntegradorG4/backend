@@ -1,10 +1,11 @@
 from uuid import uuid4
 from starlette.testclient import TestClient
-from app.main import app
+from main import app
 from app.service import product_service as product_service_module
 from app.service.rbac import require_role_admincompras
 
-client = TestClient(app)
+# NO usar cliente global - usar el fixture
+# client = TestClient(app)  # REMOVIDO
 
 def _sample_response():
     # productoId como UUID para verificar que el endpoint normaliza a str
@@ -26,7 +27,7 @@ def _sample_response():
         ],
     }
 
-def test_list_ok_structure(monkeypatch):
+def test_list_ok_structure(client, monkeypatch):
     """
     Debe responder 200 y con la estructura paginada.
     """
@@ -44,7 +45,7 @@ def test_list_ok_structure(monkeypatch):
     assert isinstance(data["items"], list)
     assert isinstance(data["items"][0]["productoId"], str)
 
-def test_list_passes_filters_and_sort_to_service(monkeypatch):
+def test_list_passes_filters_and_sort_to_service(client, monkeypatch):
     """
     Verifica que el endpoint pase correctamente los parámetros al service.
     """
@@ -82,7 +83,7 @@ def test_list_passes_filters_and_sort_to_service(monkeypatch):
     assert called["page"] == 2
     assert called["page_size"] == 25
 
-def test_list_default_pagination(monkeypatch):
+def test_list_default_pagination(client, monkeypatch):
     """
     Si no se envían page/page_size, deben ser 1 y 25 por defecto.
     """
@@ -104,7 +105,7 @@ def test_list_default_pagination(monkeypatch):
     assert called["page"] == 1
     assert called["page_size"] == 25
 
-def test_list_rejects_invalid_categoria_uuid(monkeypatch):
+def test_list_rejects_invalid_categoria_uuid(client, monkeypatch):
     """
     Si categoriaId no es UUID válido, debe responder 400.
     """
@@ -113,7 +114,7 @@ def test_list_rejects_invalid_categoria_uuid(monkeypatch):
     resp = client.get("/api/v1/productos?categoriaId=NO-UUID")
     assert resp.status_code == 400
 
-def test_list_rbac_forbidden(monkeypatch):
+def test_list_rbac_forbidden(client, monkeypatch):
     """
     Si el RBAC niega acceso, debe responder 403 con 'Acceso denegado'.
     """

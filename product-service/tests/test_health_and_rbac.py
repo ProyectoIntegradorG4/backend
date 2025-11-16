@@ -1,15 +1,16 @@
 from starlette.testclient import TestClient
-from app.main import app
+from main import app
 
-client = TestClient(app)
+# NO usar cliente global - usar el fixture
+# client = TestClient(app)  # REMOVIDO
 
 
-def test_health_ok():
+def test_health_ok(client):
     r = client.get("/health")
     assert r.status_code in (200, 204)
 
 
-def test_rbac_missing_header():
+def test_rbac_missing_header(client):
     """
     POST /productos debe validar headers ANTES del body.
     Sin Authorization => 401 y debe mencionar 'Authorization'.

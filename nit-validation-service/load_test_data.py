@@ -7,8 +7,7 @@ import json
 import sys
 import os
 from datetime import datetime
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import psycopg
 
 def parse_date(date_string):
     """Convierte fecha de formato M/D/YYYY a YYYY-MM-DD"""
@@ -27,13 +26,7 @@ def load_test_data():
     """Carga datos de prueba desde NITValidationData.json"""
     
     # Configuración de base de datos
-    DB_CONFIG = {
-        'host': 'localhost',
-        'port': 5432,
-        'database': 'nit_db',
-        'user': 'nit_service',
-        'password': 'nit_password'
-    }
+    DB_CONFIG = "postgresql://nit_service:nit_password@postgres-db:5432/nit_db"
     
     try:
         # Leer datos JSON
@@ -48,8 +41,8 @@ def load_test_data():
         print(f"Cargando {len(institutions)} instituciones...")
         
         # Conectar a la base de datos
-        conn = psycopg2.connect(**DB_CONFIG)
-        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        conn = psycopg.connect(DB_CONFIG)
+        cursor = conn.cursor()
         
         # Crear tabla si no existe
         cursor.execute("""
@@ -99,10 +92,10 @@ def load_test_data():
         
         # Verificar carga
         cursor.execute("SELECT COUNT(*) as total FROM instituciones_asociadas")
-        total_records = cursor.fetchone()['total']
+        total_records = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) as activos FROM instituciones_asociadas WHERE activo = true")
-        active_records = cursor.fetchone()['activos']
+        active_records = cursor.fetchone()[0]
         
         print(f"\n✅ Carga completada:")
         print(f"   - Registros insertados: {success_count}")
@@ -120,14 +113,14 @@ def load_test_data():
         
         print(f"\n📋 Ejemplos de datos cargados:")
         for row in examples:
-            status = "✅" if row['activo'] else "❌"
-            print(f"   {status} {row['nit']} - {row['nombre_institucion']} ({row['pais']})")
+            status = "✅" if row[3] else "❌"
+            print(f"   {status} {row[0]} - {row[1]} ({row[2]})")
         
         cursor.close()
         conn.close()
         return True
         
-    except psycopg2.Error as e:
+    except psycopg.Error as e:
         print(f"Error de base de datos: {str(e)}")
         return False
     except Exception as e:
