@@ -64,8 +64,8 @@ class RutaVisita(Base):
 
     # Índices
     __table_args__ = (
-        Index('idx_gerente_fecha', 'gerente_id', 'fecha_ruta'),
-        Index('idx_gerente_fecha_activa', 'gerente_id', 'fecha_ruta', 'activa'),
+        Index('idx_rutas_gerente_fecha', 'gerente_id', 'fecha_ruta'),
+        Index('idx_rutas_gerente_fecha_activa', 'gerente_id', 'fecha_ruta', 'activa'),
     )
 
     def __repr__(self):
@@ -128,9 +128,9 @@ class Visita(Base):
 
     # Índices compuestos
     __table_args__ = (
-        Index('idx_gerente_fecha', 'gerente_id', 'fecha_visita'),
-        Index('idx_gerente_estado', 'gerente_id', 'estado'),
-        Index('idx_fecha_estado', 'fecha_visita', 'estado'),
+        Index('idx_visitas_gerente_fecha', 'gerente_id', 'fecha_visita'),
+        Index('idx_visitas_gerente_estado', 'gerente_id', 'estado'),
+        Index('idx_visitas_fecha_estado', 'fecha_visita', 'estado'),
     )
 
     def __repr__(self):

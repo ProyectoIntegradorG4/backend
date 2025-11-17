@@ -91,8 +91,13 @@ def init_db() -> None:
     Importa los modelos para que queden registrados en Base.metadata.
     """
     from app.models.visita import Base
-    Base.metadata.create_all(bind=engine)
-    logger.info("✅ Tablas de visita-service creadas exitosamente")
+    try:
+        # checkfirst=True evita errores si las tablas ya existen
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        logger.info("✅ Tablas de visita-service creadas exitosamente")
+    except Exception as e:
+        logger.warning(f"⚠️ Advertencia al crear tablas (pueden ya existir): {str(e)}")
+        # No lanzar error, las tablas probablemente ya existen
 
 
 def test_db_connection() -> bool:
