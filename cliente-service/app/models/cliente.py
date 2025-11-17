@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Index, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Index, Text, Numeric
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr, Field
@@ -52,6 +52,10 @@ class Cliente(Base):
     contacto_principal = Column(String(255), nullable=True)
     cargo_contacto = Column(String(100), nullable=True)
     especialidad_medica = Column(String(255), nullable=True)
+    latitud = Column(Numeric(10, 8), nullable=True, 
+                    comment="Latitud de la sede para geolocalización y optimización de rutas")
+    longitud = Column(Numeric(11, 8), nullable=True,
+                     comment="Longitud de la sede para geolocalización y optimización de rutas")
     activo = Column(Boolean, default=True, nullable=False)
     fecha_registro = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     fecha_actualizacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), 
@@ -127,6 +131,8 @@ class ClienteBase(BaseModel):
     contacto_principal: Optional[str] = None
     cargo_contacto: Optional[str] = None
     especialidad_medica: Optional[str] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
     activo: bool = True
 
 
@@ -160,6 +166,8 @@ class ClienteListItem(BaseModel):
     email: Optional[str] = None
     contacto_principal: Optional[str] = None
     cargo_contacto: Optional[str] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
     activo: bool
 
     model_config = {
