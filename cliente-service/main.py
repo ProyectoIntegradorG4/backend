@@ -54,6 +54,12 @@ async def startup_event():
     logger.info("📋 Creando tablas...")
     init_db()
     
+    # Ejecutar migraciones
+    logger.info("🔄 Ejecutando migraciones...")
+    from app.database.migration import run_migrations
+    with SessionLocal() as db:
+        run_migrations(db)
+    
     # Ejecutar seeds de datos de prueba
     logger.info("🌱 Ejecutando seeds de datos de prueba...")
     with SessionLocal() as db:
