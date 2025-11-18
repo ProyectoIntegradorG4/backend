@@ -546,6 +546,81 @@ services:
         reservations:
           cpus: '0.5'
           memory: 256M
+  
+  # visit
+  visit-service:
+    build:
+      context: ./visit-service     
+      dockerfile: Dockerfile
+    container_name: visit-service
+    environment:
+      # --- Base de datos ---
+      POSTGRES_DB: ${VISIT_DB_NAME}
+      POSTGRES_USER: ${VISIT_DB_USER}
+      POSTGRES_PASSWORD: ${VISIT_DB_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      DATABASE_URL: ${VISIT_DATABASE_URL}
+      VISIT_DATABASE_URL: ${VISIT_DATABASE_URL}
+
+      REQUIRED_ROLE: ${REQUIRED_ROLE:-gerente_cuenta}
+
+      FILES_BACKEND: ${FILES_BACKEND:-local}
+
+      # Cuando FILES_BACKEND=local
+      FILES_DIR: /data/visits
+
+      # --- Evidencias: usa S3 como backend unificado ---
+      S3_BUCKET: ${S3_BUCKET}          # p.ej. crecer-visit-evidence
+      S3_PREFIX: ${S3_PREFIX:-visits}  # prefijo opcional en el bucket
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      # URL pública base para servir archivos (idealmente CloudFront; por ahora el propio bucket web si está público)
+      FILES_BASE_URL: ${FILES_BASE_URL}
+
+      # Credenciales AWS para S3 (solo en local; en AWS usarás IAM Role)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+
+       # --- Pool / SQLAlchemy ---
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-20}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-40}
+      DB_POOL_RECYCLE: ${DB_POOL_RECYCLE:-1800}
+      DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-30}
+      DB_CONNECT_TIMEOUT: ${DB_CONNECT_TIMEOUT:-10}
+      SQL_ECHO: ${SQL_ECHO:-false}
+      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+
+      # --- Redis ---
+      REDIS_URL: redis://redis-cache:6379
+
+      # --- Migraciones (carpeta donde está 0001_init_.sql) ---
+      MIGRATIONS_DIR: /app/migration
+
+    ports:
+      - "${VISIT_SERVICE_PORT}:8011"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+  
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   # API Gateway (Nginx) - Opcional
   nginx:
