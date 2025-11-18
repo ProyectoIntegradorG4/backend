@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes.clientes import router as clientes_router
+from app.routes.visitas import router as visitas_router
 from app.database.connection import init_db, test_db_connection, ensure_database_exists, SessionLocal
 from app.database.seed import run_seeds
 import asyncio
@@ -9,9 +9,9 @@ import logging
 logger = logging.getLogger("uvicorn")
 
 app = FastAPI(
-    title="Cliente Service (HU-MOV-002)",
-    description="Microservicio de gestión de clientes institucionales para gerentes de cuenta",
-    version="1.0.3"
+    title="Visita Service (HU-MOV-003)",
+    description="Microservicio de gestión de visitas y rutas optimizadas para gerentes de cuenta",
+    version="1.0.0"
 )
 
 # Configuración de CORS
@@ -25,7 +25,7 @@ app.add_middleware(
 )
 
 # Incluir rutas con prefijo /api/v1
-app.include_router(clientes_router, prefix="/api/v1/clientes", tags=["clientes"])
+app.include_router(visitas_router, prefix="/api/v1", tags=["visitas"])
 
 
 @app.on_event("startup")
@@ -33,7 +33,7 @@ async def startup_event():
     """
     Evento de inicio: configurar base de datos y ejecutar seeds
     """
-    logger.info("🚀 Iniciando Cliente Service...")
+    logger.info("🚀 Iniciando Visita Service (HU-MOV-003)...")
     
     # Asegurar que la base de datos existe
     logger.info("🔍 Verificando existencia de base de datos...")
@@ -54,18 +54,12 @@ async def startup_event():
     logger.info("📋 Creando tablas...")
     init_db()
     
-    # Ejecutar migraciones
-    logger.info("🔄 Ejecutando migraciones...")
-    from app.database.migration import run_migrations
-    with SessionLocal() as db:
-        run_migrations(db)
-    
     # Ejecutar seeds de datos de prueba
     logger.info("🌱 Ejecutando seeds de datos de prueba...")
     with SessionLocal() as db:
         run_seeds(db)
     
-    logger.info("✅ Cliente Service iniciado correctamente")
+    logger.info("✅ Visita Service iniciado correctamente")
 
 
 @app.get("/health")
@@ -75,8 +69,8 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "service": "cliente-service",
-        "version": "1.0.3"
+        "service": "visita-service",
+        "version": "1.0.0"
     }
 
 
@@ -85,7 +79,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8013,
+        port=8015,
         workers=1,  # En contenedor, usar 1 worker por contenedor
         loop="asyncio",
         access_log=False,  # Deshabilitar logs de acceso para mayor rendimiento

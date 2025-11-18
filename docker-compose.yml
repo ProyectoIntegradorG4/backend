@@ -440,6 +440,61 @@ services:
         reservations:
           cpus: "0.5"
           memory: 256M
+
+  # Visita Service (HU-MOV-003)
+  visita-service:
+    build:
+      context: ./visita-service
+      dockerfile: Dockerfile
+    container_name: visita-service
+    environment:
+      # --- Base de datos ---
+      VISITA_DB_NAME: ${VISITA_DB_NAME}
+      VISITA_DB_USER: ${VISITA_DB_USER}
+      VISITA_DB_PASSWORD: ${VISITA_DB_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      # Permite override completo si se desea
+      DATABASE_URL: ${VISITA_DATABASE_URL}
+      
+      # --- Integración con otros servicios ---
+      CLIENTE_SERVICE_URL: "http://cliente-service:8013"
+      
+      # --- Pool / tuning ---
+      DB_POOL_SIZE: "20"
+      DB_MAX_OVERFLOW: "40"
+      DB_POOL_RECYCLE: "1800"
+      DB_POOL_TIMEOUT: "30"
+      DB_CONNECT_TIMEOUT: "10"
+      SQL_ECHO: "false"
+      DB_SSL_MODE: ${DB_SSL_MODE:-disable}
+    
+    ports:
+      - "${VISITA_SERVICE_PORT}:8015"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      cliente-service:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    volumes:
+      - ./visita-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8015/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # Optimizaciones de recursos
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
   
   # Ingestion, validator e insert Service (carga masiva)
   cargamasiva-service:
