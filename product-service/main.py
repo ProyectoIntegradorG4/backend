@@ -2,7 +2,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.products import router as products_router
-from app.routes.lotes import router as lotes_router 
+from app.routes.lotes import router as lotes_router
+from app.routes.plan_venta import router as plan_venta_router
 from app.database.connection import init_db, test_db_connection, SessionLocal, ensure_database_exists
 from app.database.seed import seed_categories, seed_warehouses
 import asyncio
@@ -12,9 +13,9 @@ import logging
 logger = logging.getLogger("uvicorn")
 
 app = FastAPI(
-    title="Product Service (HU-WEB-003)",
-    description="Microservicio de carga individual de productos médicos",
-    version="1.1.10"
+    title="Product Service (HU-WEB-003 & HU-WEB-008)",
+    description="Microservicio de productos médicos y planes de venta",
+    version="1.2.0"
 )
 
 # Endpoints “legacy” sin prefijo
@@ -32,7 +33,8 @@ app.add_middleware(
 
 # Endpoints públicos versión v1
 app.include_router(products_router, prefix="/api/v1", tags=["products"])
-app.include_router(lotes_router, prefix="/api/v1", tags=["lotes"]) 
+app.include_router(lotes_router, prefix="/api/v1", tags=["lotes"])
+app.include_router(plan_venta_router, tags=["planes-venta"]) 
 
 @app.on_event("startup")
 async def startup_event():

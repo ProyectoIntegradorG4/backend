@@ -114,6 +114,8 @@ def init_db() -> None:
     from app.models import product, category  # noqa: F401
     from app.models.warehouse import Bodega  # noqa: F401
     from app.models.inventory import InventarioLote  # noqa: F401
+    from app.models.territorio import Territorio  # noqa: F401
+    from app.models.plan_venta import PlanVenta, PlanVentaTerritorio, PlanMeta  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
 def test_db_connection() -> bool:

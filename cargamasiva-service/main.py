@@ -3,11 +3,15 @@ from fastapi import FastAPI
 from app.routes.import_products import router as import_router
 
 from app.database.session import SessionLocal, Base, engine
-from app.models import category, product 
+from app.models import category, product
 
 from app.startup_seed import seed_default_categories
 
-app = FastAPI(title="MediSupply Loader (Single Endpoint)")
+app = FastAPI(
+    title="MediSupply Loader (Single Endpoint)",
+    description="Microservicio de carga masiva unificado (ingestion + validation + upsert)",
+    version="1.0.1"
+)
 
 @app.on_event("startup")
 def _startup():
@@ -24,3 +28,11 @@ def _startup():
         db.close()
 
 app.include_router(import_router)
+
+@app.get("/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "service": "cargamasiva-service",
+        "version": "1.0.0"
+    }

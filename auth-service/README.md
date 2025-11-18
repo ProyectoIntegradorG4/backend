@@ -132,7 +132,9 @@ Autentica un usuario y devuelve un token JWT.
   "fullName": "Juan Carlos",
   "isActive": true,
   "roles": ["admin"],
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "nit": "1234567-8",
+  "clienteId": 1
 }
 ```
 
@@ -263,7 +265,8 @@ CREATE TABLE usuarios (
     nit VARCHAR(20) NOT NULL,
     rol VARCHAR(50) DEFAULT 'usuario_institucional',
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    activo BOOLEAN DEFAULT TRUE
+    activo BOOLEAN DEFAULT TRUE,
+    cliente_id INTEGER NOT NULL DEFAULT 1
 );
 ```
 

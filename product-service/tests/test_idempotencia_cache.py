@@ -37,6 +37,13 @@ def test_idempotencia_cache_hit(monkeypatch):
     create_path = descubrir_endpoint_creacion()
     assert create_path, "No pude inferir el endpoint de creación."
 
+    # Bypass autenticación JWT
+    from main import app
+    from app.service.rbac import require_role_admincompras_header
+    def mock_rbac_header():
+        return None  # No lanza excepción = autorizado
+    app.dependency_overrides[require_role_admincompras_header] = mock_rbac_header
+
     class FakeRedis:
         def __init__(self): self.data = {}
         def get(self, k): return self.data.get(k)
@@ -58,6 +65,8 @@ def test_idempotencia_cache_hit(monkeypatch):
 
     r1 = client.post(create_path, json=VALID_PAYLOAD, headers=headers)
     r2 = client.post(create_path, json=VALID_PAYLOAD, headers=headers)
+    
+    app.dependency_overrides.clear()
 
     assert r1.status_code == 201
     assert r2.status_code == 201
@@ -66,6 +75,13 @@ def test_idempotencia_cache_hit(monkeypatch):
 def test_error_400_en_creacion(monkeypatch):
     create_path = descubrir_endpoint_creacion()
     assert create_path, "No pude inferir el endpoint de creación."
+
+    # Bypass autenticación JWT
+    from main import app
+    from app.service.rbac import require_role_admincompras_header
+    def mock_rbac_header():
+        return None  # No lanza excepción = autorizado
+    app.dependency_overrides[require_role_admincompras_header] = mock_rbac_header
 
     import app.service.product_service as ps
     def fake_bad(_db, _data):
@@ -77,5 +93,8 @@ def test_error_400_en_creacion(monkeypatch):
 
     # Enviamos payload VÁLIDO para evitar 422 por validación
     r = client.post(create_path, json=VALID_PAYLOAD, headers=headers)
+    
+    app.dependency_overrides.clear()
+    
     assert r.status_code == 400
 

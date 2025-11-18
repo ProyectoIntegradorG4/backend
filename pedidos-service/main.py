@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import pedidos
+from app.routes import entregas
 from app.database.connection import init_db
 import logging
 
@@ -26,6 +27,7 @@ app.add_middleware(
 
 # Incluir rutas
 app.include_router(pedidos.router, prefix="/api/v1", tags=["pedidos"])
+app.include_router(entregas.router, prefix="/api/v1", tags=["entregas"])
 
 @app.on_event("startup")
 async def startup_event():

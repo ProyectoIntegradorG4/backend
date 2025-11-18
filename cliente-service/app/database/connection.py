@@ -61,7 +61,7 @@ engine = create_engine(
     pool_timeout=30,           # Timeout para obtener conexión del pool
     connect_args={
         "connect_timeout": 10,
-        "sslmode": os.getenv("DB_SSL_MODE", "disable"),
+        "sslmode": os.getenv("DB_SSL_MODE", "prefer"),  # prefer for compatibility, require for production
         "options": "-c jit=off -c application_name=cliente_service"
     }
 )

@@ -10,7 +10,7 @@ El servicio `pedidos-service` (puerto **8007**) gestiona la creación, consulta 
 - ✅ **Soporte para dos tipos de usuarios**: Cliente Institucional y Gerente/Admin
 - ✅ **Gestión automática del NIT**: se recibe en el body del request y se asocia correctamente según el rol
 - ✅ **Generación de números únicos**: PED-000001, PED-000002, etc.
-- ✅ **Seguimiento de estado**: 7 estados posibles (pendiente, confirmado, enviado, entregado, etc.)
+- ✅ **Seguimiento de estado**: 4 estados posibles (pendiente, enviado, entregado, cancelado)
 - ✅ **Snapshots de datos**: precios y disponibilidad se capturan al momento del pedido
 
 ---
@@ -166,7 +166,7 @@ estado=pendiente      # (Opcional) Filtrar por estado
 ```
 GET /api/v1/pedidos/?pagina=1&por_pagina=10
 GET /api/v1/pedidos/?nit=900123456
-GET /api/v1/pedidos/?usuario_id=1&estado=confirmado
+GET /api/v1/pedidos/?usuario_id=1&estado=enviado
 ```
 
 **Response (200):**
@@ -255,20 +255,27 @@ rol-usuario: admin              # Solo admins pueden actualizar
 **Body:**
 ```json
 {
-  "nuevo_estado": "confirmado",
-  "observaciones": "Pedido confirmado por gerente"
+  "nuevo_estado": "enviado",
+  "observaciones": "Pedido enviado por logística"
 }
 ```
 
 **Estados Válidos:**
 ```
-pendiente    → confirmado      (Admin confirma)
-confirmado   → en_proceso      (Sistema/Admin)
-en_proceso   → enviado         (Logística)
-enviado      → entregado       (Cliente/Sistema)
-*            → cancelado       (Cualquier estado)
-*            → rechazado       (Cualquier estado)
+pendiente    → enviado         (Admin/Logística)
+pendiente    → entregado       (Admin/Logística)
+pendiente    → cancelado       (Admin/Cliente)
+enviado      → entregado       (Admin/Logística)
+enviado      → cancelado       (Admin/Cliente)
+entregado    → (estado final, no se puede cambiar)
+cancelado    → (estado final, no se puede cambiar)
 ```
+
+**Nota:** Solo se permiten los siguientes 4 estados:
+- `pendiente`: Estado inicial cuando se crea el pedido
+- `enviado`: El pedido ha sido enviado
+- `entregado`: El pedido ha sido entregado al cliente
+- `cancelado`: El pedido ha sido cancelado
 
 ---
 
@@ -350,7 +357,7 @@ usuario_id (INTEGER)          Quién creó el pedido
 nit (VARCHAR 20)              Para quién es el pedido
 rol_usuario (VARCHAR 50)      Rol del usuario
 numero_pedido (VARCHAR 50)    UNIQUE - PED-000001
-estado (ENUM)                 pendiente, confirmado, etc.
+estado (ENUM)                 pendiente, enviado, entregado, cancelado
 monto_total (FLOAT)           Suma de detalles
 fecha_creacion (TIMESTAMP)    Creado
 fecha_actualizacion (TIMESTAMP) Actualizado

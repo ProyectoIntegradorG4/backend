@@ -630,9 +630,9 @@ def seed_gerentes_cuenta(db: Session):
         
         user_engine = create_engine(USER_DB_URL)
         
-        # Hash de contraseña por defecto (Password123!)
-        # Este es el hash de bcrypt para "Password123!"
-        password_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYkIK1rGQ9."
+        # Hash de contraseña por defecto (Admin@123)
+        # Este es el hash de bcrypt para "Admin@123"
+        password_hash = "$2b$10$V2ANvb20Gv22moKqFNWlG.rhTvhX7s7HHdchhU55fRKYOz.VW0UkK"
         
         gerentes_data = [
             # Colombia

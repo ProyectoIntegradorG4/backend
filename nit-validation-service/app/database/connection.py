@@ -35,7 +35,7 @@ engine = create_engine(
     pool_pre_ping=True,
     pool_recycle=3600,
     connect_args={
-        "sslmode": os.getenv("DB_SSL_MODE", "disable")  # disable para desarrollo local, require para producción
+        "sslmode": os.getenv("DB_SSL_MODE", "prefer")  # prefer for compatibility, require for production
     }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
