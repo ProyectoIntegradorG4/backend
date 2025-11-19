@@ -21,8 +21,11 @@ def get_db():
     finally:
         db.close()
 
+<<<<<<< HEAD
 async def init_db():
     """Inicializar la base de datos"""
     from app.models.visit import Base
     Base.metadata.create_all(bind=engine)
 
+=======
+>>>>>>> develop
