@@ -3,16 +3,30 @@ from typing import List, Optional
 from datetime import datetime
 import uuid
 from enum import Enum
+from typing import Optional
 
 class EstadoPedidoSchema(str, Enum):
-    """Estados posibles de un pedido"""
+    """
+    Estados posibles de un pedido (Schema para validación Pydantic).
+    
+    Solo se permiten los siguientes 4 estados (alineados con el frontend móvil):
+    - pendiente: Estado inicial cuando se crea el pedido
+    - enviado: El pedido ha sido enviado
+    - entregado: El pedido ha sido entregado al cliente
+    - cancelado: El pedido ha sido cancelado
+    
+    Nota: Estados comentados (confirmado, en_proceso, rechazado) fueron removidos
+    para mantener consistencia con el frontend móvil que solo usa estos 4 estados.
+    """
     PENDIENTE = "pendiente"
-    CONFIRMADO = "confirmado"
-    EN_PROCESO = "en_proceso"
     ENVIADO = "enviado"
     ENTREGADO = "entregado"
     CANCELADO = "cancelado"
-    RECHAZADO = "rechazado"
+
+class CanalPedidoSchema(str, Enum):
+    """Canales posibles del pedido"""
+    MOVIL_VENTAS = "movil_ventas"
+    MOVIL_CLIENTE = "movil_cliente"
 
 # ========================
 # Esquemas para crear pedido
@@ -26,6 +40,7 @@ class ProductoEnPedidoCreate(BaseModel):
 class CrearPedidoRequest(BaseModel):
     """Request para crear un nuevo pedido"""
     nit: str = Field(..., description="NIT asociado al usuario (requerido)")
+    cliente_id: int = Field(..., description="ID del cliente (sede) asociado al NIT")
     productos: List[ProductoEnPedidoCreate] = Field(..., description="Lista de productos a pedir")
     observaciones: Optional[str] = Field(None, description="Observaciones adicionales del pedido")
 
@@ -33,6 +48,7 @@ class CrearPedidoRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "nit": "123456789",
+                "cliente_id": 101,
                 "productos": [
                     {"producto_id": "550e8400-e29b-41d4-a716-446655440000", "cantidad_solicitada": 5},
                     {"producto_id": "550e8400-e29b-41d4-a716-446655440001", "cantidad_solicitada": 10}
@@ -58,10 +74,17 @@ class DetallePedidoResponse(BaseModel):
     detalle_id: str
     producto_id: str
     nombre_producto: str
+    sku: Optional[str] = None
     cantidad_solicitada: int
     cantidad_disponible_al_momento: int
+    cantidad_confirmada: Optional[int] = None
     precio_unitario: float
     subtotal: float
+    lote_id: Optional[str] = None
+    bodega_id: Optional[str] = None
+    bodega_nombre: Optional[str] = None
+    pais: Optional[str] = None
+    fecha_vencimiento_lote: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -71,6 +94,7 @@ class PedidoResponse(BaseModel):
     pedido_id: str
     numero_pedido: str
     usuario_id: int
+    cliente_id: int
     nit: str
     rol_usuario: str
     estado: EstadoPedidoSchema
@@ -82,6 +106,18 @@ class PedidoResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PedidoEstadoHistorialItem(BaseModel):
+    """Item de historial de cambio de estado"""
+    estado_anterior: EstadoPedidoSchema
+    estado_nuevo: EstadoPedidoSchema
+    fecha_cambio: datetime
+    comentario: Optional[str] = None
+
+class ListarHistorialResponse(BaseModel):
+    """Respuesta de historial de un pedido"""
+    pedido_id: str
+    historial: List[PedidoEstadoHistorialItem]
 
 class CrearPedidoResponse(BaseModel):
     """Respuesta exitosa al crear un pedido"""

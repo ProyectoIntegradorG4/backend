@@ -1,0 +1,54 @@
+productoId,nombre,descripcion,categoriaId,formaFarmaceutica,requierePrescripcion,registroSanitario,sku,location,ubicacion,stock,precio,estado_producto,actualizado_en,fechaVencimiento
+P001,Paracetamol 500mg,Analgésico en tabletas,CAT001,Tableta,false,RS-001-A,SKU-001,Bodega A,P1-01,150,4500,activo,2025-01-15T10:00:00,2027-11-30
+P002,Ibuprofeno 400mg,Antiinflamatorio,CAT002,Tableta,false,RS-002-B,SKU-002,Bodega B,P2-03,200,6200,activo,2025-02-01T09:30:00,2027-05-15
+P003,Amoxicilina 500mg,Antibiótico,CAT003,Capsula,true,RS-003-C,SKU-003,Bodega A,P1-05,80,8300,activo,2025-01-10T08:15:00,2026-10-20
+P004,Loratadina 10mg,Antialérgico,CAT004,Tableta,false,RS-004-D,SKU-004,Bodega C,P3-02,300,5100,activo,2025-02-10T11:05:00,2028-01-01
+P005,Omeprazol 20mg,Antiácido,CAT005,Capsula,false,RS-005-E,SKU-005,Bodega A,P1-04,120,7400,activo,2025-03-01T14:00:00,2026-02-18
+P006,Metformina 850mg,Antidiabético,CAT006,Tableta,true,RS-006-F,SKU-006,Bodega D,P4-01,500,2900,activo,2025-03-10T07:00:00,2027-12-31
+P007,Atorvastatina 20mg,Control de colesterol,CAT007,Tableta,true,RS-007-G,SKU-007,Bodega E,P5-02,50,10500,inactivo,2025-01-12T09:00:00,2026-07-15
+P008,Acetaminofén Gotas,Analgésico,CAT001,Gotas,false,RS-008-H,SKU-008,Bodega B,P2-01,90,3800,activo,2025-01-20T10:30:00,2025-09-09
+P009,Cetirizina 10mg,Antialérgico,CAT004,Tableta,false,RS-009-I,SKU-009,Bodega C,P3-01,110,4900,activo,2025-02-12T10:10:00,2026-05-05
+P010,Diclofenaco Sódico 50mg,Antiinflamatorio,CAT002,Tableta,false,RS-010-J,SKU-010,Bodega D,P4-04,210,5600,activo,2025-01-28T13:00:00,2027-04-04
+P011,Vitamina C 1g,Suplemento,CAT008,Tableta,false,RS-011-K,SKU-011,Bodega A,P1-03,400,2200,activo,2025-01-05T12:00:00,2028-10-10
+P012,Aciclovir 400mg,Antiviral,CAT009,Tableta,true,RS-012-L,SKU-012,Bodega B,P2-02,130,8800,activo,2025-02-25T09:00:00,2026-12-25
+P013,Insulina Glargina 100UI/ml,Tratamiento diabetes,CAT006,Inyectable,true,RS-013-M,SKU-013,Bodega F,Refrigerado,60,112500,activo,2025-01-20T06:50:00,2025-09-01
+P014,Salbutamol Inhalador,Respiratorio,CAT010,Inhalador,false,RS-014-N,SKU-014,Bodega C,P3-05,75,16700,activo,2025-03-02T11:00:00,2027-08-08
+P015,Losartan 50mg,Cardiovascular,CAT007,Tableta,true,RS-015-O,SKU-015,Bodega D,P4-02,260,9300,activo,2025-02-18T10:30:00,2027-03-12
+P016,Azitromicina 500mg,Antibiótico,CAT003,Tableta,true,RS-016-P,SKU-016,Bodega A,P1-02,140,12800,activo,2025-01-22T12:00:00,2026-06-30
+P017,Naproxeno 500mg,Antiinflamatorio,CAT002,Tableta,false,RS-017-Q,SKU-017,Bodega E,P5-03,180,5100,activo,2025-03-02T12:15:00,2028-02-28
+P018,Dexametasona 4mg,Corticoide,CAT011,Tableta,true,RS-018-R,SKU-018,Bodega C,P3-06,95,7200,activo,2025-02-14T09:30:00,2026-01-01
+P019,Clotrimazol Crema 1%,Antimicótico,CAT012,Crema,false,RS-019-S,SKU-019,Bodega A,P1-06,85,6100,activo,2025-02-22T09:45:00,2026-11-11
+P020,Albendazol 400mg,Antiparasitario,CAT013,Tableta,false,RS-020-T,SKU-020,Bodega D,P4-03,160,3700,activo,2025-01-30T10:00:00,2027-09-20
+P021,Vitamina D3 2000UI,Suplemento,CAT008,Tableta,false,RS-021-U,SKU-021,Bodega A,P1-07,500,4500,activo,2025-03-05T09:00:00,2028-01-15
+P022,Esomeprazol 40mg,Antiácido,CAT005,Capsula,false,RS-022-V,SKU-022,Bodega C,P3-08,140,9400,activo,2025-03-03T14:00:00,2027-10-01
+P023,Diazepam 10mg,Ansiolítico,CAT014,Tableta,true,RS-023-W,SKU-023,Bodega E,P5-04,60,12500,activo,2025-02-14T11:00:00,2026-02-15
+P024,Aspirina 100mg,Cardiovascular,CAT007,Tableta,false,RS-024-X,SKU-024,Bodega A,P1-08,300,4100,activo,2025-01-12T08:00:00,2028-04-01
+P025,Enalapril 10mg,Antihipertensivo,CAT007,Tableta,true,RS-025-Y,SKU-025,Bodega B,P2-05,200,7600,activo,2025-02-26T09:45:00,2027-02-21
+P026,Fluconazol 150mg,Antimicótico,CAT012,Capsula,false,RS-026-Z,SKU-026,Bodega C,P3-09,125,6900,activo,2025-03-10T13:00:00,2026-09-10
+P027,Ondansetrón 8mg,Antiemético,CAT015,Tableta,true,RS-027-AA,SKU-027,Bodega A,P1-09,90,11000,activo,2025-03-12T08:45:00,2026-03-18
+P028,Tramadol 50mg,Analgésico Opioide,CAT016,Capsula,true,RS-028-BB,SKU-028,Bodega D,P4-05,70,18000,activo,2025-01-14T10:30:00,2026-05-10
+P029,Betametasona Crema,Corticoide,CAT011,Crema,false,RS-029-CC,SKU-029,Bodega F,P6-01,60,9800,activo,2025-02-20T09:00:00,2026-08-01
+P030,Carvedilol 25mg,Cardiovascular,CAT007,Tableta,true,RS-030-DD,SKU-030,Bodega B,P2-06,145,15200,activo,2025-03-15T11:30:00,2027-12-30
+P031,Prednisolona 5mg,Corticoide,CAT011,Tableta,true,RS-031-EE,SKU-031,Bodega C,P3-10,100,8300,activo,2025-03-09T14:00:00,2026-09-25
+P032,Alprazolam 0.5mg,Ansiolítico,CAT014,Tableta,true,RS-032-FF,SKU-032,Bodega A,P1-10,40,19500,inactivo,2025-01-08T09:00:00,2026-06-22
+P033,Penicilina G Sódica 1M UI,Antibiótico,CAT003,Inyectable,true,RS-033-GG,SKU-033,Bodega F,Refrigerado,55,24000,activo,2025-02-12T10:20:00,2025-12-31
+P034,Furosemida 40mg,Diurético,CAT007,Tableta,true,RS-034-HH,SKU-034,Bodega D,P4-06,180,5100,activo,2025-03-04T16:00:00,2027-01-20
+P035,Captopril 25mg,Antihipertensivo,CAT007,Tableta,true,RS-035-II,SKU-035,Bodega B,P2-07,220,4800,activo,2025-02-10T09:30:00,2028-03-09
+P036,Amiodarona 200mg,Antiarrítmico,CAT007,Tableta,true,RS-036-JJ,SKU-036,Bodega E,P5-06,75,18500,activo,2025-01-25T07:30:00,2027-06-18
+P037,Clopidogrel 75mg,Antiagregante plaquetario,CAT012,Tableta,true,RS-037-KK,SKU-037,Bodega C,P3-12,140,16300,activo,2025-03-06T11:15:00,2027-01-28
+P038,Levotiroxina 100mcg,Endocrino,CAT013,Tableta,true,RS-038-LL,SKU-038,Bodega A,P1-11,300,9200,activo,2025-01-18T10:00:00,2028-07-19
+P039,Insulina Regular 100UI/ml,Endocrino,CAT006,Inyectable,true,RS-039-MM,SKU-039,Bodega F,Refrigerado,90,118000,activo,2025-02-09T06:40:00,2025-10-10
+P040,Carbamazepina 200mg,Antiepiléptico,CAT015,Tableta,true,RS-040-NN,SKU-040,Bodega D,P4-08,160,13400,activo,2025-02-15T12:20:00,2026-08-30
+P005,Omeprazol 20mg (ACT),Antiácido - actualización stock/precio,CAT005,Capsula,false,RS-005-E,SKU-005,Bodega A,P1-04,140,7600,activo,2025-03-20T10:00:00,2026-02-18
+P012,Aciclovir 400mg (ACT),Antiviral - nuevo lote,CAT009,Tableta,true,RS-012-L,SKU-012,Bodega B,P2-02,150,8700,activo,2025-03-21T11:30:00,2026-12-25
+P020,Albendazol 400mg (ACT),Antiparasitario - ajuste precio,CAT013,Tableta,false,RS-020-T,SKU-020,Bodega D,P4-03,170,3600,activo,2025-03-25T09:15:00,2027-09-20
+P041,Producto Boolean Invalido,Debe fallar por boolean inválido,CAT001,Tableta,TRUEE,RS-041-AA,SKU-041,Bodega A,P1-12,100,5000,activo,2025-03-10T10:00:00,2027-10-10
+P042,Producto Precio Texto,Debe fallar precio no numérico,CAT002,Tableta,false,RS-042-BB,SKU-042,Bodega B,P2-08,90,PRECIO,activo,2025-03-11T10:00:00,2027-10-11
+P043,Producto Stock Decimal,Debe fallar stock entero,CAT003,Tableta,false,RS-043-CC,SKU-043,Bodega C,P3-13,10.5,4500,activo,2025-03-12T10:00:00,2027-10-12
+P044,Producto Fecha Mala,Debe fallar por fecha,CAT004,Tableta,false,RS-044-DD,SKU-044,Bodega D,P4-09,75,3500,activo,2025-03-13T10:00:00,2027-13-40
+P045,Producto Campo Faltante,Sin categoriaId debe fallar,,Tableta,false,RS-045-EE,SKU-045,Bodega E,P5-07,60,2500,activo,2025-03-14T10:00:00,2027-10-14
+P046,Producto Cat Inexistente,No debe pasar FK,CAT999,Tableta,false,RS-046-FF,SKU-046,Bodega A,P1-13,80,5300,activo,2025-03-15T10:00:00,2027-10-15
+P047,Producto Cat Inexistente 2,No debe pasar FK,CATXYZ,Tableta,false,RS-047-GG,SKU-047,Bodega B,P2-09,95,7100,activo,2025-03-16T10:00:00,2027-10-16
+P048,Producto Boolean Sí,Debe fallar boolean cultural,CAT005,Tableta,sí,RS-048-HH,SKU-048,Bodega C,P3-14,120,6400,activo,2025-03-17T10:00:00,2027-10-17
+P049,Producto Boolean Vacío,Debe fallar boolean vacío,CAT006,Tableta,,RS-049-II,SKU-049,Bodega D,P4-10,130,7200,activo,2025-03-18T10:00:00,2027-10-18
+P050,Producto Precio Negativo,Debe fallar si validas >=0,CAT007,Tableta,false,RS-050-JJ,SKU-050,Bodega E,P5-08,140,-1000,activo,2025-03-19T10:00:00,2027-10-19
