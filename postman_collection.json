@@ -561,6 +561,423 @@
 			]
 		},
 		{
+			"name": "Product Service - Planes de Venta",
+			"item": [
+				{
+					"name": "Listar Territorios",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta/territorios/catalogo?activo=true",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta",
+								"territorios",
+								"catalogo"
+							],
+							"query": [
+								{
+									"key": "activo",
+									"value": "true",
+									"description": "Filtrar solo territorios activos"
+								}
+							]
+						},
+						"description": "Lista el catálogo de territorios disponibles para asignar a planes de venta. Requiere rol: Administrador de Ventas"
+					}
+				},
+				{
+					"name": "Crear Plan de Venta - Exitoso",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Plan Q1 2026 Zona Andina\",\n  \"periodo\": {\n    \"desde\": \"2026-01-01\",\n    \"hasta\": \"2026-03-31\"\n  },\n  \"territorios\": [\n    \"TERR-NORTE-BOG\",\n    \"TERR-ANTIOQUIA\"\n  ],\n  \"metas\": [\n    {\n      \"productoId\": \"{{producto_id_1}}\",\n      \"territorioId\": \"TERR-NORTE-BOG\",\n      \"vendedorId\": {{vendedor_id_1}},\n      \"objetivo_cantidad\": 100,\n      \"objetivo_valor\": 50000000,\n      \"nota\": \"Meta para Zona Norte Bogotá Q1 2026\"\n    },\n    {\n      \"productoId\": \"{{producto_id_1}}\",\n      \"territorioId\": \"TERR-ANTIOQUIA\",\n      \"vendedorId\": {{vendedor_id_2}},\n      \"objetivo_cantidad\": 80,\n      \"objetivo_valor\": 40000000,\n      \"nota\": \"Meta para Antioquia Q1 2026\"\n    },\n    {\n      \"productoId\": \"{{producto_id_2}}\",\n      \"territorioId\": \"TERR-NORTE-BOG\",\n      \"vendedorId\": {{vendedor_id_1}},\n      \"objetivo_cantidad\": 150,\n      \"objetivo_valor\": 30000000,\n      \"nota\": \"Meta producto 2 Zona Norte Bogotá\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							]
+						},
+						"description": "Crea un nuevo plan de venta con territorios y metas. Requiere rol: Administrador de Ventas.\n\nValidaciones:\n- Nombre único\n- Periodo válido (hasta >= desde)\n- Al menos 1 territorio y 1 meta\n- Productos, territorios y vendedores deben existir\n- No metas duplicadas (producto + territorio + vendedor)\n- Cada meta debe tener objetivo_cantidad > 0 o objetivo_valor > 0"
+					}
+				},
+				{
+					"name": "Crear Plan de Venta - Nombre Duplicado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Plan Q1 2026 Zona Andina\",\n  \"periodo\": {\n    \"desde\": \"2026-01-01\",\n    \"hasta\": \"2026-03-31\"\n  },\n  \"territorios\": [\n    \"TERR-NORTE-BOG\"\n  ],\n  \"metas\": [\n    {\n      \"productoId\": \"{{producto_id_1}}\",\n      \"territorioId\": \"TERR-NORTE-BOG\",\n      \"vendedorId\": {{vendedor_id_1}},\n      \"objetivo_cantidad\": 50,\n      \"objetivo_valor\": 25000000\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							]
+						},
+						"description": "Intenta crear un plan con nombre duplicado - debe retornar 409"
+					}
+				},
+				{
+					"name": "Listar Planes de Venta - Sin Filtros",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta?page=1&page_size=25",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "25"
+								}
+							]
+						},
+						"description": "Lista todos los planes de venta con paginación básica. Requiere rol: Administrador de Ventas.\n\nRespuesta incluye:\n- planId\n- nombre\n- periodo (desde, hasta)\n- estado\n- territorios_count\n- metas_count\n- actualizado_en"
+					}
+				},
+				{
+					"name": "Listar Planes - Búsqueda por Nombre",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta?q=Andina&page=1&page_size=25",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "Andina",
+									"description": "Búsqueda por nombre (case-insensitive)"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "25"
+								}
+							]
+						},
+						"description": "Busca planes por nombre con ILIKE (case-insensitive)"
+					}
+				},
+				{
+					"name": "Listar Planes - Filtro por Estado",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta?estado=activo&page=1&page_size=25",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							],
+							"query": [
+								{
+									"key": "estado",
+									"value": "activo",
+									"description": "activo | borrador | cerrado | archivado"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "25"
+								}
+							]
+						},
+						"description": "Filtra planes por estado"
+					}
+				},
+				{
+					"name": "Listar Planes - Filtro por Período",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta?periodo_from=2026-01-01&periodo_to=2026-03-31&page=1&page_size=25",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							],
+							"query": [
+								{
+									"key": "periodo_from",
+									"value": "2026-01-01",
+									"description": "Fecha inicio del rango"
+								},
+								{
+									"key": "periodo_to",
+									"value": "2026-03-31",
+									"description": "Fecha fin del rango"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "25"
+								}
+							]
+						},
+						"description": "Filtra planes cuyo período intersecta con el rango especificado"
+					}
+				},
+				{
+					"name": "Listar Planes - Filtro por Territorio",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta?territorioId=BOG&page=1&page_size=25",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							],
+							"query": [
+								{
+									"key": "territorioId",
+									"value": "TERR-NORTE-BOG",
+									"description": "Código del territorio"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "25"
+								}
+							]
+						},
+						"description": "Filtra planes que incluyan un territorio específico"
+					}
+				},
+				{
+					"name": "Listar Planes - Filtro por Producto",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta?productoId={{producto_id_1}}&page=1&page_size=25",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							],
+							"query": [
+								{
+									"key": "productoId",
+									"value": "{{producto_id_1}}",
+									"description": "ID del producto"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "25"
+								}
+							]
+						},
+						"description": "Filtra planes con metas que incluyan un producto específico"
+					}
+				},
+				{
+					"name": "Listar Planes - Ordenamiento",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta?sort=nombre&order=asc&page=1&page_size=25",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta"
+							],
+							"query": [
+								{
+									"key": "sort",
+									"value": "nombre",
+									"description": "nombre | periodo_desde | updated_at"
+								},
+								{
+									"key": "order",
+									"value": "asc",
+									"description": "asc | desc"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "page_size",
+									"value": "25"
+								}
+							]
+						},
+						"description": "Lista planes con ordenamiento personalizado"
+					}
+				},
+				{
+					"name": "Obtener Plan de Venta por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{product_url}}/api/planes-venta/{{plan_venta_id}}",
+							"host": [
+								"{{product_url}}"
+							],
+							"path": [
+								"api",
+								"planes-venta",
+								"{{plan_venta_id}}"
+							]
+						},
+						"description": "Obtiene el detalle completo de un plan de venta incluyendo territorios y metas"
+					}
+				}
+			]
+		},
+		{
 			"name": "Pedidos Service",
 			"item": [
 				{
@@ -1114,6 +1531,36 @@
 			"value": "",
 			"type": "string",
 			"description": "ID del pedido creado (se obtiene de la respuesta)"
+		},
+		{
+			"key": "product_url",
+			"value": "http://localhost:8005",
+			"type": "string",
+			"description": "URL base del Product Service"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string",
+			"description": "Token JWT obtenido del auth-service (Bearer token)"
+		},
+		{
+			"key": "plan_venta_id",
+			"value": "",
+			"type": "string",
+			"description": "ID del plan de venta creado (se obtiene de la respuesta)"
+		},
+		{
+			"key": "vendedor_id_1",
+			"value": "2",
+			"type": "string",
+			"description": "ID del primer vendedor (gerente_cuenta) para planes de venta"
+		},
+		{
+			"key": "vendedor_id_2",
+			"value": "3",
+			"type": "string",
+			"description": "ID del segundo vendedor (gerente_cuenta) para planes de venta"
 		}
 	]
 }

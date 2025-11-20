@@ -1,0 +1,319 @@
+{
+	"info": {
+		"_postman_id": "cliente-service-hu-mov-002",
+		"name": "Cliente Service (HU-MOV-002)",
+		"description": "Colección completa de endpoints para Cliente Service - Gestión de Clientes Institucionales",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{BASE_URL}}/health",
+					"host": ["{{BASE_URL}}"],
+					"path": ["health"]
+				},
+				"description": "Verificar estado del servicio"
+			}
+		},
+		{
+			"name": "Tipos de Institución",
+			"item": [
+				{
+					"name": "Get Tipos de Institucion",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/tipos-institucion",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "tipos-institucion"]
+						},
+						"description": "Obtener lista de tipos de institución disponibles:\n- Hospital\n- Clínica\n- IPS\n- EPS\n- Laboratorio Clínico\n- Centro de Salud"
+					}
+				}
+			]
+		},
+		{
+			"name": "Consulta de Clientes",
+			"item": [
+				{
+					"name": "Get Mis Clientes (Con Gerente)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=1&page=1&limit=10&activo=true",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1",
+									"description": "ID del gerente (requerido para filtrar por asignaciones)"
+								},
+								{
+									"key": "pais",
+									"value": "Colombia",
+									"description": "Filtro opcional por país",
+									"disabled": true
+								},
+								{
+									"key": "tipo_institucion",
+									"value": "Hospital",
+									"description": "Filtro opcional por tipo de institución",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "San José",
+									"description": "Búsqueda por nombre, ciudad o dirección",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Número de página (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Elementos por página (default: 50, max: 100)"
+								},
+								{
+									"key": "activo",
+									"value": "true",
+									"description": "Solo clientes activos (default: true)"
+								}
+							]
+						},
+						"description": "Obtener clientes ASIGNADOS a un gerente específico.\nIncluye coordenadas de geolocalización (latitud, longitud)."
+					}
+				},
+				{
+					"name": "Get Todos los Clientes (Sin Gerente)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?pais=Colombia&page=1&limit=50&activo=true",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "pais",
+									"value": "Colombia",
+									"description": "Filtro opcional por país"
+								},
+								{
+									"key": "tipo_institucion",
+									"value": "Hospital",
+									"description": "Filtro opcional por tipo",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Búsqueda opcional",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "activo",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Obtener TODOS los clientes sin filtrar por gerente.\nÚtil para listados generales o búsquedas."
+					}
+				},
+				{
+					"name": "Get Cliente Detail",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "1"]
+						},
+						"description": "Obtener detalle completo de un cliente específico.\nIncluye todas las columnas incluyendo latitud y longitud."
+					}
+				}
+			]
+		},
+		{
+			"name": "Integraciones (Para Otros Servicios)",
+			"item": [
+				{
+					"name": "Get Mis NITs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-nits?gerente_id=1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-nits"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1",
+									"description": "ID del gerente (requerido)"
+								}
+							]
+						},
+						"description": "Obtener lista de NITs únicos de clientes asignados al gerente.\n\nUsado por:\n- pedidos-service: Validar que un NIT pertenece al gerente\n- visita-service: Validar acceso a clientes"
+					}
+				},
+				{
+					"name": "Get Mis Cliente IDs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-cliente-ids?gerente_id=1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-cliente-ids"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1",
+									"description": "ID del gerente (requerido)"
+								}
+							]
+						},
+						"description": "Obtener lista de cliente_ids (sedes) asignados al gerente.\n\nDiferencia con /mis-nits:\n- Un NIT puede tener múltiples sedes (cliente_ids)\n- Este endpoint retorna IDs específicos de cada sede\n\nUsado por:\n- pedidos-service: Filtrar pedidos por sede específica\n- visita-service: Validar acceso a sede específica"
+					}
+				}
+			]
+		},
+		{
+			"name": "Ejemplos Avanzados",
+			"item": [
+				{
+					"name": "Búsqueda por Ciudad",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=1&search=Bogotá&activo=true",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1"
+								},
+								{
+									"key": "search",
+									"value": "Bogotá"
+								},
+								{
+									"key": "activo",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Buscar clientes por ciudad.\nEl parámetro 'search' busca en: nombre_comercial, razón_social, ciudad, dirección"
+					}
+				},
+				{
+					"name": "Filtrar por Tipo IPS",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=1&tipo_institucion=IPS&activo=true",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1"
+								},
+								{
+									"key": "tipo_institucion",
+									"value": "IPS"
+								},
+								{
+									"key": "activo",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Filtrar clientes por tipo de institución IPS"
+					}
+				},
+				{
+					"name": "Clientes con Geolocalización",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=1&limit=5",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Obtener clientes con sus coordenadas de geolocalización.\n\nRespuesta incluye:\n- latitud: Coordenada geográfica (ej: 4.6533)\n- longitud: Coordenada geográfica (ej: -74.0836)\n\nÚtil para:\n- visita-service: Optimización de rutas\n- Mapas en aplicación móvil"
+					}
+				},
+				{
+					"name": "Paginación Avanzada",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=1&page=2&limit=20",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1"
+								},
+								{
+									"key": "page",
+									"value": "2",
+									"description": "Segunda página"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "20 elementos por página"
+								}
+							]
+						},
+						"description": "Ejemplo de paginación: Segunda página con 20 elementos.\n\nRespuesta incluye:\n- total: Total de registros\n- page: Página actual\n- limit: Elementos por página\n- clientes: Array de clientes"
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "http://localhost:8013",
+			"type": "string"
+		}
+	]
+}

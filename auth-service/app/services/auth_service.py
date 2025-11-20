@@ -64,7 +64,7 @@ class AuthService:
         try:
             # Buscar usuario por email
             query = text("""
-                SELECT id, nombre, correo_electronico, password_hash, nit, rol, activo
+                SELECT id, nombre, correo_electronico, password_hash, nit, rol, activo, cliente_id
                 FROM usuarios 
                 WHERE correo_electronico = :email AND activo = true
             """)
@@ -89,6 +89,11 @@ class AuthService:
             user.nit = result.nit
             user.rol = result.rol
             user.activo = result.activo
+            try:
+                user.cliente_id = result.cliente_id
+            except Exception:
+                # En caso de entornos antiguos sin la columna, usar 1 por defecto
+                user.cliente_id = 1
             
             return user
             
@@ -122,7 +127,8 @@ class AuthService:
                 isActive=user.activo,
                 roles=[user.rol] if user.rol else [],
                 token=access_token,
-                nit=user.nit  # Incluir NIT del usuario
+                nit=user.nit,  # Incluir NIT del usuario
+                clienteId=user.cliente_id
             )
             
             logger.info(f"Login exitoso para usuario: {user.correo_electronico}")

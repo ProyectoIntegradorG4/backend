@@ -165,6 +165,49 @@ async def get_gerente_nits(
         )
 
 
+@router.get("/mis-cliente-ids", response_model=dict)
+async def get_gerente_cliente_ids(
+    gerente_id: int = Query(..., description="ID del gerente"),
+    db: Session = Depends(get_db)
+):
+    """
+    Obtener lista de cliente_ids (sedes) asignados a un gerente.
+    
+    - **gerente_id**: ID del gerente (requerido)
+    
+    **No requiere autenticación** (modo desarrollo)
+    
+    Retorna lista de cliente_ids de las sedes asignadas al gerente.
+    Usado por pedidos-service para filtrar pedidos por las sedes específicas del gerente.
+    
+    Nota: Un gerente puede tener múltiples sedes del mismo NIT asignadas.
+    Este endpoint retorna los cliente_ids específicos, no solo NITs.
+    """
+    try:
+        cliente_service = ClienteService(db)
+        
+        # Obtener cliente_ids del gerente
+        cliente_ids = cliente_service.get_gerente_cliente_ids(gerente_id=gerente_id)
+        
+        logger.info(f"✅ Cliente IDs del gerente {gerente_id} retornados: {len(cliente_ids)} sedes")
+        return {
+            "gerente_id": gerente_id,
+            "cliente_ids": cliente_ids,
+            "total": len(cliente_ids)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en get_gerente_cliente_ids: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail="Error interno al obtener cliente_ids del gerente"
+        )
+
+
 @router.get("/{cliente_id}", response_model=ClienteResponse)
 async def get_cliente_detail(
     cliente_id: int,
