@@ -259,11 +259,11 @@ jobs:
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db?sslmode=require"
             ;;
           "visit-service")
-            PORT=8016
+            PORT=8011
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/visit_db?sslmode=require"
             ;;
           "visita-service")
-            PORT=8017
+            PORT=8015
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/visita_db?sslmode=require"
             ;;
         esac
