@@ -7,7 +7,7 @@ from starlette.staticfiles import StaticFiles
 from app.routes.visits import router as visits_router
 from migrations.runner import run_migrations  
 
-app = FastAPI(title="visit-service", version="1.0.1")
+app = FastAPI(title="visit-service", version="1.0.2")
 
 # === CORS global ===
 app.add_middleware(
