@@ -7,13 +7,14 @@ import logging
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.models.pedido import Pedido, DetallePedido, EstadoPedido
+from app.models.pedido import Pedido, DetallePedido, EstadoPedido, PedidoEstadoHistorial, CanalPedido
 from app.schemas.pedido import (
     CrearPedidoRequest, 
     ValidacionInventarioResult,
     PedidoResponse,
     DetallePedidoResponse
 )
+from app.models.entrega import Entrega, EstadoEntrega
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,68 @@ class PedidosService:
     PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://product-service:8005")
     CLIENTE_SERVICE_URL = os.getenv("CLIENTE_SERVICE_URL", "http://cliente-service:8003")
     REQUEST_TIMEOUT = 10.0
+    
+    @staticmethod
+    def _nit_normalizado(nit: Optional[str]) -> Optional[str]:
+        if nit is None:
+            return None
+        try:
+            import re
+            return re.sub(r"[^0-9A-Za-z]", "", str(nit))
+        except Exception:
+            return nit
+    
+    @staticmethod
+    def _nit_equals(nit_a: Optional[str], nit_b: Optional[str]) -> bool:
+        return PedidosService._nit_normalizado(nit_a) == PedidosService._nit_normalizado(nit_b)
+    
+    @staticmethod
+    async def obtener_cliente_por_id(cliente_id: int) -> Optional[Dict]:
+        """
+        Obtiene un cliente específico por su ID desde cliente-service.
+        Retorna dict con info del cliente o None si no existe.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.CLIENTE_SERVICE_URL}/api/v1/clientes/{cliente_id}"
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    return resp.json()
+                if resp.status_code == 404:
+                    logger.warning(f"Cliente {cliente_id} no encontrado en cliente-service")
+                    return None
+                logger.warning(f"Error obteniendo cliente {cliente_id}: {resp.status_code}")
+                return None
+        except httpx.TimeoutException:
+            logger.error(f"Timeout al obtener cliente {cliente_id}")
+            return None
+        except Exception as e:
+            logger.error(f"Error obteniendo cliente por ID {cliente_id}: {e}")
+            return None
+    
+    @staticmethod
+    async def obtener_sedes_por_nit(nit: str) -> List[Dict]:
+        """
+        Obtiene la lista de sedes (clientes) asociados a un NIT desde cliente-service.
+        Retorna lista de dicts con al menos 'cliente_id' y 'nit'.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.CLIENTE_SERVICE_URL}/api/v1/clientes/por-nit"
+                resp = await client.get(url, params={"nit": nit})
+                if resp.status_code == 200:
+                    data = resp.json()
+                    # Se espera estructura: { "clientes": [ { cliente_id, nit, ... }, ... ] }
+                    clientes = data.get("clientes", [])
+                    return clientes
+                logger.warning(f"No se pudieron obtener sedes para NIT {nit}: {resp.status_code}")
+                return []
+        except httpx.TimeoutException:
+            logger.error(f"Timeout al obtener sedes para NIT {nit}")
+            return []
+        except Exception as e:
+            logger.error(f"Error obteniendo sedes por NIT {nit}: {e}")
+            return []
     
     @staticmethod
     def generar_numero_pedido(db: Session) -> str:
@@ -40,6 +103,62 @@ class PedidosService:
             nuevo_numero = 1
         
         return f"PED-{nuevo_numero:06d}"
+    
+    @staticmethod
+    def _canal_por_rol(rol_usuario: str) -> Optional[CanalPedido]:
+        """Determina canal según el rol del usuario"""
+        if rol_usuario == "gerente_cuenta":
+            return CanalPedido.MOVIL_VENTAS
+        if rol_usuario == "usuario_institucional":
+            return CanalPedido.MOVIL_CLIENTE
+        return None
+    
+    @staticmethod
+    def _registrar_historial(
+        db: Session,
+        pedido: Pedido,
+        estado_anterior: EstadoPedido,
+        estado_nuevo: EstadoPedido,
+        comentario: Optional[str] = None
+    ) -> None:
+        """Inserta un registro en el historial de estados del pedido"""
+        try:
+            historial = PedidoEstadoHistorial(
+                pedido_id=pedido.pedido_id,
+                estado_anterior=estado_anterior,
+                estado_nuevo=estado_nuevo,
+                comentario=comentario
+            )
+            db.add(historial)
+        except Exception as e:
+            logger.error(f"Error registrando historial de pedido {pedido.pedido_id}: {e}")
+    
+    @staticmethod
+    async def seleccionar_lote_fefo(producto_id: str) -> Optional[Dict]:
+        """
+        Selecciona el lote con fecha de vencimiento más próxima (FEFO) para el producto.
+        Retorna dict con info del lote o None si no hay.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/v1/lotes"
+                params = {
+                    "producto_id": producto_id,
+                    "sort": "fechaVencimiento",
+                    "order": "asc",
+                    "page": 1,
+                    "page_size": 1,
+                    "solo_con_stock": True,
+                }
+                resp = await client.get(url, params=params)
+                if resp.status_code == 200:
+                    items = resp.json().get("items", [])
+                    return items[0] if items else None
+                logger.warning(f"No se pudo obtener lote FEFO para producto {producto_id}: {resp.status_code}")
+                return None
+        except Exception as e:
+            logger.error(f"Error seleccionando lote FEFO para {producto_id}: {e}")
+            return None
     
     @staticmethod
     async def validar_inventario_producto(
@@ -111,7 +230,8 @@ class PedidosService:
         """Obtiene la información completa de un producto"""
         try:
             async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
-                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/productos/{producto_id}"
+                # Usar la ruta correcta del product-service
+                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/v1/productos/{producto_id}"
                 response = await client.get(url)
                 
                 if response.status_code == 200:
@@ -123,6 +243,30 @@ class PedidosService:
         except Exception as e:
             logger.error(f"Error obteniendo info de producto: {e}")
             return None
+    
+    @staticmethod
+    def _nombre_producto_enriquecido(producto_id: str, nombre_snapshot: Optional[str]) -> str:
+        """
+        Devuelve el nombre del producto. Si el snapshot viene vacío o como 'Producto desconocido',
+        intenta obtenerlo del product-service de forma síncrona solo para la respuesta.
+        """
+        # Si ya tenemos un nombre válido en el snapshot, úsalo tal cual
+        if nombre_snapshot and nombre_snapshot.strip().lower() != "producto desconocido":
+            return nombre_snapshot
+        # Fallback de sólo lectura para enriquecer la respuesta
+        try:
+            with httpx.Client(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/v1/productos/{producto_id}"
+                resp = client.get(url)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    nombre = data.get("nombre")
+                    if nombre:
+                        return nombre
+        except Exception as e:
+            logger.warning(f"No se pudo enriquecer nombre de producto {producto_id}: {e}")
+        # Último recurso, mantener snapshot o placeholder
+        return nombre_snapshot or "Producto desconocido"
     
     @staticmethod
     async def obtener_nits_gerente(gerente_id: int) -> List[str]:
@@ -154,6 +298,38 @@ class PedidosService:
             return []
         except Exception as e:
             logger.error(f"Error obteniendo NITs del gerente {gerente_id}: {e}")
+            return []
+    
+    @staticmethod
+    async def obtener_cliente_ids_gerente(gerente_id: int) -> List[int]:
+        """
+        Obtiene la lista de cliente_ids (sedes) asignados a un gerente desde el cliente-service
+        
+        Args:
+            gerente_id: ID del gerente
+            
+        Returns:
+            Lista de cliente_ids de las sedes asignadas al gerente
+        """
+        try:
+            async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
+                url = f"{PedidosService.CLIENTE_SERVICE_URL}/api/v1/clientes/mis-cliente-ids"
+                response = await client.get(url, params={"gerente_id": gerente_id})
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    cliente_ids = data.get("cliente_ids", [])
+                    logger.info(f"Cliente IDs del gerente {gerente_id}: {cliente_ids}")
+                    return cliente_ids
+                else:
+                    logger.warning(f"Error al obtener cliente_ids del gerente {gerente_id}: {response.status_code}")
+                    return []
+                    
+        except httpx.TimeoutException:
+            logger.error(f"Timeout al obtener cliente_ids del gerente {gerente_id}")
+            return []
+        except Exception as e:
+            logger.error(f"Error obteniendo cliente_ids del gerente {gerente_id}: {e}")
             return []
     
     @staticmethod
@@ -243,6 +419,7 @@ class PedidosService:
         usuario_id: int,
         rol_usuario: str,
         nit_usuario: Optional[str],
+        cliente_id_header: Optional[int],
         db: Session
     ) -> Tuple[bool, Optional[PedidoResponse], str, List[ValidacionInventarioResult]]:
         """
@@ -259,6 +436,25 @@ class PedidosService:
                 if not nit_valido:
                     logger.warning(f"Validación NIT fallida para usuario_institucional {usuario_id}: {error_msg}")
                     return False, None, error_msg, []
+                # Para usuario_institucional, exigir cliente_id en header y priorizarlo
+                if cliente_id_header is None:
+                    msg = "cliente_id es requerido en el header para usuario_institucional"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                effective_cliente_id = cliente_id_header
+                # Validar que el cliente_id corresponda con el NIT indicado verificando por ID
+                cliente = await PedidosService.obtener_cliente_por_id(effective_cliente_id)
+                if not cliente:
+                    msg = f"Cliente {effective_cliente_id} no encontrado"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                cliente_nit = cliente.get("nit")
+                if not cliente_nit or not PedidosService._nit_equals(cliente_nit, request.nit):
+                    msg = f"El cliente_id {effective_cliente_id} no pertenece al NIT {request.nit}"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                # Forzar el cliente_id efectivo en el request para persistir
+                request.cliente_id = effective_cliente_id
             
             elif rol_usuario == 'gerente_cuenta':
                 nit_valido, error_msg = await PedidosService.validar_nit_gerente_cuenta(
@@ -267,6 +463,17 @@ class PedidosService:
                 if not nit_valido:
                     logger.warning(f"Validación NIT fallida para gerente_cuenta {usuario_id}: {error_msg}")
                     return False, None, error_msg, []
+                # Validar que el cliente_id corresponda con el NIT indicado verificando por ID
+                cliente = await PedidosService.obtener_cliente_por_id(request.cliente_id)
+                if not cliente:
+                    msg = f"Cliente {request.cliente_id} no encontrado"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                cliente_nit = cliente.get("nit")
+                if not cliente_nit or not PedidosService._nit_equals(cliente_nit, request.nit):
+                    msg = f"El cliente_id {request.cliente_id} no pertenece al NIT {request.nit}"
+                    logger.warning(msg)
+                    return False, None, msg, []
             
             # Validar el pedido
             valido, validaciones, error_msg = await PedidosService.validar_pedido(
@@ -282,10 +489,12 @@ class PedidosService:
             # Crear el pedido
             pedido = Pedido(
                 usuario_id=usuario_id,
+                cliente_id=request.cliente_id,
                 nit=request.nit,
                 rol_usuario=rol_usuario,
                 numero_pedido=numero_pedido,
                 estado=EstadoPedido.PENDIENTE,
+                canal=PedidosService._canal_por_rol(rol_usuario),
                 observaciones=request.observaciones
             )
             
@@ -307,17 +516,26 @@ class PedidosService:
                     logger.error(f"Inventario insuficiente para {producto.producto_id}")
                     raise Exception(f"Inventario insuficiente para {nombre_producto}")
                 
+                # Seleccionar lote FEFO (opcional)
+                lote = await PedidosService.seleccionar_lote_fefo(producto.producto_id)
+                
                 subtotal = producto.cantidad_solicitada * precio
                 monto_total += subtotal
                 
                 detalle = DetallePedido(
-                    pedido_id=pedido.pedido_id,
                     producto_id=producto.producto_id,
                     nombre_producto=nombre_producto,
+                    sku=info_producto.get("sku") if info_producto else None,
                     cantidad_solicitada=producto.cantidad_solicitada,
                     cantidad_disponible_al_momento=cantidad_disp,
+                    cantidad_confirmada=producto.cantidad_solicitada,
                     precio_unitario=precio,
-                    subtotal=subtotal
+                    subtotal=subtotal,
+                    lote_id=(lote or {}).get("loteId"),
+                    bodega_id=(lote or {}).get("bodegaId"),
+                    bodega_nombre=(lote or {}).get("bodegaNombre") or (lote or {}).get("bodega"),
+                    pais=(lote or {}).get("pais"),
+                    fecha_vencimiento_lote=(lote or {}).get("fechaVencimiento"),
                 )
                 
                 pedido.detalles.append(detalle)
@@ -326,6 +544,16 @@ class PedidosService:
             
             # Guardar en base de datos
             db.add(pedido)
+            # Asegurar que se asignen IDs (pedido_id) antes de registrar historial
+            db.flush()
+            # Registrar historial de creación (pendiente → pendiente)
+            PedidosService._registrar_historial(
+                db=db,
+                pedido=pedido,
+                estado_anterior=EstadoPedido.PENDIENTE,
+                estado_nuevo=EstadoPedido.PENDIENTE,
+                comentario="Creación de pedido"
+            )
             db.commit()
             db.refresh(pedido)
             
@@ -342,7 +570,7 @@ class PedidosService:
                     logger.warning(f"Error actualizando stock para producto {producto.producto_id}")
             
             # Si hay errores al actualizar stock, registrar pero no fallar el pedido
-            # (el pedido ya está creado y confirmado)
+            # (el pedido ya está creado con estado 'pendiente')
             if productos_con_error:
                 logger.error(f"Pedido {numero_pedido} creado pero error actualizando stock para productos: {productos_con_error}")
                 # Opcional: Podrías marcar el pedido con un estado especial o agregar una observación
@@ -357,6 +585,7 @@ class PedidosService:
                 pedido_id=str(pedido.pedido_id),
                 numero_pedido=pedido.numero_pedido,
                 usuario_id=pedido.usuario_id,
+                cliente_id=pedido.cliente_id,
                 nit=pedido.nit,
                 rol_usuario=pedido.rol_usuario,
                 estado=pedido.estado,
@@ -398,6 +627,7 @@ class PedidosService:
                 pedido_id=str(pedido.pedido_id),
                 numero_pedido=pedido.numero_pedido,
                 usuario_id=pedido.usuario_id,
+                cliente_id=pedido.cliente_id,
                 nit=pedido.nit,
                 rol_usuario=pedido.rol_usuario,
                 estado=pedido.estado,
@@ -409,7 +639,9 @@ class PedidosService:
                     DetallePedidoResponse(
                         detalle_id=str(d.detalle_id),
                         producto_id=str(d.producto_id),
-                        nombre_producto=d.nombre_producto,
+                        nombre_producto=PedidosService._nombre_producto_enriquecido(
+                            str(d.producto_id), d.nombre_producto
+                        ),
                         cantidad_solicitada=d.cantidad_solicitada,
                         cantidad_disponible_al_momento=d.cantidad_disponible_al_momento,
                         precio_unitario=d.precio_unitario,
@@ -427,6 +659,8 @@ class PedidosService:
         usuario_id: int = None,
         nit: str = None,
         nits_gerente: List[str] = None,
+        cliente_ids_gerente: List[int] = None,
+        cliente_id: Optional[int] = None,
         estado: EstadoPedido = None,
         pagina: int = 1,
         por_pagina: int = 10,
@@ -438,7 +672,9 @@ class PedidosService:
         Args:
             usuario_id: Filtrar por ID de usuario
             nit: Filtrar por NIT específico
-            nits_gerente: Lista de NITs del gerente (para mostrar todos sus clientes)
+            nits_gerente: Lista de NITs del gerente (DEPRECATED, usar cliente_ids_gerente)
+            cliente_ids_gerente: Lista de cliente_ids asignados al gerente (para mostrar solo sus sedes)
+            cliente_id: Filtrar por cliente_id específico
             estado: Filtrar por estado
             pagina: Número de página
             por_pagina: Registros por página
@@ -450,15 +686,21 @@ class PedidosService:
             if usuario_id:
                 query = query.filter(Pedido.usuario_id == usuario_id)
             
-            # Filtrar por NIT específico o por lista de NITs del gerente
+            # Filtrar por NIT específico o por lista de cliente_ids del gerente
             if nit:
                 query = query.filter(Pedido.nit == nit)
+            elif cliente_ids_gerente:
+                # Para gerente_cuenta, mostrar pedidos SOLO de las sedes asignadas
+                query = query.filter(Pedido.cliente_id.in_(cliente_ids_gerente))
             elif nits_gerente:
-                # Para gerente_cuenta, mostrar pedidos de todos sus clientes
+                # DEPRECATED: Mantener por compatibilidad pero preferir cliente_ids_gerente
                 query = query.filter(Pedido.nit.in_(nits_gerente))
             
             if estado:
                 query = query.filter(Pedido.estado == estado)
+            
+            if cliente_id:
+                query = query.filter(Pedido.cliente_id == cliente_id)
             
             total = query.count()
             
@@ -471,6 +713,7 @@ class PedidosService:
                     pedido_id=str(p.pedido_id),
                     numero_pedido=p.numero_pedido,
                     usuario_id=p.usuario_id,
+                    cliente_id=p.cliente_id,
                     nit=p.nit,
                     rol_usuario=p.rol_usuario,
                     estado=p.estado,
@@ -482,7 +725,9 @@ class PedidosService:
                         DetallePedidoResponse(
                             detalle_id=str(d.detalle_id),
                             producto_id=str(d.producto_id),
-                            nombre_producto=d.nombre_producto,
+                            nombre_producto=PedidosService._nombre_producto_enriquecido(
+                                str(d.producto_id), d.nombre_producto
+                            ),
                             cantidad_solicitada=d.cantidad_solicitada,
                             cantidad_disponible_al_momento=d.cantidad_disponible_al_momento,
                             precio_unitario=d.precio_unitario,
@@ -519,6 +764,35 @@ class PedidosService:
             if observaciones:
                 pedido.observaciones = (pedido.observaciones or "") + f"\n[{datetime.now(timezone.utc).isoformat()}] {observaciones}"
             
+            # Registrar historial de cambio de estado
+            PedidosService._registrar_historial(
+                db=db,
+                pedido=pedido,
+                estado_anterior=estado_anterior,
+                estado_nuevo=nuevo_estado,
+                comentario=observaciones
+            )
+            # Sincronizar con entregas
+            try:
+                if nuevo_estado == EstadoPedido.ENVIADO:
+                    # Crear entrega programada si no existe
+                    entrega = db.query(Entrega).filter(Entrega.pedido_id == pedido.pedido_id).first()
+                    if not entrega:
+                        entrega = Entrega(
+                            pedido_id=pedido.pedido_id,
+                            nit=pedido.nit,
+                            estado_entrega=EstadoEntrega.PROGRAMADA,
+                            fecha_hora_programada=datetime.now(timezone.utc),
+                        )
+                        db.add(entrega)
+                elif nuevo_estado == EstadoPedido.ENTREGADO:
+                    # Marcar entrega como ENTREGADA si existe
+                    entrega = db.query(Entrega).filter(Entrega.pedido_id == pedido.pedido_id).first()
+                    if entrega:
+                        entrega.estado_entrega = EstadoEntrega.ENTREGADA
+                        entrega.fecha_hora_entrega_real = datetime.now(timezone.utc)
+            except Exception as sync_err:
+                logger.error(f"Error sincronizando entregas para pedido {pedido_id}: {sync_err}")
             db.commit()
             db.refresh(pedido)
             
@@ -526,6 +800,7 @@ class PedidosService:
                 pedido_id=str(pedido.pedido_id),
                 numero_pedido=pedido.numero_pedido,
                 usuario_id=pedido.usuario_id,
+                cliente_id=pedido.cliente_id,
                 nit=pedido.nit,
                 rol_usuario=pedido.rol_usuario,
                 estado=pedido.estado,

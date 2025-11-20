@@ -1,0 +1,24 @@
+# Dependencias de desarrollo y testing
+# Instalar con: pip install -r requirements-dev.txt
+
+# Testing
+pytest==7.4.0
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+anyio>=3.7,<5
+Faker==24.*
+
+# Linting y formateo
+black==23.12.1
+flake8==7.0.0
+mypy==1.7.1
+isort==5.13.2
+
+# Type stubs
+types-requests==2.31.0.20240106
+
+# Herramientas de desarrollo
+ipython==8.18.1
+ipdb==0.13.13
+

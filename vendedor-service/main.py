@@ -16,7 +16,7 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(
     title="Vendedores Service",
     description="Microservicio de Registro y Gestión de Vendedores (JWT + RBAC)",
-    version="1.0.1",
+    version="1.0.2",
 )
 
 
@@ -66,7 +66,7 @@ async def startup_event():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "vendedor-service"}
+    return {"status": "healthy", "service": "vendedor-service", "version": "1.0.2"}
 
 if __name__ == "__main__":
     import uvicorn

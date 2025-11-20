@@ -30,7 +30,7 @@ jobs:
       id: tag
       run: |
         # Define all services
-        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service" "product-service" "proveedor-service" "pedidos-service" "ingestion-service" "validator-service" "upserter-service" "cliente-service" "vendedor-service")
+        ALL_SERVICES=("user-service" "auth-service" "nit-validation-service" "audit-service" "product-service" "proveedor-service" "pedidos-service" "ingestion-service" "validator-service" "upserter-service" "cliente-service" "vendedor-service" "cargamasiva-service" "visit-service" "visita-service")
         TAGGED_SERVICES=()
 
         echo "🔍 Detecting changed services..."
@@ -254,6 +254,18 @@ jobs:
             PORT=8014
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/vendedor_db?sslmode=require"
             ;;
+          "cargamasiva-service")
+            PORT=8015
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db?sslmode=require"
+            ;;
+          "visit-service")
+            PORT=8011
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/visit_db?sslmode=require"
+            ;;
+          "visita-service")
+            PORT=8015
+            DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/visita_db?sslmode=require"
+            ;;
         esac
 
         LOG_GROUP="/ecs/$SERVICE_NAME"
@@ -269,6 +281,8 @@ jobs:
         if [ "$SERVICE_NAME" = "vendedor-service" ]; then
           USER_DB_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
           EXTRA_ENV_VARS=",{\"name\": \"USER_DATABASE_URL\", \"value\": \"$USER_DB_URL\"}"
+        elif [ "$SERVICE_NAME" = "visit-service" ]; then
+          EXTRA_ENV_VARS=",{\"name\": \"FILES_BACKEND\", \"value\": \"s3\"},{\"name\": \"S3_BUCKET\", \"value\": \"visit-evidence\"},{\"name\": \"S3_PREFIX\", \"value\": \"visits-prod\"},{\"name\": \"FILES_BASE_URL\", \"value\": \"https://visit-evidence.s3.us-east-1.amazonaws.com\"},{\"name\": \"AWS_REGION\", \"value\": \"us-east-1\"},{\"name\": \"REQUIRED_ROLE\", \"value\": \"gerente_cuenta\"},{\"name\": \"MAX_UPLOAD_MB\", \"value\": \"15\"}"
         fi
 
         # Create task definition with proper variable substitution
@@ -299,7 +313,8 @@ jobs:
                 {"name": "DATABASE_URL", "value": "$DATABASE_URL"},
                 {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
                 {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
-                {"name": "JWT_EXPIRE_MINUTES", "value": "60"}$EXTRA_ENV_VARS
+                {"name": "JWT_EXPIRE_MINUTES", "value": "60"},
+                {"name": "API_URL", "value": "${{ secrets.API_URL }}"}$EXTRA_ENV_VARS
               ],
               "logConfiguration": {
                 "logDriver": "awslogs",

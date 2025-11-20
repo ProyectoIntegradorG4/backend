@@ -1,0 +1,366 @@
+{
+	"info": {
+		"_postman_id": "visita-service-001",
+		"name": "Visita Service (HU-MOV-003)",
+		"description": "Colección de endpoints para gestión de visitas y rutas optimizadas",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{BASE_URL}}/health",
+					"host": ["{{BASE_URL}}"],
+					"path": ["health"]
+				},
+				"description": "Verificar estado del servicio"
+			}
+		},
+		{
+			"name": "Gestión de Visitas",
+			"item": [
+				{
+					"name": "Crear Visita",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"gerente_id\": 1,\n  \"cliente_id\": 1,\n  \"fecha_visita\": \"2025-11-20\",\n  \"hora_inicio_sugerida\": \"09:00:00\",\n  \"duracion_estimada_minutos\": 60,\n  \"prioridad\": \"alta\",\n  \"observaciones\": \"Primera visita del mes - Cliente prioritario\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/visitas",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "visitas"]
+						},
+						"description": "Crear nueva visita programada. Valida que el gerente tenga acceso al cliente y obtiene automáticamente las coordenadas."
+					}
+				},
+				{
+					"name": "Obtener Visita por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/visitas/1?gerente_id=1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "visitas", "1"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1",
+									"description": "ID del gerente para validación"
+								}
+							]
+						},
+						"description": "Obtener detalle de una visita específica"
+					}
+				},
+				{
+					"name": "Listar Visitas por Fecha",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/visitas?gerente_id=1&fecha=2025-11-20",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "visitas"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1",
+									"description": "ID del gerente"
+								},
+								{
+									"key": "fecha",
+									"value": "2025-11-20",
+									"description": "Fecha de las visitas (YYYY-MM-DD)"
+								},
+								{
+									"key": "estado",
+									"value": "programada",
+									"description": "Filtro opcional por estado",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Obtener lista de visitas programadas para un gerente en una fecha"
+					}
+				},
+				{
+					"name": "Actualizar Visita",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fecha_visita\": \"2025-11-21\",\n  \"hora_inicio_sugerida\": \"10:00:00\",\n  \"prioridad\": \"media\",\n  \"observaciones\": \"Reprogramada por solicitud del cliente\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/visitas/1?gerente_id=1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "visitas", "1"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Actualizar visita existente. Solo se envían los campos a modificar."
+					}
+				},
+				{
+					"name": "Cancelar Visita",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/visitas/1?gerente_id=1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "visitas", "1"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Cancelar visita (soft delete). Cambia el estado a 'cancelada'."
+					}
+				}
+			]
+		},
+		{
+			"name": "Rutas Optimizadas (HU-MOV-003)",
+			"item": [
+				{
+					"name": "Obtener Ruta Optimizada",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/rutas-visitas?gerente_id=1&fecha=2025-11-20",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "rutas-visitas"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1",
+									"description": "ID del gerente"
+								},
+								{
+									"key": "fecha",
+									"value": "2025-11-20",
+									"description": "Fecha de la ruta (YYYY-MM-DD)"
+								}
+							]
+						},
+						"description": "**[HU-MOV-003]** Obtener ruta optimizada de visitas para una fecha.\n\nRetorna:\n- Lista ordenada de visitas\n- Orden recomendado\n- Tiempos estimados entre visitas\n- Distancias calculadas\n- Horarios sugeridos\n\nSi no existe ruta, la genera automáticamente."
+					}
+				},
+				{
+					"name": "Recalcular Ruta",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fecha\": \"2025-11-20\",\n  \"gerente_id\": 1\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/rutas-visitas/recalcular",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "rutas-visitas", "recalcular"]
+						},
+						"description": "**[HU-MOV-003]** Forzar recálculo de ruta optimizada.\n\nIncrementa la versión de la ruta para tracking de cambios.\n\nÚtil cuando:\n- Se agregan/eliminan visitas\n- Cambian prioridades\n- Se requiere reoptimización"
+					}
+				},
+				{
+					"name": "Clientes Disponibles en Zona",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes-disponibles-zona?gerente_id=1&fecha=2025-11-20&lat=4.6533&lng=-74.0836&radio_km=20",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes-disponibles-zona"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1",
+									"description": "ID del gerente"
+								},
+								{
+									"key": "fecha",
+									"value": "2025-11-20",
+									"description": "Fecha para verificar visitas programadas"
+								},
+								{
+									"key": "lat",
+									"value": "4.6533",
+									"description": "Latitud del punto de referencia"
+								},
+								{
+									"key": "lng",
+									"value": "-74.0836",
+									"description": "Longitud del punto de referencia"
+								},
+								{
+									"key": "radio_km",
+									"value": "20",
+									"description": "Radio de búsqueda en km (default: 20, max: 100)"
+								}
+							]
+						},
+						"description": "**[HU-MOV-003]** Obtener clientes disponibles en zona geográfica.\n\nRetorna clientes asignados al gerente dentro de un radio específico.\nÚtil cuando no hay visitas programadas para mostrar opciones de clientes cercanos.\n\n- Filtra por radio desde punto de referencia\n- Indica si ya tienen visita programada\n- Ordena por distancia (más cercanos primero)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Ejemplos Completos",
+			"item": [
+				{
+					"name": "Flujo Completo - Crear y Optimizar",
+					"item": [
+						{
+							"name": "1. Crear Primera Visita",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"gerente_id\": 1,\n  \"cliente_id\": 1,\n  \"fecha_visita\": \"2025-11-25\",\n  \"hora_inicio_sugerida\": \"08:00:00\",\n  \"duracion_estimada_minutos\": 60,\n  \"prioridad\": \"alta\",\n  \"observaciones\": \"Visita inicial del día\"\n}"
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/visitas",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "visitas"]
+								}
+							}
+						},
+						{
+							"name": "2. Crear Segunda Visita",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"gerente_id\": 1,\n  \"cliente_id\": 2,\n  \"fecha_visita\": \"2025-11-25\",\n  \"duracion_estimada_minutos\": 45,\n  \"prioridad\": \"media\"\n}"
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/visitas",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "visitas"]
+								}
+							}
+						},
+						{
+							"name": "3. Crear Tercera Visita",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"gerente_id\": 1,\n  \"cliente_id\": 3,\n  \"fecha_visita\": \"2025-11-25\",\n  \"duracion_estimada_minutos\": 60,\n  \"prioridad\": \"baja\"\n}"
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/visitas",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "visitas"]
+								}
+							}
+						},
+						{
+							"name": "4. Obtener Ruta Optimizada",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/rutas-visitas?gerente_id=1&fecha=2025-11-25",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "rutas-visitas"],
+									"query": [
+										{
+											"key": "gerente_id",
+											"value": "1"
+										},
+										{
+											"key": "fecha",
+											"value": "2025-11-25"
+										}
+									]
+								},
+								"description": "Obtiene ruta optimizada con las 3 visitas ordenadas"
+							}
+						},
+						{
+							"name": "5. Recalcular Ruta",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"fecha\": \"2025-11-25\",\n  \"gerente_id\": 1\n}"
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/rutas-visitas/recalcular",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "rutas-visitas", "recalcular"]
+								},
+								"description": "Fuerza recálculo (incrementa versión)"
+							}
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "http://localhost:8015",
+			"type": "string"
+		}
+	]
+}
+

@@ -1,9 +1,19 @@
 # tests/test_connection_and_seed.py
 import importlib
+import sys
 from sqlalchemy import text  # (por si lo vuelves a usar)
 import os
+import pytest
+
 
 def test_sqlite_engine_and_seed(tmp_path, monkeypatch):
+    """
+    ⚠️ IMPORTANTE: Este test hace importlib.reload() que afecta el estado global.
+    Se ejecuta de forma aislada. No debe ejecutarse junto con otros tests que usen BD.
+    
+    Para ejecutar solo este test:
+        pytest tests/test_connection_and_seed.py -v
+    """
     # Forzar SQLite para pruebas unitarias
     db_url = f"sqlite:///{tmp_path}/test.db"
     monkeypatch.setenv("DATABASE_URL", db_url)

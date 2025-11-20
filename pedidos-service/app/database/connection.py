@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
@@ -49,11 +49,25 @@ def get_db() -> Generator[Session, None, None]:
 async def init_db():
     """Inicializar la base de datos creando las tablas."""
     try:
-        from app.models.pedido import Base as PedidoBase
+        # Importar modelos para asegurar su registro en el metadata
+        from app.models import pedido as _pedido_models  # noqa: F401
+        from app.models import entrega as _entrega_models  # noqa: F401
 
         # Crear tablas si no existen
         Base.metadata.create_all(bind=engine)
         logger.info("Base de datos de pedidos inicializada correctamente")
+
+        # Migraciones ligeras y seguras en runtime (solo para dev)
+        try:
+            with engine.connect() as conn:
+                # Agregar columna cliente_id si no existe
+                conn.execute(text("ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_id INTEGER"))
+                # Crear índice si no existe
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_pedidos_cliente_id ON pedidos (cliente_id)"))
+                conn.commit()
+                logger.info("Verificación/migración de columna cliente_id completada")
+        except Exception as mig_err:
+            logger.error(f"Error aplicando migraciones ligeras: {mig_err}")
 
     except Exception as e:
         logger.error(f"Error inicializando la base de datos: {e}")
