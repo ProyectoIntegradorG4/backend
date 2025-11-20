@@ -282,7 +282,7 @@ jobs:
           USER_DB_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
           EXTRA_ENV_VARS=",{\"name\": \"USER_DATABASE_URL\", \"value\": \"$USER_DB_URL\"}"
         elif [ "$SERVICE_NAME" = "visit-service" ]; then
-          EXTRA_ENV_VARS=",{\"name\": \"FILES_BACKEND\", \"value\": \"s3\"},{\"name\": \"S3_BUCKET\", \"value\": \"visit-evidence\"},{\"name\": \"S3_PREFIX\", \"value\": \"visits-prod\"},{\"name\": \"FILES_BASE_URL\", \"value\": \"https://visit-evidence.s3.us-east-1.amazonaws.com\"},{\"name\": \"AWS_REGION\", \"value\": \"us-east-1\"},{\"name\": \"REQUIRED_ROLE\", \"value\": \"gerente_cuenta\"},{\"name\": \"MAX_UPLOAD_MB\", \"value\": \"15\"}"
+          EXTRA_ENV_VARS=",{\"name\": \"FILES_BACKEND\", \"value\": \"${{ secrets.VISIT_FILES_BACKEND }}\"},{\"name\": \"FILES_DIR\", \"value\": \"/data/visits\"},{\"name\": \"S3_BUCKET\", \"value\": \"${{ secrets.S3_BUCKET }}\"},{\"name\": \"S3_PREFIX\", \"value\": \"visits-prod\"},{\"name\": \"FILES_BASE_URL\", \"value\": \"${{ secrets.FILES_BASE_URL }}\"},{\"name\": \"AWS_REGION\", \"value\": \"us-east-1\"},{\"name\": \"AWS_ACCESS_KEY_ID\", \"value\": \"${{ secrets.AWS_ACCESS_KEY_ID }}\"},{\"name\": \"AWS_SECRET_ACCESS_KEY\", \"value\": \"${{ secrets.AWS_SECRET_ACCESS_KEY }}\"},{\"name\": \"REQUIRED_ROLE\", \"value\": \"gerente_cuenta\"},{\"name\": \"MAX_UPLOAD_MB\", \"value\": \"15\"}"
         fi
 
         # Create task definition with proper variable substitution
