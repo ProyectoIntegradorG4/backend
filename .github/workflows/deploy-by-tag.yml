@@ -169,6 +169,7 @@ jobs:
           "product-service")
             PORT=8005
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db"
+            USER_DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
             ;;
           "proveedor-service")
             PORT=8006
@@ -239,6 +240,7 @@ jobs:
                 {"name": "POSTGRES_HOST", "value": "${{ secrets.RDS_ENDPOINT }}"},
                 {"name": "POSTGRES_PORT", "value": "5432"},
                 {"name": "DATABASE_URL", "value": "${DATABASE_URL}"},
+                {"name": "USER_DATABASE_URL", "value": "${USER_DATABASE_URL}"},
                 {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
                 {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
                 {"name": "JWT_EXPIRE_MINUTES", "value": "60"},
