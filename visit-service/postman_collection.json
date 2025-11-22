@@ -1,0 +1,490 @@
+{
+	"info": {
+		"_postman_id": "visit-service-001",
+		"name": "Visit Service",
+		"description": "Colección de endpoints para gestión de visitas a clientes con evidencia (imágenes y videos)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{BASE_URL}}/health",
+					"host": ["{{BASE_URL}}"],
+					"path": ["health"]
+				},
+				"description": "Verificar estado del servicio"
+			}
+		},
+		{
+			"name": "Gestión de Visitas",
+			"item": [
+				{
+					"name": "Crear Visita",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{AUTH_TOKEN}}",
+								"description": "Token de autenticación Bearer"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "1",
+								"description": "ID del usuario (account manager)"
+							},
+							{
+								"key": "X-User-Role",
+								"value": "gerente_cuenta",
+								"description": "Rol del usuario (debe contener 'gerente_cuenta')"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"client_id\": 1,\n  \"visit_datetime\": \"2025-11-20T10:30:00\",\n  \"title\": \"Visita de seguimiento\",\n  \"notes\": \"Revisar inventario y necesidades del cliente\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/visits",
+							"host": ["{{BASE_URL}}"],
+							"path": ["visits"]
+						},
+						"description": "Crear nueva visita a un cliente.\n\n**Campos requeridos:**\n- `client_id`: ID del cliente (numérico)\n- `visit_datetime`: Fecha y hora en formato ISO 8601 (YYYY-MM-DDTHH:MM:SS)\n\n**Campos opcionales:**\n- `title`: Título de la visita\n- `notes`: Notas adicionales\n\n**Alternativa de fecha/hora:**\nEn lugar de `visit_datetime`, se puede usar:\n- `date`: \"2025-11-20\" (YYYY-MM-DD)\n- `time\": \"10:30\" (HH:MM)\n\n**Headers requeridos:**\n- `Authorization`: Bearer token\n- `X-User-Id`: ID del usuario (se usa como account_mgr_id)\n- `X-User-Role`: Rol del usuario (debe contener 'gerente_cuenta')"
+					}
+				},
+				{
+					"name": "Crear Visita (con date y time)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{AUTH_TOKEN}}"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "1"
+							},
+							{
+								"key": "X-User-Role",
+								"value": "gerente_cuenta"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"client_id\": 1,\n  \"date\": \"2025-11-20\",\n  \"time\": \"10:30\",\n  \"title\": \"Visita inicial\",\n  \"notes\": \"Primera visita del mes\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/visits",
+							"host": ["{{BASE_URL}}"],
+							"path": ["visits"]
+						},
+						"description": "Crear visita usando campos separados `date` y `time` en lugar de `visit_datetime`"
+					}
+				},
+				{
+					"name": "Obtener Visita por ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{AUTH_TOKEN}}"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "1"
+							},
+							{
+								"key": "X-User-Role",
+								"value": "gerente_cuenta"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/visits/1",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "visits", "1"]
+						},
+						"description": "Obtener detalle completo de una visita específica incluyendo todas sus evidencias (imágenes y videos)"
+					}
+				},
+				{
+					"name": "Listar Visitas por Cliente",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{AUTH_TOKEN}}"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "1"
+							},
+							{
+								"key": "X-User-Role",
+								"value": "gerente_cuenta"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/visits/client/1?limit=50&offset=0",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "visits", "client", "1"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50",
+									"description": "Número máximo de resultados (1-200, default: 50)"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Número de resultados a omitir (default: 0)"
+								}
+							]
+						},
+						"description": "Obtener lista paginada de visitas de un cliente específico.\n\nRetorna todas las visitas con sus evidencias asociadas."
+					}
+				}
+			]
+		},
+		{
+			"name": "Evidencias",
+			"item": [
+				{
+					"name": "Subir Evidencia (Imagen)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{AUTH_TOKEN}}"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "1"
+							},
+							{
+								"key": "X-User-Role",
+								"value": "gerente_cuenta"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"description": "Archivo de imagen (JPEG, PNG, WebP). Máximo 15MB"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/visits/1/evidence",
+							"host": ["{{BASE_URL}}"],
+							"path": ["visits", "1", "evidence"]
+						},
+						"description": "Subir una imagen como evidencia de una visita.\n\n**Parámetros disponibles:**\n- `image`: Archivo de imagen (JPEG, PNG, WebP)\n- `video`: Archivo de video (MP4, WebM, MKV)\n- `file`: Archivo genérico (se detecta automáticamente si es imagen o video)\n\n**Límites:**\n- Tamaño máximo por archivo: 15MB (configurable)\n- Se puede subir múltiples archivos en una sola petición\n\n**Tipos de contenido soportados:**\n- Imágenes: image/jpeg, image/png, image/webp\n- Videos: video/mp4, video/quicktime, video/webm, video/x-matroska, video/mkv"
+					}
+				},
+				{
+					"name": "Subir Evidencia (Video)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{AUTH_TOKEN}}"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "1"
+							},
+							{
+								"key": "X-User-Role",
+								"value": "gerente_cuenta"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "video",
+									"type": "file",
+									"src": [],
+									"description": "Archivo de video (MP4, WebM, MKV). Máximo 15MB"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/visits/1/evidence",
+							"host": ["{{BASE_URL}}"],
+							"path": ["visits", "1", "evidence"]
+						},
+						"description": "Subir un video como evidencia de una visita"
+					}
+				},
+				{
+					"name": "Subir Múltiples Evidencias",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{AUTH_TOKEN}}"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "1"
+							},
+							{
+								"key": "X-User-Role",
+								"value": "gerente_cuenta"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"description": "Primera imagen"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": [],
+									"description": "Segunda imagen"
+								},
+								{
+									"key": "video",
+									"type": "file",
+									"src": [],
+									"description": "Video de evidencia"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/visits/1/evidence",
+							"host": ["{{BASE_URL}}"],
+							"path": ["visits", "1", "evidence"]
+						},
+						"description": "Subir múltiples evidencias (imágenes y videos) en una sola petición.\n\nSe pueden combinar múltiples archivos usando los campos `image`, `video` o `file`."
+					}
+				},
+				{
+					"name": "Subir Evidencia (Archivo Genérico)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{AUTH_TOKEN}}"
+							},
+							{
+								"key": "X-User-Id",
+								"value": "1"
+							},
+							{
+								"key": "X-User-Role",
+								"value": "gerente_cuenta"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "Archivo genérico (se detecta automáticamente si es imagen o video)"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/visits/1/evidence",
+							"host": ["{{BASE_URL}}"],
+							"path": ["visits", "1", "evidence"]
+						},
+						"description": "Subir evidencia usando el campo genérico `file`. El sistema detecta automáticamente si es imagen o video basándose en el Content-Type."
+					}
+				}
+			]
+		},
+		{
+			"name": "Ejemplos Completos",
+			"item": [
+				{
+					"name": "Flujo Completo - Crear Visita y Subir Evidencia",
+					"item": [
+						{
+							"name": "1. Crear Visita",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "Bearer {{AUTH_TOKEN}}"
+									},
+									{
+										"key": "X-User-Id",
+										"value": "1"
+									},
+									{
+										"key": "X-User-Role",
+										"value": "gerente_cuenta"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"client_id\": 1,\n  \"visit_datetime\": \"2025-11-25T09:00:00\",\n  \"title\": \"Visita de seguimiento mensual\",\n  \"notes\": \"Revisar inventario y necesidades del cliente\"\n}"
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/visits",
+									"host": ["{{BASE_URL}}"],
+									"path": ["visits"]
+								}
+							}
+						},
+						{
+							"name": "2. Subir Evidencia de la Visita",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{AUTH_TOKEN}}"
+									},
+									{
+										"key": "X-User-Id",
+										"value": "1"
+									},
+									{
+										"key": "X-User-Role",
+										"value": "gerente_cuenta"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "image",
+											"type": "file",
+											"src": []
+										}
+									]
+								},
+								"url": {
+									"raw": "{{BASE_URL}}/visits/{{visit_id}}/evidence",
+									"host": ["{{BASE_URL}}"],
+									"path": ["visits", "{{visit_id}}", "evidence"]
+								},
+								"description": "Usar el ID de la visita creada en el paso anterior"
+							}
+						},
+						{
+							"name": "3. Obtener Visita con Evidencias",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{AUTH_TOKEN}}"
+									},
+									{
+										"key": "X-User-Id",
+										"value": "1"
+									},
+									{
+										"key": "X-User-Role",
+										"value": "gerente_cuenta"
+									}
+								],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/visits/{{visit_id}}",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "visits", "{{visit_id}}"]
+								},
+								"description": "Verificar que la visita se creó correctamente con sus evidencias"
+							}
+						},
+						{
+							"name": "4. Listar Todas las Visitas del Cliente",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{AUTH_TOKEN}}"
+									},
+									{
+										"key": "X-User-Id",
+										"value": "1"
+									},
+									{
+										"key": "X-User-Role",
+										"value": "gerente_cuenta"
+									}
+								],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/visits/client/1?limit=50&offset=0",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "visits", "client", "1"],
+									"query": [
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "offset",
+											"value": "0"
+										}
+									]
+								},
+								"description": "Obtener todas las visitas del cliente con paginación"
+							}
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "http://localhost:8011",
+			"type": "string",
+			"description": "URL base del servicio visit-service"
+		},
+		{
+			"key": "AUTH_TOKEN",
+			"value": "your-token-here",
+			"type": "string",
+			"description": "Token de autenticación Bearer"
+		},
+		{
+			"key": "visit_id",
+			"value": "1",
+			"type": "string",
+			"description": "ID de visita para usar en ejemplos"
+		}
+	]
+}
+
