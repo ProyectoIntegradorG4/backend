@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.database.session import get_db
 from app.services.visit_service import VisitService
+from app.models.visit import VisitEvidence
 from app.services.rbac import (
     require_auth_token,
     require_role_admincompras_header,
@@ -151,7 +152,16 @@ def _save_bytes(
 
 def _url_for(*, key: str) -> str:
     if FILES_BACKEND == "s3":
-        return f"{FILES_BASE_URL.rstrip('/')}/{key.lstrip('/')}"
+        # Generar pre-signed URL con expiración de 24 horas
+        # Esto permite que la app móvil acceda a objetos privados de S3
+        assert s3 is not None, "S3 client not initialized"
+        url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': S3_BUCKET, 'Key': key},
+            ExpiresIn=86400  # 24 horas (86400 segundos)
+        )
+        return url
+    # Para local: URLs relativas (compatibilidad con StaticFiles mount en /files)
     return f"/files/{key.lstrip('/')}"
 
 
@@ -426,4 +436,35 @@ def get_visit(
             }
             for e in v.evidences
         ],
+    }
+
+
+@router.get(
+    "/api/v1/visits/{visit_id}/evidence/{evidence_id}/url",
+    dependencies=[Depends(require_role_admincompras)],
+)
+def regenerate_evidence_url(
+    visit_id: int,
+    evidence_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Regenera URL pre-firmada para una evidencia específica.
+    Útil cuando la URL expira (después de 24 horas).
+    """
+    evidence = db.query(VisitEvidence).filter(
+        VisitEvidence.id == evidence_id,
+        VisitEvidence.visit_id == visit_id
+    ).first()
+    
+    if not evidence:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evidencia no encontrada"
+        )
+    
+    return {
+        "id": evidence.id,
+        "url": _url_for(key=evidence.storage_key),
+        "expires_in_seconds": 86400,  # 24 horas
     }
