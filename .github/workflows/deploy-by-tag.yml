@@ -148,6 +148,8 @@ jobs:
 
         # Configure service-specific settings
         RDS_HOST="${{ secrets.RDS_ENDPOINT }}"
+        POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+        USER_DATABASE_URL=""  # Initialize empty, will be set for product-service
 
         case "$SERVICE" in
           "nit-validation-service")
@@ -168,7 +170,6 @@ jobs:
             ;;
           "product-service")
             PORT=8005
-            POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
             DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/product_db"
             USER_DATABASE_URL="postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@${RDS_HOST}:5432/user_db?sslmode=require"
             ;;
