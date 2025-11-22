@@ -20,6 +20,11 @@ USER_DB_URL = os.getenv(
     "postgresql+psycopg://user_service:user_password@postgres-db:5432/user_db"
 )
 
+# Log the connection URL being used (without password for security)
+import re
+masked_url = re.sub(r'://([^:]+):([^@]+)@', r'://\1:****@', USER_DB_URL)
+logger.info(f"Using USER_DB_URL: {masked_url}")
+
 
 class PlanVentaService:
     """
