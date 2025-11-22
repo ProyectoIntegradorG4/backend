@@ -16,6 +16,10 @@ class ClientVisit(Base):
     visit_datetime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     title: Mapped[str | None] = mapped_column(String(120), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Campos granulares para HU-MOV-004
+    contacto_nombre: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    tipo_visita: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    objetivo_visita: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 

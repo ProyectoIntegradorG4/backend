@@ -12,6 +12,7 @@ from fastapi import (
     HTTPException,
     UploadFile,
     File,
+    Form,
     Body,
     Query,
     Request,
@@ -234,6 +235,9 @@ def create_visit(
         visit_dt=visit_dt,
         title=payload.get("title"),
         notes=payload.get("notes"),
+        contacto_nombre=payload.get("contacto_nombre"),
+        tipo_visita=payload.get("tipo_visita"),
+        objetivo_visita=payload.get("objetivo_visita"),
     )
     db.commit()
 
@@ -250,6 +254,7 @@ async def upload_evidence(
     file: UploadFile | None = File(None),
     image: UploadFile | None = File(None),
     video: UploadFile | None = File(None),
+    comment: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     svc = VisitService(db)
@@ -332,6 +337,15 @@ async def upload_evidence(
             }
         )
 
+    # Actualizar notas de la visita con el comentario (HU-MOV-006)
+    if comment:
+        existing_notes = visit.notes or ""
+        if existing_notes:
+            visit.notes = f"{existing_notes}\n\n[Evidencia] {comment}"
+        else:
+            visit.notes = f"[Evidencia] {comment}"
+        db.add(visit)
+
     db.commit()
     return {"items": results, "count": len(results)}
 
@@ -357,6 +371,9 @@ def list_visits_by_client(
             "visit_datetime": v.visit_datetime.isoformat(),
             "title": v.title,
             "notes": v.notes,
+            "contacto_nombre": v.contacto_nombre,
+            "tipo_visita": v.tipo_visita,
+            "objetivo_visita": v.objetivo_visita,
             "evidences": [
                 {
                     "id": e.id,
@@ -396,6 +413,9 @@ def get_visit(
         "visit_datetime": v.visit_datetime.isoformat(),
         "title": v.title,
         "notes": v.notes,
+        "contacto_nombre": v.contacto_nombre,
+        "tipo_visita": v.tipo_visita,
+        "objetivo_visita": v.objetivo_visita,
         "evidences": [
             {
                 "id": e.id,
