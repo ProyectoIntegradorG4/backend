@@ -875,7 +875,10 @@ class TestClienteService:
         mock_conn.execute.return_value.fetchone.return_value = mock_result
         
         mock_engine = Mock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_conn)
+        mock_context.__exit__ = Mock(return_value=False)
+        mock_engine.connect.return_value = mock_context
         mock_engine.dispose = Mock()
         mock_create_engine.return_value = mock_engine
         
@@ -893,7 +896,10 @@ class TestClienteService:
         mock_conn.execute.return_value.fetchone.return_value = None
         
         mock_engine = Mock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_conn)
+        mock_context.__exit__ = Mock(return_value=False)
+        mock_engine.connect.return_value = mock_context
         mock_engine.dispose = Mock()
         mock_create_engine.return_value = mock_engine
         
@@ -916,7 +922,10 @@ class TestClienteService:
         mock_conn.execute.return_value.fetchone.return_value = mock_result
         
         mock_engine = Mock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_conn)
+        mock_context.__exit__ = Mock(return_value=False)
+        mock_engine.connect.return_value = mock_context
         mock_engine.dispose = Mock()
         mock_create_engine.return_value = mock_engine
         
@@ -939,7 +948,10 @@ class TestClienteService:
         mock_conn.execute.return_value.fetchone.return_value = mock_result
         
         mock_engine = Mock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_conn)
+        mock_context.__exit__ = Mock(return_value=False)
+        mock_engine.connect.return_value = mock_context
         mock_engine.dispose = Mock()
         mock_create_engine.return_value = mock_engine
         
@@ -970,7 +982,10 @@ class TestClienteService:
         mock_conn.execute.return_value.fetchone.return_value = mock_result
         
         mock_engine = Mock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_conn)
+        mock_context.__exit__ = Mock(return_value=False)
+        mock_engine.connect.return_value = mock_context
         mock_engine.dispose = Mock()
         mock_create_engine.return_value = mock_engine
         
@@ -987,7 +1002,10 @@ class TestClienteService:
         mock_conn.execute.return_value.fetchone.return_value = None
         
         mock_engine = Mock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_conn)
+        mock_context.__exit__ = Mock(return_value=False)
+        mock_engine.connect.return_value = mock_context
         mock_engine.dispose = Mock()
         mock_create_engine.return_value = mock_engine
         
@@ -1006,7 +1024,10 @@ class TestClienteService:
         mock_conn.execute.return_value.fetchone.return_value = mock_result
         
         mock_engine = Mock()
-        mock_engine.connect.return_value.__enter__.return_value = mock_conn
+        mock_context = Mock()
+        mock_context.__enter__ = Mock(return_value=mock_conn)
+        mock_context.__exit__ = Mock(return_value=False)
+        mock_engine.connect.return_value = mock_context
         mock_engine.dispose = Mock()
         mock_create_engine.return_value = mock_engine
         

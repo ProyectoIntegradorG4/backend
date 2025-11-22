@@ -48,8 +48,27 @@ def client(db_session):
             pass
     
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
+    
+    # Deshabilitar startup event durante tests usando un mock
+    from unittest.mock import patch, MagicMock
+    
+    # Mockear startup event para evitar conexiones a PostgreSQL real
+    original_startup = None
+    if hasattr(app.router, 'on_startup'):
+        # Guardar referencia original si existe
+        pass
+    
+    # Mockear funciones que se ejecutan en startup
+    with patch('main.ensure_database_exists', return_value=True), \
+         patch('main.test_db_connection', return_value=True), \
+         patch('main.init_db'), \
+         patch('main.run_migrations'), \
+         patch('main.run_seeds'):
+        
+        # Crear TestClient - las tablas ya están creadas por db_engine fixture
+        test_client = TestClient(app)
         yield test_client
+    
     app.dependency_overrides.clear()
 
 
