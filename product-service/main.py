@@ -15,7 +15,7 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(
     title="Product Service (HU-WEB-003 & HU-WEB-008)",
     description="Microservicio de productos médicos y planes de venta",
-    version="1.2.2"
+    version="1.2.3"
 )
 
 # Endpoints “legacy” sin prefijo
