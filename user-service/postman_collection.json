@@ -2,54 +2,512 @@
   "info": {
     "_postman_id": "user-service-collection",
     "name": "User Service",
-    "description": "Colección de pruebas para el User Service",
+    "description": "Colección completa de pruebas para el User Service - Microservicio de gestión de usuarios con orquestador de registro optimizado",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "item": [
+  "variable": [
     {
-      "name": "Register User",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nombre\": \"Juan Perez\",\n  \"correo_electronico\": \"juan.perez@example.com\",\n  \"password\": \"Password123!\",\n  \"nit\": \"900123456-7\",\n  \"rol\": \"usuario_institucional\"\n}"
-        },
-        "url": {
-          "raw": "http://localhost:8001/register",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8001",
-          "path": [
-            "register"
-          ]
-        }
-      }
-    },
+      "key": "base_url",
+      "value": "http://localhost:8001",
+      "type": "string"
+    }
+  ],
+  "item": [
     {
       "name": "Health Check",
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:8001/health",
-          "protocol": "http",
+          "raw": "{{base_url}}/health",
           "host": [
-            "localhost"
+            "{{base_url}}"
           ],
-          "port": "8001",
           "path": [
             "health"
           ]
+        },
+        "description": "Verifica el estado del servicio. Retorna el estado de salud del microservicio."
+      },
+      "response": [
+        {
+          "name": "Success Response",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"status\": \"healthy\",\n    \"service\": \"user-service\"\n}"
         }
-      }
+      ]
+    },
+    {
+      "name": "Register",
+      "item": [
+        {
+          "name": "Register User - Usuario Institucional",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Perez\",\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"Password123!\",\n  \"nit\": \"900123456-7\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register"
+              ]
+            },
+            "description": "Registra un nuevo usuario institucional. El rol se asigna automáticamente basado en el NIT. Para NITs diferentes a los gerentes, se asigna 'usuario_institucional'."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Juan Perez\",\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"Password123!\",\n  \"nit\": \"900123456-7\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "register"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"userId\": 1,\n    \"institucionId\": 1,\n    \"rol\": \"usuario_institucional\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"mensaje\": \"Registro exitoso\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register User - Gerente de Cuenta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Maria Rodriguez\",\n  \"email\": \"maria.rodriguez@example.com\",\n  \"password\": \"SecurePass456@\",\n  \"nit\": \"111111111-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register"
+              ]
+            },
+            "description": "Registra un nuevo usuario con rol de gerente de cuenta. Los NITs '111111111-1', '111111111-2', '111111111-3', '111111111-4' se asignan automáticamente como 'gerente_cuenta'."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Maria Rodriguez\",\n  \"email\": \"maria.rodriguez@example.com\",\n  \"password\": \"SecurePass456@\",\n  \"nit\": \"111111111-1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "register"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"userId\": 2,\n    \"institucionId\": 1,\n    \"rol\": \"gerente_cuenta\",\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"mensaje\": \"Registro exitoso\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register User - Error: Password Débil",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Pedro Martinez\",\n  \"email\": \"pedro.martinez@example.com\",\n  \"password\": \"weak\",\n  \"nit\": \"900123456-7\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register"
+              ]
+            },
+            "description": "Intenta registrar un usuario con contraseña que no cumple la política de complejidad. La contraseña debe tener mínimo 8 caracteres, incluir mayúsculas, minúsculas, números y caracteres especiales."
+          },
+          "response": [
+            {
+              "name": "Error Response - Password Complexity Failed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Pedro Martinez\",\n  \"email\": \"pedro.martinez@example.com\",\n  \"password\": \"weak\",\n  \"nit\": \"900123456-7\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "register"
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"detail\": {\n        \"error\": \"Reglas de negocio fallidas\",\n        \"detalles\": {\n            \"password\": \"No cumple política de complejidad\"\n        }\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register User - Error: NIT No Autorizado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana Lopez\",\n  \"email\": \"ana.lopez@example.com\",\n  \"password\": \"SecurePass789!\",\n  \"nit\": \"999999999-9\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register"
+              ]
+            },
+            "description": "Intenta registrar un usuario con un NIT que no existe en el servicio de validación de NITs. El NIT debe estar registrado en InstitucionesAsociadas."
+          },
+          "response": [
+            {
+              "name": "Error Response - NIT Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Ana Lopez\",\n  \"email\": \"ana.lopez@example.com\",\n  \"password\": \"SecurePass789!\",\n  \"nit\": \"999999999-9\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "register"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"detail\": {\n        \"error\": \"NIT no autorizado\",\n        \"detalles\": {\n            \"nit\": \"999999999-9 no existe en InstitucionesAsociadas\"\n        }\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register User - Error: Email Duplicado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Carlos Sanchez\",\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"nit\": \"900123456-7\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register"
+              ]
+            },
+            "description": "Intenta registrar un usuario con un email que ya existe en la base de datos. El email debe ser único."
+          },
+          "response": [
+            {
+              "name": "Error Response - Email Already Exists",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Carlos Sanchez\",\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"nit\": \"900123456-7\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "register"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"detail\": {\n        \"error\": \"Usuario ya existe\",\n        \"detalles\": {\n            \"email\": \"juan.perez@example.com\"\n        }\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Register User - Error: Datos Inválidos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"\",\n  \"email\": \"invalid-email\",\n  \"password\": \"Pass123!\",\n  \"nit\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "register"
+              ]
+            },
+            "description": "Intenta registrar un usuario con datos inválidos (email inválido, campos vacíos, etc.). FastAPI validará automáticamente el formato del email y los campos requeridos."
+          },
+          "response": [
+            {
+              "name": "Error Response - Invalid Data",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"\",\n  \"email\": \"invalid-email\",\n  \"password\": \"Pass123!\",\n  \"nit\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{base_url}}/register",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "register"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"detail\": [\n        {\n            \"loc\": [\"body\", \"email\"],\n            \"msg\": \"value is not a valid email address\",\n            \"type\": \"value_error.email\"\n        }\n    ]\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Endpoints para el registro de usuarios. El servicio valida la complejidad de la contraseña, verifica que el NIT exista en el servicio de validación, y asegura que el email sea único. El rol se asigna automáticamente basado en el NIT."
     }
   ]
 }

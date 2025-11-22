@@ -2,9 +2,17 @@
 	"info": {
 		"_postman_id": "cliente-service-hu-mov-002",
 		"name": "Cliente Service (HU-MOV-002)",
-		"description": "Colección completa de endpoints para Cliente Service - Gestión de Clientes Institucionales",
+		"description": "Colección completa de endpoints para Cliente Service - Gestión de Clientes Institucionales\n\nVersión del servicio: 1.0.3\n\nEndpoints disponibles:\n- Health Check\n- Tipos de Institución\n- Consulta de Clientes (con filtros avanzados)\n- Integraciones para otros servicios (NITs y Cliente IDs)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
+	"variable": [
+		{
+			"key": "BASE_URL",
+			"value": "http://localhost:8013",
+			"type": "string",
+			"description": "URL base del servicio Cliente Service"
+		}
+	],
 	"item": [
 		{
 			"name": "Health Check",
@@ -16,8 +24,33 @@
 					"host": ["{{BASE_URL}}"],
 					"path": ["health"]
 				},
-				"description": "Verificar estado del servicio"
-			}
+				"description": "Verificar estado del servicio. Retorna el estado de salud del microservicio junto con su versión."
+			},
+			"response": [
+				{
+					"name": "Success Response",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/health",
+							"host": ["{{BASE_URL}}"],
+							"path": ["health"]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"status\": \"healthy\",\n    \"service\": \"cliente-service\",\n    \"version\": \"1.0.3\"\n}"
+				}
+			]
 		},
 		{
 			"name": "Tipos de Institución",
@@ -32,8 +65,33 @@
 							"host": ["{{BASE_URL}}"],
 							"path": ["api", "v1", "clientes", "tipos-institucion"]
 						},
-						"description": "Obtener lista de tipos de institución disponibles:\n- Hospital\n- Clínica\n- IPS\n- EPS\n- Laboratorio Clínico\n- Centro de Salud"
-					}
+						"description": "Obtener lista de tipos de institución disponibles para usar en filtros.\n\nTipos disponibles:\n- Hospital\n- Clínica\n- IPS\n- EPS\n- Laboratorio Clínico\n- Centro de Salud\n\n**No requiere autenticación** (modo desarrollo)"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/tipos-institucion",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "tipos-institucion"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"tipos\": [\n        \"Hospital\",\n        \"Clínica\",\n        \"IPS\",\n        \"EPS\",\n        \"Laboratorio Clínico\",\n        \"Centro de Salud\"\n    ]\n}"
+						}
+					]
 				}
 			]
 		},
@@ -58,7 +116,7 @@
 								{
 									"key": "pais",
 									"value": "Colombia",
-									"description": "Filtro opcional por país",
+									"description": "Filtro opcional por país (Colombia, Peru, Mexico, Ecuador)",
 									"disabled": true
 								},
 								{
@@ -70,18 +128,18 @@
 								{
 									"key": "search",
 									"value": "San José",
-									"description": "Búsqueda por nombre, ciudad o dirección",
+									"description": "Búsqueda por nombre comercial, razón social, ciudad o dirección",
 									"disabled": true
 								},
 								{
 									"key": "page",
 									"value": "1",
-									"description": "Número de página (default: 1)"
+									"description": "Número de página (default: 1, mínimo: 1)"
 								},
 								{
 									"key": "limit",
 									"value": "10",
-									"description": "Elementos por página (default: 50, max: 100)"
+									"description": "Elementos por página (default: 50, mínimo: 1, máximo: 100)"
 								},
 								{
 									"key": "activo",
@@ -90,8 +148,92 @@
 								}
 							]
 						},
-						"description": "Obtener clientes ASIGNADOS a un gerente específico.\nIncluye coordenadas de geolocalización (latitud, longitud)."
-					}
+						"description": "Obtener clientes ASIGNADOS a un gerente específico.\n\nIncluye coordenadas de geolocalización (latitud, longitud) para optimización de rutas.\n\nSi se especifica gerente_id, retorna solo los clientes asignados a ese gerente.\nEl país del gerente se determina automáticamente.\n\n**No requiere autenticación** (modo desarrollo)"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=1&page=1&limit=10&activo=true",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "mis-clientes"],
+									"query": [
+										{
+											"key": "gerente_id",
+											"value": "1"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "activo",
+											"value": "true"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"total\": 25,\n    \"page\": 1,\n    \"limit\": 10,\n    \"clientes\": [\n        {\n            \"cliente_id\": 1,\n            \"nit\": \"800123456-1\",\n            \"nombre_comercial\": \"Hospital San Juan\",\n            \"razon_social\": \"Hospital San Juan de Dios SAS\",\n            \"tipo_institucion\": \"Hospital\",\n            \"pais\": \"Colombia\",\n            \"ciudad\": \"Bogotá\",\n            \"direccion\": \"Calle 10 # 20-30\",\n            \"telefono\": \"+57 1 234 5678\",\n            \"email\": \"contacto@hospitalsanjuan.com\",\n            \"contacto_principal\": \"Dr. Carlos Pérez\",\n            \"cargo_contacto\": \"Director de Compras\",\n            \"latitud\": 4.6533,\n            \"longitud\": -74.0836,\n            \"activo\": true\n        }\n    ]\n}"
+						},
+						{
+							"name": "Error - Gerente No Encontrado",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=999&page=1&limit=10&activo=true",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "mis-clientes"],
+									"query": [
+										{
+											"key": "gerente_id",
+											"value": "999"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "activo",
+											"value": "true"
+										}
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"detail\": \"No se pudo determinar el país del gerente 999\"\n}"
+						}
+					]
 				},
 				{
 					"name": "Get Todos los Clientes (Sin Gerente)",
@@ -106,7 +248,7 @@
 								{
 									"key": "pais",
 									"value": "Colombia",
-									"description": "Filtro opcional por país"
+									"description": "Filtro opcional por país (Colombia, Peru, Mexico, Ecuador)"
 								},
 								{
 									"key": "tipo_institucion",
@@ -117,25 +259,71 @@
 								{
 									"key": "search",
 									"value": "",
-									"description": "Búsqueda opcional",
+									"description": "Búsqueda opcional por nombre, ciudad o dirección",
 									"disabled": true
 								},
 								{
 									"key": "page",
-									"value": "1"
+									"value": "1",
+									"description": "Número de página (default: 1)"
 								},
 								{
 									"key": "limit",
-									"value": "50"
+									"value": "50",
+									"description": "Elementos por página (default: 50, max: 100)"
 								},
 								{
 									"key": "activo",
-									"value": "true"
+									"value": "true",
+									"description": "Solo clientes activos (default: true)"
 								}
 							]
 						},
-						"description": "Obtener TODOS los clientes sin filtrar por gerente.\nÚtil para listados generales o búsquedas."
-					}
+						"description": "Obtener TODOS los clientes sin filtrar por gerente.\n\nÚtil para listados generales o búsquedas cuando no se necesita filtrar por asignaciones.\n\n**No requiere autenticación** (modo desarrollo)"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?pais=Colombia&page=1&limit=50&activo=true",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "mis-clientes"],
+									"query": [
+										{
+											"key": "pais",
+											"value": "Colombia"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "50"
+										},
+										{
+											"key": "activo",
+											"value": "true"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"total\": 150,\n    \"page\": 1,\n    \"limit\": 50,\n    \"clientes\": [\n        {\n            \"cliente_id\": 1,\n            \"nit\": \"800123456-1\",\n            \"nombre_comercial\": \"Hospital San Juan\",\n            \"razon_social\": \"Hospital San Juan de Dios SAS\",\n            \"tipo_institucion\": \"Hospital\",\n            \"pais\": \"Colombia\",\n            \"ciudad\": \"Bogotá\",\n            \"direccion\": \"Calle 10 # 20-30\",\n            \"telefono\": \"+57 1 234 5678\",\n            \"email\": \"contacto@hospitalsanjuan.com\",\n            \"contacto_principal\": \"Dr. Carlos Pérez\",\n            \"cargo_contacto\": \"Director de Compras\",\n            \"latitud\": 4.6533,\n            \"longitud\": -74.0836,\n            \"activo\": true\n        }\n    ]\n}"
+						}
+					]
 				},
 				{
 					"name": "Get Cliente Detail",
@@ -147,8 +335,56 @@
 							"host": ["{{BASE_URL}}"],
 							"path": ["api", "v1", "clientes", "1"]
 						},
-						"description": "Obtener detalle completo de un cliente específico.\nIncluye todas las columnas incluyendo latitud y longitud."
-					}
+						"description": "Obtener detalle completo de un cliente específico.\n\nIncluye todas las columnas incluyendo latitud y longitud para geolocalización.\n\n**No requiere autenticación** (modo desarrollo)\n\nRetorna 404 si el cliente no existe."
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/1",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "1"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"cliente_id\": 1,\n    \"nit\": \"800123456-1\",\n    \"nombre_comercial\": \"Hospital San Juan\",\n    \"razon_social\": \"Hospital San Juan de Dios SAS\",\n    \"tipo_institucion\": \"Hospital\",\n    \"pais\": \"Colombia\",\n    \"departamento\": \"Cundinamarca\",\n    \"ciudad\": \"Bogotá\",\n    \"direccion\": \"Calle 10 # 20-30\",\n    \"telefono\": \"+57 1 234 5678\",\n    \"email\": \"contacto@hospitalsanjuan.com\",\n    \"contacto_principal\": \"Dr. Carlos Pérez\",\n    \"cargo_contacto\": \"Director de Compras\",\n    \"especialidad_medica\": \"General\",\n    \"latitud\": 4.6533,\n    \"longitud\": -74.0836,\n    \"activo\": true,\n    \"fecha_registro\": \"2024-01-15T10:30:00Z\",\n    \"fecha_actualizacion\": \"2024-01-15T10:30:00Z\"\n}"
+						},
+						{
+							"name": "Error - Cliente No Encontrado",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/9999",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "9999"]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"detail\": \"Cliente no encontrado\"\n}"
+						}
+					]
 				}
 			]
 		},
@@ -172,8 +408,68 @@
 								}
 							]
 						},
-						"description": "Obtener lista de NITs únicos de clientes asignados al gerente.\n\nUsado por:\n- pedidos-service: Validar que un NIT pertenece al gerente\n- visita-service: Validar acceso a clientes"
-					}
+						"description": "Obtener lista de NITs únicos de clientes asignados al gerente.\n\nEste endpoint retorna los NITs únicos (sin duplicados) de todas las sedes asignadas al gerente.\n\n**Usado por:**\n- pedidos-service: Validar que un NIT pertenece al gerente\n- visita-service: Validar acceso a clientes\n\n**No requiere autenticación** (modo desarrollo)"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/mis-nits?gerente_id=1",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "mis-nits"],
+									"query": [
+										{
+											"key": "gerente_id",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"gerente_id\": 1,\n    \"nits\": [\n        \"800123456-1\",\n        \"800123456-2\",\n        \"800234567-1\",\n        \"800345678-1\"\n    ],\n    \"total\": 4\n}"
+						},
+						{
+							"name": "Error - Gerente Sin Clientes",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/mis-nits?gerente_id=999",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "mis-nits"],
+									"query": [
+										{
+											"key": "gerente_id",
+											"value": "999"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"gerente_id\": 999,\n    \"nits\": [],\n    \"total\": 0\n}"
+						}
+					]
 				},
 				{
 					"name": "Get Mis Cliente IDs",
@@ -192,8 +488,39 @@
 								}
 							]
 						},
-						"description": "Obtener lista de cliente_ids (sedes) asignados al gerente.\n\nDiferencia con /mis-nits:\n- Un NIT puede tener múltiples sedes (cliente_ids)\n- Este endpoint retorna IDs específicos de cada sede\n\nUsado por:\n- pedidos-service: Filtrar pedidos por sede específica\n- visita-service: Validar acceso a sede específica"
-					}
+						"description": "Obtener lista de cliente_ids (sedes) asignados al gerente.\n\n**Diferencia con /mis-nits:**\n- Un NIT puede tener múltiples sedes (cliente_ids)\n- Este endpoint retorna IDs específicos de cada sede\n- /mis-nits retorna NITs únicos (sin duplicados)\n\n**Usado por:**\n- pedidos-service: Filtrar pedidos por sede específica\n- visita-service: Validar acceso a sede específica\n\n**No requiere autenticación** (modo desarrollo)"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{BASE_URL}}/api/v1/clientes/mis-cliente-ids?gerente_id=1",
+									"host": ["{{BASE_URL}}"],
+									"path": ["api", "v1", "clientes", "mis-cliente-ids"],
+									"query": [
+										{
+											"key": "gerente_id",
+											"value": "1"
+										}
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"gerente_id\": 1,\n    \"cliente_ids\": [\n        1,\n        2,\n        3,\n        5,\n        7,\n        10\n    ],\n    \"total\": 6\n}"
+						}
+					]
 				}
 			]
 		},
@@ -216,7 +543,8 @@
 								},
 								{
 									"key": "search",
-									"value": "Bogotá"
+									"value": "Bogotá",
+									"description": "Busca en nombre_comercial, razón_social, ciudad y dirección"
 								},
 								{
 									"key": "activo",
@@ -224,7 +552,7 @@
 								}
 							]
 						},
-						"description": "Buscar clientes por ciudad.\nEl parámetro 'search' busca en: nombre_comercial, razón_social, ciudad, dirección"
+						"description": "Buscar clientes por ciudad o cualquier término.\n\nEl parámetro 'search' busca en:\n- nombre_comercial\n- razón_social\n- ciudad\n- dirección\n\nÚtil para búsquedas rápidas sin especificar el campo exacto."
 					}
 				},
 				{
@@ -243,7 +571,8 @@
 								},
 								{
 									"key": "tipo_institucion",
-									"value": "IPS"
+									"value": "IPS",
+									"description": "Filtrar solo instituciones tipo IPS"
 								},
 								{
 									"key": "activo",
@@ -251,7 +580,7 @@
 								}
 							]
 						},
-						"description": "Filtrar clientes por tipo de institución IPS"
+						"description": "Filtrar clientes por tipo de institución IPS.\n\nTipos válidos:\n- Hospital\n- Clínica\n- IPS\n- EPS\n- Laboratorio Clínico\n- Centro de Salud"
 					}
 				},
 				{
@@ -270,11 +599,12 @@
 								},
 								{
 									"key": "limit",
-									"value": "5"
+									"value": "5",
+									"description": "Limitar a 5 resultados para ver coordenadas"
 								}
 							]
 						},
-						"description": "Obtener clientes con sus coordenadas de geolocalización.\n\nRespuesta incluye:\n- latitud: Coordenada geográfica (ej: 4.6533)\n- longitud: Coordenada geográfica (ej: -74.0836)\n\nÚtil para:\n- visita-service: Optimización de rutas\n- Mapas en aplicación móvil"
+						"description": "Obtener clientes con sus coordenadas de geolocalización.\n\nRespuesta incluye:\n- latitud: Coordenada geográfica (ej: 4.6533)\n- longitud: Coordenada geográfica (ej: -74.0836)\n\nÚtil para:\n- visita-service: Optimización de rutas\n- Mapas en aplicación móvil\n- Cálculo de distancias entre clientes"
 					}
 				},
 				{
@@ -303,17 +633,113 @@
 								}
 							]
 						},
-						"description": "Ejemplo de paginación: Segunda página con 20 elementos.\n\nRespuesta incluye:\n- total: Total de registros\n- page: Página actual\n- limit: Elementos por página\n- clientes: Array de clientes"
+						"description": "Ejemplo de paginación: Segunda página con 20 elementos.\n\nRespuesta incluye:\n- total: Total de registros que coinciden con los filtros\n- page: Página actual\n- limit: Elementos por página\n- clientes: Array de clientes\n\nÚtil para implementar paginación en frontend."
+					}
+				},
+				{
+					"name": "Búsqueda Combinada (Tipo + País + Search)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=1&tipo_institucion=Hospital&pais=Colombia&search=San&page=1&limit=10",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1"
+								},
+								{
+									"key": "tipo_institucion",
+									"value": "Hospital",
+									"description": "Solo hospitales"
+								},
+								{
+									"key": "pais",
+									"value": "Colombia",
+									"description": "Solo en Colombia"
+								},
+								{
+									"key": "search",
+									"value": "San",
+									"description": "Que contenga 'San' en nombre o ubicación"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Ejemplo de búsqueda combinando múltiples filtros:\n- Tipo de institución: Hospital\n- País: Colombia\n- Búsqueda de texto: 'San'\n\nLos filtros se aplican con lógica AND (todos deben cumplirse)."
+					}
+				},
+				{
+					"name": "Clientes Inactivos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?gerente_id=1&activo=false&limit=10",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "gerente_id",
+									"value": "1"
+								},
+								{
+									"key": "activo",
+									"value": "false",
+									"description": "Incluir solo clientes inactivos"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Obtener lista de clientes inactivos.\n\nÚtil para:\n- Auditoría\n- Reactivación de clientes\n- Reportes históricos"
+					}
+				},
+				{
+					"name": "Todos los Clientes por País",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{BASE_URL}}/api/v1/clientes/mis-clientes?pais=Peru&tipo_institucion=Clínica&page=1&limit=50",
+							"host": ["{{BASE_URL}}"],
+							"path": ["api", "v1", "clientes", "mis-clientes"],
+							"query": [
+								{
+									"key": "pais",
+									"value": "Peru",
+									"description": "Filtrar por país"
+								},
+								{
+									"key": "tipo_institucion",
+									"value": "Clínica",
+									"description": "Solo clínicas"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Obtener todos los clientes de un país específico sin filtrar por gerente.\n\nPaíses disponibles:\n- Colombia\n- Peru\n- Mexico\n- Ecuador\n\nÚtil para reportes administrativos o cuando no se necesita filtrar por asignaciones."
 					}
 				}
 			]
-		}
-	],
-	"variable": [
-		{
-			"key": "BASE_URL",
-			"value": "http://localhost:8013",
-			"type": "string"
 		}
 	]
 }
