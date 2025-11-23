@@ -1,8 +1,8 @@
 {
 	"info": {
-		"_postman_id": "backend-microservices-collection-v2",
-		"name": "Backend Microservices - User, Audit & Provider Services",
-		"description": "Colección completa de Postman para los microservicios de usuarios, auditoría y proveedores con variables configurables",
+		"_postman_id": "backend-microservices-collection-v3",
+		"name": "Backend Microservices - Completo (v3.0)",
+		"description": "Colección completa de Postman para todos los microservicios: usuarios, auditoría, proveedores, pedidos, planes de venta y rutas de entrega (HU-WEB-012)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -1247,6 +1247,379 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Rutas de Entrega - HU-WEB-012",
+			"description": "Endpoints para generación y gestión de rutas de entrega optimizadas con VRP Nearest Neighbor",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/health",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "health"]
+						},
+						"description": "Verificar que el módulo de rutas está operativo"
+					}
+				},
+				{
+					"name": "Generar Rutas - Caso Simple",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"objetivo\": \"min_distancia\",\n  \"vehiculos\": [\n    {\n      \"id\": \"VEH-001\",\n      \"capacidad_volumen\": 50.0,\n      \"capacidad_peso\": 1000.0,\n      \"cadena_frio\": true,\n      \"depot\": {\n        \"lat\": 4.6097,\n        \"lon\": -74.0817\n      },\n      \"duracion_maxima_minutos\": 480\n    }\n  ],\n  \"pedidos\": [\n    {\n      \"id\": \"PED-001\",\n      \"lat\": 4.6351,\n      \"lon\": -74.0703,\n      \"ventana_inicio\": \"08:00\",\n      \"ventana_fin\": \"12:00\",\n      \"tiempo_servicio_minutos\": 15,\n      \"requiere_frio\": true,\n      \"volumen\": 5.0,\n      \"peso\": 50.0\n    },\n    {\n      \"id\": \"PED-002\",\n      \"lat\": 4.6762,\n      \"lon\": -74.0481,\n      \"ventana_inicio\": \"08:00\",\n      \"ventana_fin\": \"13:00\",\n      \"tiempo_servicio_minutos\": 20,\n      \"requiere_frio\": false,\n      \"volumen\": 3.0,\n      \"peso\": 30.0\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/rutas/generar",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "rutas", "generar"]
+						},
+						"description": "Generar rutas optimizadas para 1 vehículo y 2 pedidos usando Nearest Neighbor VRP. El ruta_id se capturará automáticamente para usarlo en Recalcular Ruta."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    ",
+									"    // Capturar y guardar ruta_id si existe",
+									"    if (response.ruta_id) {",
+									"        pm.collectionVariables.set('ruta_id', response.ruta_id);",
+									"        pm.test('✅ ruta_id capturado y guardado: ' + response.ruta_id, function() {",
+									"            pm.expect(response.ruta_id).to.exist;",
+									"            pm.expect(response.ruta_id).to.be.a('string');",
+									"        });",
+									"    } else {",
+									"        pm.test('⚠️ ruta_id no encontrado en respuesta', function() {",
+									"            pm.expect(response).to.have.property('ruta_id');",
+									"        });",
+									"    }",
+									"}",
+									"",
+									"pm.test('Respuesta 200 OK', function() {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Estructura de respuesta válida', function() {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('rutas');",
+									"    pm.expect(response).to.have.property('tiempo_calculo_ms');",
+									"    pm.expect(response.rutas).to.be.an('array');",
+									"});",
+									""
+								],
+								"type": "javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Generar Rutas - Con Límites",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"objetivo\": \"min_tiempo\",\n  \"vehiculos\": [\n    {\n      \"id\": \"VEH-001\",\n      \"capacidad_volumen\": 50.0,\n      \"capacidad_peso\": 1000.0,\n      \"cadena_frio\": true,\n      \"depot\": {\n        \"lat\": 4.6097,\n        \"lon\": -74.0817\n      },\n      \"duracion_maxima_minutos\": 480\n    }\n  ],\n  \"pedidos\": [\n    {\n      \"id\": \"PED-001\",\n      \"lat\": 4.6351,\n      \"lon\": -74.0703,\n      \"ventana_inicio\": \"08:00\",\n      \"ventana_fin\": \"12:00\",\n      \"tiempo_servicio_minutos\": 15,\n      \"requiere_frio\": true,\n      \"volumen\": 5.0,\n      \"peso\": 50.0\n    }\n  ],\n  \"limites\": {\n    \"max_distancia_km\": 100.0,\n    \"max_duracion_minutos\": 480,\n    \"considerar_trafico\": true\n  }\n}"
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/rutas/generar",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "rutas", "generar"]
+						},
+						"description": "Generar rutas con límites de distancia y duración, considerando tráfico"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    ",
+									"    // Capturar y guardar ruta_id si existe",
+									"    if (response.ruta_id) {",
+									"        pm.collectionVariables.set('ruta_id', response.ruta_id);",
+									"        pm.test('✅ ruta_id capturado y guardado: ' + response.ruta_id, function() {",
+									"            pm.expect(response.ruta_id).to.exist;",
+									"            pm.expect(response.ruta_id).to.be.a('string');",
+									"        });",
+									"    } else {",
+									"        pm.test('⚠️ ruta_id no encontrado en respuesta', function() {",
+									"            pm.expect(response).to.have.property('ruta_id');",
+									"        });",
+									"    }",
+									"}",
+									"",
+									"pm.test('Respuesta 200 OK', function() {",
+									"    pm.expect(pm.response.code).to.equal(200);",
+									"});",
+									"",
+									"pm.test('Estructura de respuesta válida', function() {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('rutas');",
+									"    pm.expect(response).to.have.property('tiempo_calculo_ms');",
+									"    pm.expect(response.rutas).to.be.an('array');",
+									"});",
+									""
+								],
+								"type": "javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Recalcular Ruta",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ruta_id\": \"{{ruta_id}}\",\n  \"nueva_secuencia\": [\"PED-002\", \"PED-001\"]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/rutas/recalcular",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "rutas", "recalcular"]
+						},
+						"description": "Recalcular ruta con nueva secuencia (drag-and-drop en UI)\n\n✅ FLUJO AUTOMATIZADO (RESUELTO):\n1. Ejecutar: 'Generar Rutas - Caso Simple'\n2. El ruta_id se guardará automáticamente en la variable de colección\n3. El ruta_id ya estará poblado cuando ejecutes este endpoint\n4. Solo necesitas ajustar la 'nueva_secuencia' con los IDs de los pedidos\n\n📋 Validaciones:\n- La nueva secuencia debe contener exactamente los mismos pedidos\n- Las ventanas de tiempo deben cumplirse (hard constraint)\n- La duración máxima no debe excederse\n\n✨ Problema anterior (ya resuelto):\n- Antes: error 500 porque ruta_id estaba vacío\n- Ahora: ruta_id se captura automáticamente con script de Postman"
+					}
+				},
+				{
+					"name": "Crear Vehículo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"vehiculo_id\": \"VEH-TEST-001\",\n  \"nombre\": \"Camión Refrigerado Grande\",\n  \"capacidad_volumen\": 60.0,\n  \"capacidad_peso\": 1500.0,\n  \"cadena_frio\": true,\n  \"depot_latitud\": 4.6097,\n  \"depot_longitud\": -74.0817,\n  \"depot_direccion\": \"Calle 26 #68-90, Bogotá\",\n  \"duracion_maxima_minutos\": 540\n}"
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/vehiculos",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "vehiculos"]
+						},
+						"description": "Crear un nuevo vehículo para usar en rutas"
+					}
+				},
+				{
+					"name": "Listar Vehículos - Solo Activos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/vehiculos?solo_activos=true",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "vehiculos"],
+							"query": [
+								{
+									"key": "solo_activos",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Listar todos los vehículos activos disponibles"
+					}
+				},
+				{
+					"name": "Listar Vehículos - Todos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/vehiculos?solo_activos=false",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "vehiculos"],
+							"query": [
+								{
+									"key": "solo_activos",
+									"value": "false"
+								}
+							]
+						},
+						"description": "Listar todos los vehículos (activos e inactivos)"
+					}
+				},
+				{
+					"name": "Test Error - Sin Rol RBAC",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "usuario-id",
+								"value": "1"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "vendedor"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "1234567890"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"objetivo\": \"min_distancia\",\n  \"vehiculos\": [],\n  \"pedidos\": []\n}"
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/rutas/generar",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "rutas", "generar"]
+						},
+						"description": "Probar acceso con rol incorrecto (debe retornar 403 Forbidden)"
+					}
+				},
+				{
+					"name": "Test Error - Excede Límites MVP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"objetivo\": \"min_distancia\",\n  \"vehiculos\": [\n    {\"id\": \"VEH-1\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-2\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-3\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-4\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-5\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-6\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-7\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-8\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-9\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-10\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}},\n    {\"id\": \"VEH-11\", \"capacidad_volumen\": 50, \"capacidad_peso\": 1000, \"cadena_frio\": false, \"depot\": {\"lat\": 4.6097, \"lon\": -74.0817}}\n  ],\n  \"pedidos\": []\n}"
+						},
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/rutas/generar",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "rutas", "generar"]
+						},
+						"description": "Probar con 11 vehículos (excede límite MVP de 10, debe retornar 400 Bad Request)"
+					}
+				}
+			]
 		}
 	],
 	"event": [
@@ -1561,6 +1934,30 @@
 			"value": "3",
 			"type": "string",
 			"description": "ID del segundo vendedor (gerente_cuenta) para planes de venta"
+		},
+		{
+			"key": "ruta_usuario_id",
+			"value": "1",
+			"type": "string",
+			"description": "ID del usuario para pruebas de rutas (supervisor de logística o gerente)"
+		},
+		{
+			"key": "ruta_rol_usuario",
+			"value": "admin",
+			"type": "string",
+			"description": "Rol del usuario para pruebas de rutas (admin o gerente_cuenta)"
+		},
+		{
+			"key": "ruta_nit_usuario",
+			"value": "111111111-1",
+			"type": "string",
+			"description": "NIT del usuario para pruebas de rutas (credentials del supervisor)"
+		},
+		{
+			"key": "ruta_id",
+			"value": "",
+			"type": "string",
+			"description": "ID de la ruta generada (se obtiene de la respuesta de generar rutas)"
 		}
 	]
 }
