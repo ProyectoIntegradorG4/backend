@@ -15,7 +15,7 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(
     title="Product Service (HU-WEB-003 & HU-WEB-008)",
     description="Microservicio de productos médicos y planes de venta",
-    version="1.2.6"
+    version="1.2.7"
 )
 
 # Endpoints “legacy” sin prefijo
@@ -34,7 +34,7 @@ app.add_middleware(
 # Endpoints públicos versión v1
 app.include_router(products_router, prefix="/api/v1", tags=["products"])
 app.include_router(lotes_router, prefix="/api/v1", tags=["lotes"])
-app.include_router(plan_venta_router, tags=["planes-venta"]) 
+app.include_router(plan_venta_router, tags=["planes-venta"])  # Already has /api/v1 prefix in router 
 
 @app.on_event("startup")
 async def startup_event():
