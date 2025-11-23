@@ -1249,6 +1249,388 @@
 			]
 		},
 		{
+			"name": "Reportes de Vendedores - HU-WEB-010",
+			"description": "Endpoints para consulta de KPIs, rankings y dashboard de vendedores con datos Chart.js",
+			"item": [
+				{
+					"name": "Obtener KPI de Vendedor - Exitoso",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/kpi?vendedor_id=3&desde=2025-01-01&hasta=2025-12-31",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "kpi"],
+							"query": [
+								{
+									"key": "vendedor_id",
+									"value": "3",
+									"description": "ID del vendedor (gerente_cuenta)"
+								},
+								{
+									"key": "desde",
+									"value": "2025-01-01",
+									"description": "Fecha inicio del periodo (YYYY-MM-DD)"
+								},
+								{
+									"key": "hasta",
+									"value": "2025-12-31",
+									"description": "Fecha fin del periodo (YYYY-MM-DD)"
+								}
+							]
+						},
+						"description": "Retorna KPIs completos de un vendedor: ventas, unidades, pedidos, metas, cumplimiento y tendencia temporal"
+					}
+				},
+				{
+					"name": "Obtener KPI con Filtros - Territorio y Producto",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/kpi?vendedor_id=4&desde=2026-01-01&hasta=2026-03-31&territorio_id=TERR-NORTE-BOG&producto_id={{producto_id_1}}",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "kpi"],
+							"query": [
+								{
+									"key": "vendedor_id",
+									"value": "4",
+									"description": "ID del vendedor"
+								},
+								{
+									"key": "desde",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2026-03-31"
+								},
+								{
+									"key": "territorio_id",
+									"value": "TERR-NORTE-BOG",
+									"description": "Filtrar por territorio específico"
+								},
+								{
+									"key": "producto_id",
+									"value": "{{producto_id_1}}",
+									"description": "Filtrar por producto específico"
+								}
+							]
+						},
+						"description": "Obtiene KPIs filtrados por territorio y producto. Útil para análisis segmentado."
+					}
+				},
+				{
+					"name": "Obtener Reporte Regional - Zona Norte",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/region?territorio_id=TERR-NORTE-BOG&desde=2026-01-01&hasta=2026-03-31",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "region"],
+							"query": [
+								{
+									"key": "territorio_id",
+									"value": "TERR-NORTE-BOG",
+									"description": "ID del territorio (Zona Norte Bogotá)"
+								},
+								{
+									"key": "desde",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2026-03-31"
+								}
+							]
+						},
+						"description": "Retorna reporte consolidado de una región con ranking de vendedores, resumen agregado y tendencias"
+					}
+				},
+				{
+					"name": "Obtener Reporte Regional - Con Filtro Producto",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/region?territorio_id=TERR-ANTIOQUIA&desde=2026-01-01&hasta=2026-06-30&producto_id={{producto_id_2}}",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "region"],
+							"query": [
+								{
+									"key": "territorio_id",
+									"value": "TERR-ANTIOQUIA"
+								},
+								{
+									"key": "desde",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2026-06-30"
+								},
+								{
+									"key": "producto_id",
+									"value": "{{producto_id_2}}",
+									"description": "Filtrar ventas de un producto específico"
+								}
+							]
+						},
+						"description": "Reporte regional filtrado por producto específico"
+					}
+				},
+				{
+					"name": "Obtener Dashboard - Trimestre Q1",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/dashboard?desde=2026-01-01&hasta=2026-03-31",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "dashboard"],
+							"query": [
+								{
+									"key": "desde",
+									"value": "2026-01-01",
+									"description": "Fecha inicio del periodo"
+								},
+								{
+									"key": "hasta",
+									"value": "2026-03-31",
+									"description": "Fecha fin del periodo"
+								}
+							]
+						},
+						"description": "Dashboard ejecutivo consolidado con KPIs principales, gráficos Chart.js (línea, barras, dona), top vendedores y alertas. Datos listos para visualización frontend."
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Dashboard retorna datos Chart.js', function () {",
+									"    const response = pm.response.json();",
+									"    ",
+									"    // Verificar estructura Chart.js",
+									"    pm.expect(response).to.have.property('grafico_tendencia');",
+									"    pm.expect(response.grafico_tendencia).to.have.property('labels');",
+									"    pm.expect(response.grafico_tendencia).to.have.property('datasets');",
+									"    ",
+									"    pm.expect(response).to.have.property('grafico_vendedores');",
+									"    pm.expect(response.grafico_vendedores).to.have.property('labels');",
+									"    pm.expect(response.grafico_vendedores).to.have.property('datasets');",
+									"    ",
+									"    pm.expect(response).to.have.property('grafico_cumplimiento');",
+									"    pm.expect(response).to.have.property('top_vendedores');",
+									"    pm.expect(response).to.have.property('kpis');",
+									"    pm.expect(response.kpis).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Obtener Dashboard - Año Completo",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/dashboard?desde=2026-01-01&hasta=2026-12-31",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "dashboard"],
+							"query": [
+								{
+									"key": "desde",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2026-12-31"
+								}
+							]
+						},
+						"description": "Dashboard con datos anuales. La tendencia se agrupa por mes debido al periodo >60 días."
+					}
+				},
+				{
+					"name": "Obtener Resumen Rápido KPIs - Vendedor",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/kpi/resumen?vendedor_id=5&desde=2026-01-01&hasta=2026-01-31",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "kpi", "resumen"],
+							"query": [
+								{
+									"key": "vendedor_id",
+									"value": "5"
+								},
+								{
+									"key": "desde",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2026-01-31"
+								}
+							]
+						},
+						"description": "Endpoint ligero para obtener solo métricas principales sin tendencia. Útil para widgets o vistas rápidas."
+					}
+				},
+				{
+					"name": "Test Error - Periodo Inválido (desde > hasta)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/kpi?vendedor_id=3&desde=2026-12-31&hasta=2026-01-01",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "kpi"],
+							"query": [
+								{
+									"key": "vendedor_id",
+									"value": "3"
+								},
+								{
+									"key": "desde",
+									"value": "2026-12-31",
+									"description": "Fecha posterior a hasta"
+								},
+								{
+									"key": "hasta",
+									"value": "2026-01-01"
+								}
+							]
+						},
+						"description": "Test de validación: debe retornar 400 cuando desde > hasta"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Error message about invalid period', function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.detail).to.include('fecha');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Test Error - Periodo Muy Largo (>365 días)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/kpi?vendedor_id=3&desde=2025-01-01&hasta=2027-01-01",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "kpi"],
+							"query": [
+								{
+									"key": "vendedor_id",
+									"value": "3"
+								},
+								{
+									"key": "desde",
+									"value": "2025-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2027-01-01",
+									"description": "Más de 365 días después"
+								}
+							]
+						},
+						"description": "Test de validación: debe retornar 400 cuando el periodo excede 365 días"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Error mentions 365 days limit', function () {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.detail).to.include('365');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Test Error - Vendedor ID Inválido (<=0)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/reportes/vendedores/kpi?vendedor_id=0&desde=2026-01-01&hasta=2026-03-31",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "reportes", "vendedores", "kpi"],
+							"query": [
+								{
+									"key": "vendedor_id",
+									"value": "0",
+									"description": "ID inválido (debe ser > 0)"
+								},
+								{
+									"key": "desde",
+									"value": "2026-01-01"
+								},
+								{
+									"key": "hasta",
+									"value": "2026-03-31"
+								}
+							]
+						},
+						"description": "Test de validación: debe retornar 422 cuando vendedor_id <= 0"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 422', function () {",
+									"    pm.response.to.have.status(422);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Health Check Reportes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{pedidos_url}}/health",
+							"host": ["{{pedidos_url}}"],
+							"path": ["health"]
+						},
+						"description": "Verifica que el servicio de pedidos (que incluye reportes) esté activo"
+					}
+				}
+			]
+		},
+		{
 			"name": "Rutas de Entrega - HU-WEB-012",
 			"description": "Endpoints para generación y gestión de rutas de entrega optimizadas con VRP Nearest Neighbor",
 			"item": [
@@ -1958,6 +2340,30 @@
 			"value": "",
 			"type": "string",
 			"description": "ID de la ruta generada (se obtiene de la respuesta de generar rutas)"
+		},
+		{
+			"key": "vendedor_id_reportes",
+			"value": "3",
+			"type": "string",
+			"description": "ID del vendedor (gerente_cuenta) para reportes - Carlos Vendedor"
+		},
+		{
+			"key": "territorio_id_reportes",
+			"value": "TERR-NORTE-BOG",
+			"type": "string",
+			"description": "ID del territorio para reportes - Zona Norte Bogotá"
+		},
+		{
+			"key": "reporte_desde",
+			"value": "2026-01-01",
+			"type": "string",
+			"description": "Fecha inicio para reportes (YYYY-MM-DD)"
+		},
+		{
+			"key": "reporte_hasta",
+			"value": "2026-03-31",
+			"type": "string",
+			"description": "Fecha fin para reportes (YYYY-MM-DD)"
 		}
 	]
 }
