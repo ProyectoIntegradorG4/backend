@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import pedidos
 from app.routes import entregas
 from app.routes import rutas
+from app.routes import reportes
 from app.database.connection import init_db
 import logging
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Pedidos Service",
     description="Microservicio de gestión de pedidos con validación de inventario en tiempo real",
-    version="1.0.3"
+    version="1.1.0"
 )
 
 # Configuración de CORS optimizada
@@ -30,6 +31,7 @@ app.add_middleware(
 app.include_router(pedidos.router, prefix="/api/v1", tags=["pedidos"])
 app.include_router(entregas.router, prefix="/api/v1", tags=["entregas"])
 app.include_router(rutas.router, tags=["rutas"])
+app.include_router(reportes.router, tags=["reportes"])
 
 @app.on_event("startup")
 async def startup_event():
