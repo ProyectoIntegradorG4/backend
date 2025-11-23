@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "visit-service-001",
 		"name": "Visit Service",
-		"description": "Colección de endpoints para gestión de visitas a clientes con evidencia (imágenes y videos). Soporta almacenamiento local y S3.",
+		"description": "Colección de endpoints para gestión de visitas a clientes con evidencia (imágenes y videos)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -49,14 +49,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"client_id\": 1,\n  \"visit_datetime\": \"2025-11-20T10:30:00\",\n  \"title\": \"Visita de seguimiento\",\n  \"notes\": \"Revisar inventario y necesidades del cliente\",\n  \"contacto_nombre\": \"Juan Pérez\",\n  \"tipo_visita\": \"seguimiento\",\n  \"objetivo_visita\": \"Revisar inventario y necesidades\"\n}"
+							"raw": "{\n  \"client_id\": 1,\n  \"visit_datetime\": \"2025-11-20T10:30:00\",\n  \"title\": \"Visita de seguimiento\",\n  \"notes\": \"Revisar inventario y necesidades del cliente\"\n}"
 						},
 						"url": {
 							"raw": "{{BASE_URL}}/visits",
 							"host": ["{{BASE_URL}}"],
 							"path": ["visits"]
 						},
-						"description": "Crear nueva visita a un cliente.\n\n**Campos requeridos:**\n- `client_id`: ID del cliente (numérico)\n- `visit_datetime`: Fecha y hora en formato ISO 8601 (YYYY-MM-DDTHH:MM:SS)\n\n**Campos opcionales:**\n- `title`: Título de la visita\n- `notes`: Notas adicionales\n- `contacto_nombre`: Nombre del contacto en la visita\n- `tipo_visita`: Tipo de visita (ej: \"seguimiento\", \"inicial\", \"cierre\")\n- `objetivo_visita`: Objetivo de la visita\n\n**Alternativa de fecha/hora:**\nEn lugar de `visit_datetime`, se puede usar:\n- `date`: \"2025-11-20\" (YYYY-MM-DD)\n- `time`: \"10:30\" (HH:MM)\n\n**Headers requeridos:**\n- `Authorization`: Bearer token\n- `X-User-Id`: ID del usuario (se usa como account_mgr_id)\n- `X-User-Role`: Rol del usuario (debe contener 'gerente_cuenta')"
+						"description": "Crear nueva visita a un cliente.\n\n**Campos requeridos:**\n- `client_id`: ID del cliente (numérico)\n- `visit_datetime`: Fecha y hora en formato ISO 8601 (YYYY-MM-DDTHH:MM:SS)\n\n**Campos opcionales:**\n- `title`: Título de la visita\n- `notes`: Notas adicionales\n\n**Alternativa de fecha/hora:**\nEn lugar de `visit_datetime`, se puede usar:\n- `date`: \"2025-11-20\" (YYYY-MM-DD)\n- `time\": \"10:30\" (HH:MM)\n\n**Headers requeridos:**\n- `Authorization`: Bearer token\n- `X-User-Id`: ID del usuario (se usa como account_mgr_id)\n- `X-User-Role`: Rol del usuario (debe contener 'gerente_cuenta')"
 					}
 				},
 				{
@@ -83,48 +83,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"client_id\": 1,\n  \"date\": \"2025-11-20\",\n  \"time\": \"10:30\",\n  \"title\": \"Visita inicial\",\n  \"notes\": \"Primera visita del mes\",\n  \"contacto_nombre\": \"María García\",\n  \"tipo_visita\": \"inicial\",\n  \"objetivo_visita\": \"Presentación de productos\"\n}"
+							"raw": "{\n  \"client_id\": 1,\n  \"date\": \"2025-11-20\",\n  \"time\": \"10:30\",\n  \"title\": \"Visita inicial\",\n  \"notes\": \"Primera visita del mes\"\n}"
 						},
 						"url": {
 							"raw": "{{BASE_URL}}/visits",
 							"host": ["{{BASE_URL}}"],
 							"path": ["visits"]
 						},
-						"description": "Crear visita usando campos separados `date` y `time` en lugar de `visit_datetime`. Incluye todos los campos opcionales disponibles."
-					}
-				},
-				{
-					"name": "Crear Visita (Mínima)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "Authorization",
-								"value": "Bearer {{AUTH_TOKEN}}"
-							},
-							{
-								"key": "X-User-Id",
-								"value": "1"
-							},
-							{
-								"key": "X-User-Role",
-								"value": "gerente_cuenta"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"client_id\": 1,\n  \"visit_datetime\": \"2025-11-20T10:30:00\"\n}"
-						},
-						"url": {
-							"raw": "{{BASE_URL}}/visits",
-							"host": ["{{BASE_URL}}"],
-							"path": ["visits"]
-						},
-						"description": "Crear visita con solo los campos requeridos (client_id y visit_datetime)"
+						"description": "Crear visita usando campos separados `date` y `time` en lugar de `visit_datetime`"
 					}
 				},
 				{
@@ -146,11 +112,11 @@
 							}
 						],
 						"url": {
-							"raw": "{{BASE_URL}}/api/v1/visits/{{visit_id}}",
+							"raw": "{{BASE_URL}}/api/v1/visits/1",
 							"host": ["{{BASE_URL}}"],
-							"path": ["api", "v1", "visits", "{{visit_id}}"]
+							"path": ["api", "v1", "visits", "1"]
 						},
-						"description": "Obtener detalle completo de una visita específica incluyendo todas sus evidencias (imágenes y videos).\n\n**Respuesta incluye:**\n- Información completa de la visita (id, client_id, account_mgr_id, visit_datetime, title, notes, contacto_nombre, tipo_visita, objetivo_visita)\n- Lista de evidencias con sus URLs (soporta almacenamiento local y S3)"
+						"description": "Obtener detalle completo de una visita específica incluyendo todas sus evidencias (imágenes y videos)"
 					}
 				},
 				{
@@ -172,9 +138,9 @@
 							}
 						],
 						"url": {
-							"raw": "{{BASE_URL}}/api/v1/visits/client/{{client_id}}?limit=50&offset=0",
+							"raw": "{{BASE_URL}}/api/v1/visits/client/1?limit=50&offset=0",
 							"host": ["{{BASE_URL}}"],
-							"path": ["api", "v1", "visits", "client", "{{client_id}}"],
+							"path": ["api", "v1", "visits", "client", "1"],
 							"query": [
 								{
 									"key": "limit",
@@ -188,7 +154,7 @@
 								}
 							]
 						},
-						"description": "Obtener lista paginada de visitas de un cliente específico.\n\n**Parámetros de consulta:**\n- `limit`: Número máximo de resultados (1-200, default: 50)\n- `offset`: Número de resultados a omitir (default: 0)\n\n**Respuesta:**\nRetorna todas las visitas con sus evidencias asociadas, incluyendo todos los campos (contacto_nombre, tipo_visita, objetivo_visita)."
+						"description": "Obtener lista paginada de visitas de un cliente específico.\n\nRetorna todas las visitas con sus evidencias asociadas."
 					}
 				}
 			]
@@ -226,54 +192,11 @@
 							]
 						},
 						"url": {
-							"raw": "{{BASE_URL}}/visits/{{visit_id}}/evidence",
+							"raw": "{{BASE_URL}}/visits/1/evidence",
 							"host": ["{{BASE_URL}}"],
-							"path": ["visits", "{{visit_id}}", "evidence"]
+							"path": ["visits", "1", "evidence"]
 						},
-						"description": "Subir una imagen como evidencia de una visita.\n\n**Parámetros disponibles:**\n- `image`: Archivo de imagen (JPEG, PNG, WebP)\n- `video`: Archivo de video (MP4, WebM, MKV)\n- `file`: Archivo genérico (se detecta automáticamente si es imagen o video)\n- `comment`: Comentario opcional que se agregará a las notas de la visita\n\n**Límites:**\n- Tamaño máximo por archivo: 15MB (configurable via MAX_UPLOAD_MB)\n- Se puede subir múltiples archivos en una sola petición\n\n**Tipos de contenido soportados:**\n- Imágenes: image/jpeg, image/png, image/webp\n- Videos: video/mp4, video/quicktime, video/webm, video/x-matroska, video/mkv\n\n**Almacenamiento:**\n- Soporta almacenamiento local (FILES_BACKEND=local) y S3 (FILES_BACKEND=s3)\n- Las URLs se generan automáticamente según el backend configurado"
-					}
-				},
-				{
-					"name": "Subir Evidencia (Imagen con Comentario)",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{AUTH_TOKEN}}"
-							},
-							{
-								"key": "X-User-Id",
-								"value": "1"
-							},
-							{
-								"key": "X-User-Role",
-								"value": "gerente_cuenta"
-							}
-						],
-						"body": {
-							"mode": "formdata",
-							"formdata": [
-								{
-									"key": "image",
-									"type": "file",
-									"src": [],
-									"description": "Archivo de imagen"
-								},
-								{
-									"key": "comment",
-									"value": "Foto del inventario actual del cliente",
-									"type": "text",
-									"description": "Comentario que se agregará a las notas de la visita"
-								}
-							]
-						},
-						"url": {
-							"raw": "{{BASE_URL}}/visits/{{visit_id}}/evidence",
-							"host": ["{{BASE_URL}}"],
-							"path": ["visits", "{{visit_id}}", "evidence"]
-						},
-						"description": "Subir una imagen con un comentario. El comentario se agregará automáticamente a las notas de la visita con el formato: \"[Evidencia] {comentario}\""
+						"description": "Subir una imagen como evidencia de una visita.\n\n**Parámetros disponibles:**\n- `image`: Archivo de imagen (JPEG, PNG, WebP)\n- `video`: Archivo de video (MP4, WebM, MKV)\n- `file`: Archivo genérico (se detecta automáticamente si es imagen o video)\n\n**Límites:**\n- Tamaño máximo por archivo: 15MB (configurable)\n- Se puede subir múltiples archivos en una sola petición\n\n**Tipos de contenido soportados:**\n- Imágenes: image/jpeg, image/png, image/webp\n- Videos: video/mp4, video/quicktime, video/webm, video/x-matroska, video/mkv"
 					}
 				},
 				{
@@ -306,11 +229,11 @@
 							]
 						},
 						"url": {
-							"raw": "{{BASE_URL}}/visits/{{visit_id}}/evidence",
+							"raw": "{{BASE_URL}}/visits/1/evidence",
 							"host": ["{{BASE_URL}}"],
-							"path": ["visits", "{{visit_id}}", "evidence"]
+							"path": ["visits", "1", "evidence"]
 						},
-						"description": "Subir un video como evidencia de una visita. El video se almacenará en S3 si está configurado (FILES_BACKEND=s3) o localmente."
+						"description": "Subir un video como evidencia de una visita"
 					}
 				},
 				{
@@ -351,21 +274,15 @@
 									"type": "file",
 									"src": [],
 									"description": "Video de evidencia"
-								},
-								{
-									"key": "comment",
-									"value": "Múltiples evidencias de la visita",
-									"type": "text",
-									"description": "Comentario opcional"
 								}
 							]
 						},
 						"url": {
-							"raw": "{{BASE_URL}}/visits/{{visit_id}}/evidence",
+							"raw": "{{BASE_URL}}/visits/1/evidence",
 							"host": ["{{BASE_URL}}"],
-							"path": ["visits", "{{visit_id}}", "evidence"]
+							"path": ["visits", "1", "evidence"]
 						},
-						"description": "Subir múltiples evidencias (imágenes y videos) en una sola petición.\n\nSe pueden combinar múltiples archivos usando los campos `image`, `video` o `file`. Todos los archivos se procesarán y almacenarán (en S3 si está configurado)."
+						"description": "Subir múltiples evidencias (imágenes y videos) en una sola petición.\n\nSe pueden combinar múltiples archivos usando los campos `image`, `video` o `file`."
 					}
 				},
 				{
@@ -398,11 +315,11 @@
 							]
 						},
 						"url": {
-							"raw": "{{BASE_URL}}/visits/{{visit_id}}/evidence",
+							"raw": "{{BASE_URL}}/visits/1/evidence",
 							"host": ["{{BASE_URL}}"],
-							"path": ["visits", "{{visit_id}}", "evidence"]
+							"path": ["visits", "1", "evidence"]
 						},
-						"description": "Subir evidencia usando el campo genérico `file`. El sistema detecta automáticamente si es imagen o video basándose en el Content-Type del archivo."
+						"description": "Subir evidencia usando el campo genérico `file`. El sistema detecta automáticamente si es imagen o video basándose en el Content-Type."
 					}
 				}
 			]
@@ -437,14 +354,13 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"client_id\": 1,\n  \"visit_datetime\": \"2025-11-25T09:00:00\",\n  \"title\": \"Visita de seguimiento mensual\",\n  \"notes\": \"Revisar inventario y necesidades del cliente\",\n  \"contacto_nombre\": \"Juan Pérez\",\n  \"tipo_visita\": \"seguimiento\",\n  \"objetivo_visita\": \"Revisar inventario y necesidades\"\n}"
+									"raw": "{\n  \"client_id\": 1,\n  \"visit_datetime\": \"2025-11-25T09:00:00\",\n  \"title\": \"Visita de seguimiento mensual\",\n  \"notes\": \"Revisar inventario y necesidades del cliente\"\n}"
 								},
 								"url": {
 									"raw": "{{BASE_URL}}/visits",
 									"host": ["{{BASE_URL}}"],
 									"path": ["visits"]
-								},
-								"description": "Crear una visita completa con todos los campos disponibles"
+								}
 							}
 						},
 						{
@@ -472,11 +388,6 @@
 											"key": "image",
 											"type": "file",
 											"src": []
-										},
-										{
-											"key": "comment",
-											"value": "Foto del inventario actual",
-											"type": "text"
 										}
 									]
 								},
@@ -485,7 +396,7 @@
 									"host": ["{{BASE_URL}}"],
 									"path": ["visits", "{{visit_id}}", "evidence"]
 								},
-								"description": "Subir evidencia con comentario. El archivo se almacenará en S3 si FILES_BACKEND=s3 está configurado. Usar el ID de la visita creada en el paso anterior."
+								"description": "Usar el ID de la visita creada en el paso anterior"
 							}
 						},
 						{
@@ -511,7 +422,7 @@
 									"host": ["{{BASE_URL}}"],
 									"path": ["api", "v1", "visits", "{{visit_id}}"]
 								},
-								"description": "Verificar que la visita se creó correctamente con sus evidencias. La respuesta incluirá las URLs de las evidencias (S3 o local según configuración)."
+								"description": "Verificar que la visita se creó correctamente con sus evidencias"
 							}
 						},
 						{
@@ -533,9 +444,9 @@
 									}
 								],
 								"url": {
-									"raw": "{{BASE_URL}}/api/v1/visits/client/{{client_id}}?limit=50&offset=0",
+									"raw": "{{BASE_URL}}/api/v1/visits/client/1?limit=50&offset=0",
 									"host": ["{{BASE_URL}}"],
-									"path": ["api", "v1", "visits", "client", "{{client_id}}"],
+									"path": ["api", "v1", "visits", "client", "1"],
 									"query": [
 										{
 											"key": "limit",
@@ -547,7 +458,7 @@
 										}
 									]
 								},
-								"description": "Obtener todas las visitas del cliente con paginación. Incluye todos los campos (contacto_nombre, tipo_visita, objetivo_visita) y evidencias con sus URLs."
+								"description": "Obtener todas las visitas del cliente con paginación"
 							}
 						}
 					]
@@ -573,12 +484,7 @@
 			"value": "1",
 			"type": "string",
 			"description": "ID de visita para usar en ejemplos"
-		},
-		{
-			"key": "client_id",
-			"value": "1",
-			"type": "string",
-			"description": "ID de cliente para usar en ejemplos"
 		}
 	]
 }
+
