@@ -11,7 +11,7 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(
     title="Visita Service (HU-MOV-003)",
     description="Microservicio de gestión de visitas y rutas optimizadas para gerentes de cuenta",
-    version="1.0.2"
+    version="1.0.3"
 )
 
 # Configuración de CORS

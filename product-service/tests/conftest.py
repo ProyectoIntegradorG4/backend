@@ -74,24 +74,26 @@ def db_session():
     session.close()
     
     # Limpiar dependency_overrides
-    from main import app as fastapi_app
     fastapi_app.dependency_overrides.clear()
 
 
-@pytest.fixture(autouse=True)
-def override_get_db(db_session, monkeypatch):
-    """Override de get_db para usar la sesión de test"""
-    def _override():
+@pytest.fixture(name="client")
+def client_fixture(db_session):
+    """TestClient con override de get_db"""
+    def _override_get_db():
         try:
             yield db_session
         finally:
             pass
-    monkeypatch.setattr("app.database.connection.get_db", _override)
-
-
-@pytest.fixture(name="client")
-def client_fixture():
-    return TestClient(fastapi_app)
+    
+    # Override de la dependencia antes de crear el cliente
+    fastapi_app.dependency_overrides[get_db] = _override_get_db
+    
+    with TestClient(fastapi_app) as test_client:
+        yield test_client
+    
+    # Limpiar overrides después
+    fastapi_app.dependency_overrides.clear()
 
 # También como objeto directo para imports
 client = TestClient(fastapi_app)

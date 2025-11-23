@@ -52,6 +52,7 @@ async def init_db():
         # Importar modelos para asegurar su registro en el metadata
         from app.models import pedido as _pedido_models  # noqa: F401
         from app.models import entrega as _entrega_models  # noqa: F401
+        from app.models import ruta as _ruta_models  # noqa: F401
 
         # Crear tablas si no existen
         Base.metadata.create_all(bind=engine)

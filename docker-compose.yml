@@ -575,7 +575,7 @@ services:
       S3_PREFIX: ${S3_PREFIX:-visits}  # prefijo opcional en el bucket
       AWS_REGION: ${AWS_REGION:-us-east-1}
       # URL pública base para servir archivos (idealmente CloudFront; por ahora el propio bucket web si está público)
-      FILES_BASE_URL: ${FILES_BASE_URL}
+      # FILES_BASE_URL: ${FILES_BASE_URL}  # ⚠️ COMENTADO: No se usa con S3 - Las URLs se generan como pre-signed URLs
 
       # Credenciales AWS para S3 (solo en local; en AWS usarás IAM Role)
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}

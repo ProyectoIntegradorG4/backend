@@ -222,6 +222,8 @@ class TestCrearPlanVenta:
     
     def test_crear_plan_validacion_metas_duplicadas(self):
         """Debe rechazar metas duplicadas (mismo producto/territorio/vendedor)"""
+        from unittest.mock import patch
+        
         db_mock = Mock()
         
         # Setup mínimo para pasar validaciones anteriores
@@ -257,8 +259,10 @@ class TestCrearPlanVenta:
             ]
         )
         
-        with pytest.raises(HTTPException) as exc_info:
-            PlanVentaService.crear_plan_venta(db_mock, data, usuario_id=1)
+        # Mock de validación de vendedores cross-database
+        with patch.object(PlanVentaService, '_validar_vendedores', return_value=(True, [1], "")):
+            with pytest.raises(HTTPException) as exc_info:
+                PlanVentaService.crear_plan_venta(db_mock, data, usuario_id=1)
         
         assert exc_info.value.status_code == 400
         assert "duplicada" in str(exc_info.value.detail).lower()
