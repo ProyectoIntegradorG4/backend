@@ -3,7 +3,7 @@ Servicio de reportes de vendedores (HU-WEB-010)
 Calcula KPIs, rankings y genera datos para gráficos Chart.js
 """
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_, case, extract
+from sqlalchemy import func, and_, or_, case, extract, create_engine, text
 from typing import List, Optional, Dict, Tuple
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -29,6 +29,12 @@ class ReportesService:
     PRODUCT_SERVICE_URL = os.getenv("PRODUCT_SERVICE_URL", "http://product-service:8005")
     USER_SERVICE_URL = os.getenv("USER_SERVICE_URL", "http://user-service:8001")
     REQUEST_TIMEOUT = 5.0  # SLA de 2s, dejamos margen para llamadas HTTP
+    
+    # Conexión directa a product_db para obtener metas
+    PRODUCT_DB_URL = os.getenv(
+        "PRODUCT_DATABASE_URL",
+        "postgresql+psycopg://product_service:product_password@postgres-db:5432/product_db"
+    )
     
     @staticmethod
     async def obtener_nombre_vendedor(vendedor_id: int) -> str:
@@ -75,38 +81,58 @@ class ReportesService:
         hasta: date
     ) -> Tuple[Optional[int], Optional[float]]:
         """
-        Obtiene las metas agregadas para el periodo desde product-service.
+        Obtiene las metas agregadas para el periodo consultando directamente product_db.
         Retorna: (meta_unidades, meta_valor)
         """
         try:
-            params = {
-                "desde": desde.isoformat(),
-                "hasta": hasta.isoformat()
-            }
+            # Crear engine para product_db
+            product_engine = create_engine(ReportesService.PRODUCT_DB_URL, pool_pre_ping=True)
             
+            # Construir query SQL
+            query = """
+                SELECT 
+                    COALESCE(SUM(pm.objetivo_cantidad), 0) as total_unidades,
+                    COALESCE(SUM(pm.objetivo_valor), 0) as total_valor
+                FROM plan_meta pm
+                JOIN plan_venta pv ON pm.plan_id = pv.plan_id
+                WHERE pv.estado = 'activo'
+                    AND pv.periodo_desde <= :hasta
+                    AND pv.periodo_hasta >= :desde
+            """
+            
+            params = {"desde": desde, "hasta": hasta}
+            
+            # Agregar filtros opcionales
             if vendedor_id:
+                query += " AND pm.vendedor_id = :vendedor_id"
                 params["vendedor_id"] = vendedor_id
+            
             if territorio_id:
+                query += " AND pm.territorio_id = :territorio_id"
                 params["territorio_id"] = territorio_id
+            
             if producto_id:
+                query += " AND pm.producto_id = :producto_id"
                 params["producto_id"] = producto_id
             
-            async with httpx.AsyncClient(timeout=ReportesService.REQUEST_TIMEOUT) as client:
-                url = f"{ReportesService.PRODUCT_SERVICE_URL}/api/v1/planes-venta/metas/agregadas"
-                resp = await client.get(url, params=params)
+            # Ejecutar query
+            with product_engine.connect() as conn:
+                result = conn.execute(text(query), params)
+                row = result.fetchone()
                 
-                if resp.status_code == 200:
-                    data = resp.json()
-                    meta_unidades = data.get("total_unidades", 0)
-                    meta_valor = data.get("total_valor", 0.0)
+                if row:
+                    meta_unidades = int(row[0]) if row[0] else 0
+                    meta_valor = float(row[1]) if row[1] else 0.0
+                    
                     return (
                         meta_unidades if meta_unidades > 0 else None,
                         meta_valor if meta_valor > 0 else None
                     )
-                
-                return (None, None)
+            
+            return (None, None)
+            
         except Exception as e:
-            logger.warning(f"Error obteniendo metas: {e}")
+            logger.error(f"Error obteniendo metas desde product_db: {e}", exc_info=True)
             return (None, None)
     
     @staticmethod
