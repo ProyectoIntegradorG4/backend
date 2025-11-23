@@ -1934,6 +1934,155 @@
 					}
 				},
 				{
+					"name": "Listar Rutas - Todas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/rutas?limit=50&offset=0",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "rutas"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50",
+									"description": "Número máximo de resultados"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Desplazamiento para paginación"
+								}
+							]
+						},
+						"description": "Listar todas las rutas de entrega con paginación predeterminada"
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200 OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response tiene estructura correcta', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('total');",
+									"    pm.expect(response).to.have.property('rutas');",
+									"    pm.expect(response).to.have.property('offset');",
+									"    pm.expect(response).to.have.property('limit');",
+									"    pm.expect(response.rutas).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Cada ruta tiene campos requeridos', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.rutas.length > 0) {",
+									"        const ruta = response.rutas[0];",
+									"        pm.expect(ruta).to.have.property('ruta_id');",
+									"        pm.expect(ruta).to.have.property('vehiculo_id');",
+									"        pm.expect(ruta).to.have.property('estado');",
+									"        pm.expect(ruta).to.have.property('num_paradas');",
+									"        pm.expect(ruta).to.have.property('distancia_total_km');",
+									"        pm.expect(ruta).to.have.property('duracion_total_minutos');",
+									"        pm.expect(ruta).to.have.property('fecha_creacion');",
+									"    }",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Listar Rutas - Con Filtro Estado",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/rutas?estado=CONFIRMADA&limit=20",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "rutas"],
+							"query": [
+								{
+									"key": "estado",
+									"value": "CONFIRMADA",
+									"description": "Filtrar solo rutas confirmadas"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Listar rutas filtradas por estado (BORRADOR, CONFIRMADA, EN_CURSO, COMPLETADA, CANCELADA)"
+					}
+				},
+				{
+					"name": "Listar Rutas - Paginación Avanzada",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "usuario-id",
+								"value": "{{ruta_usuario_id}}"
+							},
+							{
+								"key": "rol-usuario",
+								"value": "{{ruta_rol_usuario}}"
+							},
+							{
+								"key": "nit-usuario",
+								"value": "{{ruta_nit_usuario}}"
+							}
+						],
+						"url": {
+							"raw": "{{pedidos_url}}/api/v1/logistica/rutas?limit=10&offset=10",
+							"host": ["{{pedidos_url}}"],
+							"path": ["api", "v1", "logistica", "rutas"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "10 resultados por página"
+								},
+								{
+									"key": "offset",
+									"value": "10",
+									"description": "Saltar los primeros 10 resultados"
+								}
+							]
+						},
+						"description": "Listar rutas con paginación avanzada para obtener la segunda página de resultados"
+					}
+				},
+				{
 					"name": "Test Error - Sin Rol RBAC",
 					"request": {
 						"method": "POST",

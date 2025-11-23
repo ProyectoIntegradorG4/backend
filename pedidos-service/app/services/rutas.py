@@ -634,3 +634,46 @@ class RutasService:
         if solo_activos:
             query = query.filter(Vehiculo.activo == True)
         return query.all()
+    
+    @staticmethod
+    def listar_rutas(
+        db: Session, 
+        estado: Optional[str] = None,
+        vehiculo_id: Optional[str] = None,
+        fecha_desde: Optional[str] = None,
+        fecha_hasta: Optional[str] = None,
+        limit: int = 100
+    ):
+        """
+        Lista rutas de entrega con filtros opcionales.
+        
+        Args:
+            db: Sesión de base de datos
+            estado: Filtrar por estado (borrador, confirmada, en_proceso, completada, cancelada)
+            vehiculo_id: Filtrar por ID de vehículo
+            fecha_desde: Filtrar rutas desde esta fecha (YYYY-MM-DD)
+            fecha_hasta: Filtrar rutas hasta esta fecha (YYYY-MM-DD)
+            limit: Número máximo de resultados (default 100)
+        
+        Returns:
+            Lista de rutas con sus paradas
+        """
+        query = db.query(Ruta).order_by(Ruta.fecha_creacion.desc())
+        
+        # Aplicar filtros
+        if estado:
+            query = query.filter(Ruta.estado == estado)
+        
+        if vehiculo_id:
+            query = query.filter(Ruta.vehiculo_id == vehiculo_id)
+        
+        if fecha_desde:
+            query = query.filter(Ruta.fecha_creacion >= fecha_desde)
+        
+        if fecha_hasta:
+            from datetime import datetime, timedelta
+            # Incluir todo el día de fecha_hasta
+            fecha_hasta_dt = datetime.strptime(fecha_hasta, "%Y-%m-%d") + timedelta(days=1)
+            query = query.filter(Ruta.fecha_creacion < fecha_hasta_dt)
+        
+        return query.limit(limit).all()
