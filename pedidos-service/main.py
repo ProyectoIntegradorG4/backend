@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Pedidos Service",
     description="Microservicio de gestión de pedidos con validación de inventario en tiempo real",
-    version="1.0.3"
+    version="1.1.0"
 )
 
 # Configuración de CORS optimizada
