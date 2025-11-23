@@ -1,0 +1,340 @@
+{
+	"info": {
+		"name": "Listar Rutas - Endpoints Nuevos",
+		"description": "Requests para el endpoint de listar rutas de entrega",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Listar Rutas - Todas",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "usuario-id",
+						"value": "1"
+					},
+					{
+						"key": "rol-usuario",
+						"value": "admin"
+					},
+					{
+						"key": "nit-usuario",
+						"value": "900123456"
+					}
+				],
+				"url": {
+					"raw": "{{pedidos_url}}/api/v1/logistica/rutas?limit=50",
+					"host": ["{{pedidos_url}}"],
+					"path": ["api", "v1", "logistica", "rutas"],
+					"query": [
+						{
+							"key": "limit",
+							"value": "50",
+							"description": "Número máximo de resultados"
+						}
+					]
+				},
+				"description": "Listar todas las rutas de entrega sin filtros"
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status 200', () => {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test('Response tiene estructura correcta', () => {",
+							"    const response = pm.response.json();",
+							"    pm.expect(response).to.have.property('total');",
+							"    pm.expect(response).to.have.property('rutas');",
+							"    pm.expect(response).to.have.property('filtros_aplicados');",
+							"    pm.expect(response.rutas).to.be.an('array');",
+							"});",
+							"",
+							"pm.test('Cada ruta tiene campos requeridos', () => {",
+							"    const response = pm.response.json();",
+							"    if (response.rutas.length > 0) {",
+							"        const ruta = response.rutas[0];",
+							"        pm.expect(ruta).to.have.property('ruta_id');",
+							"        pm.expect(ruta).to.have.property('vehiculo_id');",
+							"        pm.expect(ruta).to.have.property('estado');",
+							"        pm.expect(ruta).to.have.property('total_pedidos');",
+							"        pm.expect(ruta).to.have.property('distancia_total_km');",
+							"        pm.expect(ruta).to.have.property('duracion_total_minutos');",
+							"        pm.expect(ruta).to.have.property('fecha_creacion');",
+							"    }",
+							"});"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "Listar Rutas - Por Estado",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "usuario-id",
+						"value": "1"
+					},
+					{
+						"key": "rol-usuario",
+						"value": "admin"
+					},
+					{
+						"key": "nit-usuario",
+						"value": "900123456"
+					}
+				],
+				"url": {
+					"raw": "{{pedidos_url}}/api/v1/logistica/rutas?estado=borrador&limit=20",
+					"host": ["{{pedidos_url}}"],
+					"path": ["api", "v1", "logistica", "rutas"],
+					"query": [
+						{
+							"key": "estado",
+							"value": "borrador",
+							"description": "Filtrar solo rutas en borrador"
+						},
+						{
+							"key": "limit",
+							"value": "20"
+						}
+					]
+				},
+				"description": "Listar rutas filtradas por estado (borrador, confirmada, en_proceso, completada, cancelada)"
+			},
+			"response": []
+		},
+		{
+			"name": "Listar Rutas - Por Vehículo",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "usuario-id",
+						"value": "1"
+					},
+					{
+						"key": "rol-usuario",
+						"value": "admin"
+					},
+					{
+						"key": "nit-usuario",
+						"value": "900123456"
+					}
+				],
+				"url": {
+					"raw": "{{pedidos_url}}/api/v1/logistica/rutas?vehiculo_id=VEH-001&limit=30",
+					"host": ["{{pedidos_url}}"],
+					"path": ["api", "v1", "logistica", "rutas"],
+					"query": [
+						{
+							"key": "vehiculo_id",
+							"value": "VEH-001",
+							"description": "ID del vehículo a filtrar"
+						},
+						{
+							"key": "limit",
+							"value": "30"
+						}
+					]
+				},
+				"description": "Listar rutas asignadas a un vehículo específico"
+			},
+			"response": []
+		},
+		{
+			"name": "Listar Rutas - Por Rango de Fechas",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "usuario-id",
+						"value": "1"
+					},
+					{
+						"key": "rol-usuario",
+						"value": "admin"
+					},
+					{
+						"key": "nit-usuario",
+						"value": "900123456"
+					}
+				],
+				"url": {
+					"raw": "{{pedidos_url}}/api/v1/logistica/rutas?fecha_desde=2025-11-01&fecha_hasta=2025-11-30&limit=100",
+					"host": ["{{pedidos_url}}"],
+					"path": ["api", "v1", "logistica", "rutas"],
+					"query": [
+						{
+							"key": "fecha_desde",
+							"value": "2025-11-01",
+							"description": "Fecha inicio (YYYY-MM-DD)"
+						},
+						{
+							"key": "fecha_hasta",
+							"value": "2025-11-30",
+							"description": "Fecha fin (YYYY-MM-DD)"
+						},
+						{
+							"key": "limit",
+							"value": "100"
+						}
+					]
+				},
+				"description": "Listar rutas en un rango de fechas específico"
+			},
+			"response": []
+		},
+		{
+			"name": "Listar Rutas - Filtros Combinados",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "usuario-id",
+						"value": "1"
+					},
+					{
+						"key": "rol-usuario",
+						"value": "admin"
+					},
+					{
+						"key": "nit-usuario",
+						"value": "900123456"
+					}
+				],
+				"url": {
+					"raw": "{{pedidos_url}}/api/v1/logistica/rutas?estado=confirmada&vehiculo_id=VEH-002&fecha_desde=2025-11-15&limit=25",
+					"host": ["{{pedidos_url}}"],
+					"path": ["api", "v1", "logistica", "rutas"],
+					"query": [
+						{
+							"key": "estado",
+							"value": "confirmada"
+						},
+						{
+							"key": "vehiculo_id",
+							"value": "VEH-002"
+						},
+						{
+							"key": "fecha_desde",
+							"value": "2025-11-15"
+						},
+						{
+							"key": "limit",
+							"value": "25"
+						}
+					]
+				},
+				"description": "Listar rutas con múltiples filtros aplicados simultáneamente"
+			},
+			"response": []
+		},
+		{
+			"name": "Test Error - Estado Inválido",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "usuario-id",
+						"value": "1"
+					},
+					{
+						"key": "rol-usuario",
+						"value": "admin"
+					},
+					{
+						"key": "nit-usuario",
+						"value": "900123456"
+					}
+				],
+				"url": {
+					"raw": "{{pedidos_url}}/api/v1/logistica/rutas?estado=invalido",
+					"host": ["{{pedidos_url}}"],
+					"path": ["api", "v1", "logistica", "rutas"],
+					"query": [
+						{
+							"key": "estado",
+							"value": "invalido",
+							"description": "Estado que no existe"
+						}
+					]
+				},
+				"description": "Probar error con estado inválido - debe retornar 400"
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status 400 Bad Request', () => {",
+							"    pm.response.to.have.status(400);",
+							"});",
+							"",
+							"pm.test('Error menciona estados válidos', () => {",
+							"    const response = pm.response.json();",
+							"    pm.expect(response.detail).to.include('Estado inválido');",
+							"});"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "Test Error - Sin Rol RBAC",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "usuario-id",
+						"value": "1"
+					},
+					{
+						"key": "rol-usuario",
+						"value": "cliente",
+						"description": "Rol no autorizado"
+					},
+					{
+						"key": "nit-usuario",
+						"value": "900123456"
+					}
+				],
+				"url": {
+					"raw": "{{pedidos_url}}/api/v1/logistica/rutas",
+					"host": ["{{pedidos_url}}"],
+					"path": ["api", "v1", "logistica", "rutas"]
+				},
+				"description": "Probar error RBAC - debe retornar 403"
+			},
+			"response": [],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status 403 Forbidden', () => {",
+							"    pm.response.to.have.status(403);",
+							"});",
+							"",
+							"pm.test('Error menciona permisos', () => {",
+							"    const response = pm.response.json();",
+							"    pm.expect(response.detail).to.include('Acceso denegado');",
+							"});"
+						]
+					}
+				}
+			]
+		}
+	]
+}

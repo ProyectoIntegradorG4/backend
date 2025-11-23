@@ -12,7 +12,7 @@ from app.schemas.ruta import (
     GenerarRutasRequest, GenerarRutasResponse,
     RecalcularRutaRequest, RecalcularRutaResponse,
     CrearVehiculoRequest, VehiculoResponse,
-    ListarVehiculosResponse
+    ListarVehiculosResponse, RutaListItem, ListarRutasResponse
 )
 from app.services.rutas import RutasService
 
@@ -266,6 +266,99 @@ async def listar_vehiculos(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error al listar vehículos"
+        )
+
+# ==================== Endpoint de Listado de Rutas ====================
+
+@router.get(
+    "/rutas",
+    response_model=ListarRutasResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Listar rutas de entrega",
+    description="""
+    Lista todas las rutas de entrega con filtros opcionales.
+    
+    **Filtros disponibles:**
+    - `estado`: borrador, confirmada, en_proceso, completada, cancelada
+    - `vehiculo_id`: ID específico de vehículo
+    - `fecha_desde`: Fecha inicio en formato YYYY-MM-DD
+    - `fecha_hasta`: Fecha fin en formato YYYY-MM-DD
+    - `limit`: Número máximo de resultados (default 100, max 500)
+    
+    **Acceso:** Requiere rol "admin" o "gerente_cuenta"
+    """
+)
+async def listar_rutas(
+    estado: Optional[str] = Query(None, description="Filtrar por estado de ruta"),
+    vehiculo_id: Optional[str] = Query(None, description="Filtrar por ID de vehículo"),
+    fecha_desde: Optional[str] = Query(None, description="Fecha desde (YYYY-MM-DD)", regex=r"^\d{4}-\d{2}-\d{2}$"),
+    fecha_hasta: Optional[str] = Query(None, description="Fecha hasta (YYYY-MM-DD)", regex=r"^\d{4}-\d{2}-\d{2}$"),
+    limit: int = Query(100, ge=1, le=500, description="Número máximo de resultados"),
+    usuario_auth: dict = Depends(require_supervisor_logistica),
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint para listar rutas con filtros.
+    Retorna información resumida de cada ruta.
+    """
+    try:
+        # Validar estado si se proporciona
+        estados_validos = ["borrador", "confirmada", "en_proceso", "completada", "cancelada"]
+        if estado and estado not in estados_validos:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Estado inválido. Debe ser uno de: {', '.join(estados_validos)}"
+            )
+        
+        # Obtener rutas del servicio
+        rutas = RutasService.listar_rutas(
+            db=db,
+            estado=estado,
+            vehiculo_id=vehiculo_id,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            limit=limit
+        )
+        
+        # Construir respuesta
+        rutas_response = [
+            RutaListItem(
+                ruta_id=str(r.ruta_id),
+                vehiculo_id=r.vehiculo_id,
+                estado=r.estado.value if hasattr(r.estado, 'value') else r.estado,
+                total_pedidos=len(r.paradas) - 2 if r.paradas else 0,  # Excluir depot inicial y final
+                distancia_total_km=r.distancia_total_km or 0.0,
+                duracion_total_minutos=r.duracion_total_minutos or 0,
+                fecha_creacion=r.fecha_creacion.isoformat() if r.fecha_creacion else "",
+                creado_por=r.usuario_creador_id
+            )
+            for r in rutas
+        ]
+        
+        logger.info(
+            f"Usuario {usuario_auth['usuario_id']} listó {len(rutas_response)} rutas "
+            f"(filtros: estado={estado}, vehiculo={vehiculo_id})"
+        )
+        
+        return ListarRutasResponse(
+            total=len(rutas_response),
+            rutas=rutas_response,
+            filtros_aplicados={
+                "estado": estado,
+                "vehiculo_id": vehiculo_id,
+                "fecha_desde": fecha_desde,
+                "fecha_hasta": fecha_hasta,
+                "limit": str(limit)
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al listar rutas: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al listar rutas"
         )
 
 # ==================== Health Check ====================

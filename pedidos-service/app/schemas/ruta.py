@@ -146,6 +146,29 @@ class ListarVehiculosResponse(BaseModel):
     vehiculos: List[VehiculoResponse]
 
 
+# ==================== Listar Rutas ====================
+
+class RutaListItem(BaseModel):
+    """Item individual de ruta en listado"""
+    ruta_id: str
+    vehiculo_id: str
+    estado: str
+    total_pedidos: int
+    distancia_total_km: float
+    duracion_total_minutos: int
+    fecha_creacion: str
+    creado_por: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+class ListarRutasResponse(BaseModel):
+    """Respuesta al listar rutas"""
+    total: int
+    rutas: List[RutaListItem]
+    filtros_aplicados: Dict[str, Optional[str]] = {}
+
+
 # ==================== Recalcular Ruta ====================
 
 class RecalcularRutaRequest(BaseModel):
