@@ -222,7 +222,7 @@ __marimo__/
 .dockerignore
 
 # PostgreSQL
-*.sql
+#*.sql
 
 # IDE
 .idea/

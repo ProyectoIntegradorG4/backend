@@ -11,7 +11,7 @@ logger = logging.getLogger("uvicorn")
 app = FastAPI(
     title="Cliente Service (HU-MOV-002)",
     description="Microservicio de gestión de clientes institucionales para gerentes de cuenta",
-    version="1.0.4"
+    version="1.0.5"
 )
 
 # Configuración de CORS
@@ -76,7 +76,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "cliente-service",
-        "version": "1.0.4"
+        "version": "1.0.5"
     }
 
 

@@ -122,3 +122,37 @@ def producto_stock_bajo():
         "precio": 8000.00
     }
 
+@pytest.fixture
+def ubicaciones_bogota():
+    """Ubicaciones de ejemplo en Bogotá para tests de rutas"""
+    return {
+        "DEPOT": {"lat": 4.6097, "lon": -74.0817},
+        "PED-001": {"lat": 4.6351, "lon": -74.0703},
+        "PED-002": {"lat": 4.6762, "lon": -74.0481},
+        "PED-003": {"lat": 4.6420, "lon": -74.1100}
+    }
+
+@pytest.fixture
+def vehiculo_basico():
+    """Datos de un vehículo básico para las pruebas"""
+    return {
+        "vehiculo_id": "VEH-001",
+        "capacidad_volumen": 50.0,
+        "capacidad_peso": 1000.0,
+        "cadena_frio": False,
+        "depot": {"lat": 4.6097, "lon": -74.0817},
+        "duracion_maxima_minutos": 480
+    }
+
+@pytest.fixture
+def vehiculo_refrigerado():
+    """Datos de un vehículo con cadena de frío"""
+    return {
+        "vehiculo_id": "VEH-002",
+        "capacidad_volumen": 30.0,
+        "capacidad_peso": 600.0,
+        "cadena_frio": True,
+        "depot": {"lat": 4.6097, "lon": -74.0817},
+        "duracion_maxima_minutos": 360
+    }
+

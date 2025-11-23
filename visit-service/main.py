@@ -7,7 +7,7 @@ from app.database.session import init_db
 
 from app.routes.visits import router as visits_router
 
-app = FastAPI(title="visit-service", version="1.0.4")
+app = FastAPI(title="visit-service", version="1.1.0")
 
 # === CORS global ===
 app.add_middleware(

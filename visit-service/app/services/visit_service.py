@@ -13,8 +13,11 @@ class VisitService:
         client_id: int,
         account_mgr_id: int,
         visit_dt: datetime,
-        title: str | None,
-        notes: str | None
+        title: str | None = None,
+        notes: str | None = None,
+        contacto_nombre: str | None = None,
+        tipo_visita: str | None = None,
+        objetivo_visita: str | None = None,
     ) -> ClientVisit:
         visit = ClientVisit(
             client_id=client_id,
@@ -22,6 +25,9 @@ class VisitService:
             visit_datetime=visit_dt,
             title=title,
             notes=notes,
+            contacto_nombre=contacto_nombre,
+            tipo_visita=tipo_visita,
+            objetivo_visita=objetivo_visita,
         )
         self.db.add(visit)
         self.db.flush()  # obtiene ID sin cerrar transacción
