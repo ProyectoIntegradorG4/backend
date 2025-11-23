@@ -257,6 +257,7 @@ jobs:
                 {"name": "API_URL", "value": "${{ secrets.API_URL }}"},
                 {"name": "CLIENTE_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
                 {"name": "PRODUCT_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
+                {"name": "USER_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
                 {"name": "VENDEDOR_SERVICE_URL", "value": "${{ secrets.API_URL }}"}
               ],
               "logConfiguration": {
