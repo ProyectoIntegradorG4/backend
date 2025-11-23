@@ -19,7 +19,7 @@ from app.service.plan_venta_service import PlanVentaService
 from app.service.rbac import require_role_admin_ventas
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/planes-venta", tags=["planes-venta"])
+router = APIRouter(prefix="/api/v1/planes-venta", tags=["planes-venta"])
 
 
 @router.post(
