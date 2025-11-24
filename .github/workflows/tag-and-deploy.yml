@@ -321,7 +321,11 @@ jobs:
                 {"name": "REDIS_URL", "value": "redis://${{ secrets.REDIS_ENDPOINT }}:6379"},
                 {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
                 {"name": "JWT_EXPIRE_MINUTES", "value": "60"},
-                {"name": "API_URL", "value": "${{ secrets.API_URL }}"}$EXTRA_ENV_VARS
+                {"name": "API_URL", "value": "${{ secrets.API_URL }}"},
+                {"name": "CLIENTE_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
+                {"name": "PRODUCT_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
+                {"name": "USER_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
+                {"name": "VENDEDOR_SERVICE_URL", "value": "${{ secrets.API_URL }}"}$EXTRA_ENV_VARS
               ],
               "logConfiguration": {
                 "logDriver": "awslogs",
