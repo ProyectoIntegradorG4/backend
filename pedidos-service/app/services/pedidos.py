@@ -173,13 +173,41 @@ class PedidosService:
         try:
             async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
                 url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/productos/{producto_id}/inventario"
+                logger.info(f"Consultando inventario para producto {producto_id} en {url}")
                 response = await client.get(url)
                 
+                # Verificar el Content-Type antes de intentar parsear JSON
+                content_type = response.headers.get("content-type", "").lower()
+                logger.debug(f"Response status: {response.status_code}, Content-Type: {content_type}")
+                
                 if response.status_code == 200:
-                    data = response.json()
+                    # Verificar que la respuesta sea JSON válido
+                    if "application/json" not in content_type:
+                        response_text = response.text[:500]  # Limitar a 500 caracteres para logging
+                        logger.error(
+                            f"Respuesta no es JSON para producto {producto_id}. "
+                            f"Content-Type: {content_type}, Response: {response_text}"
+                        )
+                        return False, 0, 0.0, f"Error: El servicio retornó un formato no válido (Content-Type: {content_type})"
+                    
+                    try:
+                        data = response.json()
+                    except ValueError as json_error:
+                        response_text = response.text[:500]
+                        logger.error(
+                            f"Error parseando JSON para producto {producto_id}. "
+                            f"Response text: {response_text}, Error: {json_error}"
+                        )
+                        return False, 0, 0.0, f"Error: Respuesta del servicio no es JSON válido"
+                    
                     cantidad_disponible = data.get("cantidad_disponible", 0)
                     precio = data.get("precio", 0.0)
                     disponible = cantidad_disponible >= cantidad_solicitada
+                    
+                    logger.debug(
+                        f"Inventario para {producto_id}: disponible={cantidad_disponible}, "
+                        f"solicitado={cantidad_solicitada}, suficiente={disponible}"
+                    )
                     
                     if disponible:
                         return True, cantidad_disponible, precio, "Inventario disponible"
@@ -187,16 +215,36 @@ class PedidosService:
                         return False, cantidad_disponible, precio, f"Inventario insuficiente. Disponible: {cantidad_disponible}"
                 
                 elif response.status_code == 404:
+                    logger.warning(f"Producto {producto_id} no encontrado en product-service")
                     return False, 0, 0.0, "Producto no encontrado"
                 else:
-                    logger.warning(f"Error al validar producto {producto_id}: {response.status_code}")
-                    return False, 0, 0.0, "Error al consultar inventario"
+                    # Intentar obtener el mensaje de error si está en JSON
+                    error_msg = f"Error al consultar inventario (HTTP {response.status_code})"
+                    try:
+                        if "application/json" in content_type:
+                            error_data = response.json()
+                            if "detail" in error_data:
+                                error_msg = error_data["detail"]
+                            elif "mensaje" in error_data:
+                                error_msg = error_data["mensaje"]
+                    except:
+                        pass
+                    
+                    response_text = response.text[:500] if hasattr(response, 'text') else str(response.content[:500])
+                    logger.warning(
+                        f"Error al validar producto {producto_id}: {response.status_code}. "
+                        f"Response: {response_text}"
+                    )
+                    return False, 0, 0.0, error_msg
                     
         except httpx.TimeoutException:
-            logger.error(f"Timeout al consultar inventario para {producto_id}")
+            logger.error(f"Timeout al consultar inventario para {producto_id} en {PedidosService.PRODUCT_SERVICE_URL}")
             return False, 0, 0.0, "Timeout al consultar inventario"
+        except httpx.ConnectError as e:
+            logger.error(f"Error de conexión al consultar inventario para {producto_id}: {e}")
+            return False, 0, 0.0, f"Error de conexión con product-service: {str(e)}"
         except Exception as e:
-            logger.error(f"Error validando inventario: {e}")
+            logger.error(f"Error validando inventario para {producto_id}: {e}", exc_info=True)
             return False, 0, 0.0, f"Error: {str(e)}"
     
     @staticmethod
@@ -430,29 +478,43 @@ class PedidosService:
         try:
             # Validar NIT según el rol del usuario
             if rol_usuario == 'usuario_institucional':
-                nit_valido, error_msg = await PedidosService.validar_nit_usuario_institucional(
-                    request.nit, nit_usuario
-                )
-                if not nit_valido:
-                    logger.warning(f"Validación NIT fallida para usuario_institucional {usuario_id}: {error_msg}")
-                    return False, None, error_msg, []
+                # IMPORTANTE: Normalizar solo para comparación, mantener formato original para búsquedas
+                # El backend normaliza internamente para comparar, pero mantiene el formato original en DB
+                if not nit_usuario:
+                    msg = f"NIT de usuario no proporcionado en los headers. Usuario: {usuario_id}"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                
+                # Comparar NITs normalizados (para manejar diferencias de formato)
+                # pero mantener formato original en el request para búsquedas
+                if not PedidosService._nit_equals(request.nit, nit_usuario):
+                    msg = f"El NIT proporcionado ({request.nit}) no coincide con el NIT del usuario ({nit_usuario})"
+                    logger.warning(f"Validación NIT fallida para usuario_institucional {usuario_id}: {msg}")
+                    return False, None, msg, []
+                
                 # Para usuario_institucional, exigir cliente_id en header y priorizarlo
                 if cliente_id_header is None:
-                    msg = "cliente_id es requerido en el header para usuario_institucional"
+                    msg = f"cliente_id es requerido en el header 'cliente-id' para usuario_institucional. Usuario: {usuario_id}, NIT: {nit_usuario}"
                     logger.warning(msg)
                     return False, None, msg, []
+                
                 effective_cliente_id = cliente_id_header
+                
                 # Validar que el cliente_id corresponda con el NIT indicado verificando por ID
+                # El cliente viene con su NIT en formato original de la base de datos
                 cliente = await PedidosService.obtener_cliente_por_id(effective_cliente_id)
                 if not cliente:
-                    msg = f"Cliente {effective_cliente_id} no encontrado"
+                    msg = f"Cliente {effective_cliente_id} no encontrado en cliente-service. Verifique que el cliente existe y que cliente-service está disponible."
                     logger.warning(msg)
                     return False, None, msg, []
+                
+                # Comparar NITs normalizados (el cliente puede tener formato diferente pero ser el mismo)
                 cliente_nit = cliente.get("nit")
                 if not cliente_nit or not PedidosService._nit_equals(cliente_nit, request.nit):
-                    msg = f"El cliente_id {effective_cliente_id} no pertenece al NIT {request.nit}"
+                    msg = f"El cliente_id {effective_cliente_id} (NIT: {cliente_nit}) no pertenece al NIT {request.nit} del pedido"
                     logger.warning(msg)
                     return False, None, msg, []
+                
                 # Forzar el cliente_id efectivo en el request para persistir
                 request.cliente_id = effective_cliente_id
             
