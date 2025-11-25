@@ -2,7 +2,7 @@
 from typing import List, Optional, Tuple
 import logging
 
-from sqlalchemy import asc, desc, func, or_
+from sqlalchemy import asc, desc, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 from uuid import uuid4
 
@@ -239,38 +239,45 @@ class ProductoService:
             return None
 
     @staticmethod
-    def actualizar_stock_producto(db: Session, producto_id: str, cantidad_a_restar: int) -> Tuple[bool, int, str]:
+    def actualizar_stock_producto(db: Session, producto_id: str, cantidad_a_restar: int) -> Tuple[bool, int, str, Optional[str]]:
         """
         Actualiza el stock de un producto restando la cantidad especificada.
+        Usa SELECT FOR UPDATE para bloquear la fila y evitar condiciones de carrera.
         
         Args:
             db: Sesión de base de datos
             producto_id: ID del producto
             cantidad_a_restar: Cantidad a restar del stock (debe ser positiva)
         
-        Retorna: (exito, stock_actualizado, mensaje)
+        Retorna: (exito, stock_actualizado, mensaje, codigo_error)
         - exito: True si se actualizó correctamente
-        - stock_actualizado: Nuevo valor de stock después de la resta
+        - stock_actualizado: Nuevo valor de stock después de la resta (o stock actual si falla)
         - mensaje: Mensaje descriptivo del resultado
+        - codigo_error: Código de error específico (None si éxito, "OUT_OF_STOCK", "STOCK_INSUFFICIENT", etc.)
         """
         try:
             if cantidad_a_restar <= 0:
-                return False, 0, "La cantidad a restar debe ser mayor que cero"
+                return False, 0, "La cantidad a restar debe ser mayor que cero", "INVALID_QUANTITY"
             
-            # Obtener el producto
-            producto = db.query(Producto).filter(Producto.productoId == producto_id).first()
+            # Obtener el producto con bloqueo de fila (SELECT FOR UPDATE)
+            # Esto previene condiciones de carrera cuando múltiples pedidos intentan actualizar el mismo producto
+            stmt = select(Producto).where(Producto.productoId == producto_id).with_for_update()
+            producto = db.execute(stmt).scalar_one_or_none()
             
             if not producto:
-                return False, 0, "Producto no encontrado"
+                return False, 0, "Producto no encontrado", "PRODUCT_NOT_FOUND"
             
-            # Obtener stock actual
+            # Obtener stock actual (ya bloqueado por SELECT FOR UPDATE)
             stock_actual = producto.stock if producto.stock is not None else 0
             
             # Validar que haya suficiente stock
             if stock_actual < cantidad_a_restar:
-                return False, stock_actual, f"Stock insuficiente. Disponible: {stock_actual}, Solicitado: {cantidad_a_restar}"
+                codigo_error = "OUT_OF_STOCK" if stock_actual == 0 else "STOCK_INSUFFICIENT"
+                mensaje_error = f"Stock insuficiente. Disponible: {stock_actual}, Solicitado: {cantidad_a_restar}"
+                logger.warning(f"Stock insuficiente para producto {producto_id}: {mensaje_error}")
+                return False, stock_actual, mensaje_error, codigo_error
             
-            # Actualizar stock
+            # Actualizar stock (dentro de la transacción con bloqueo)
             nuevo_stock = stock_actual - cantidad_a_restar
             producto.stock = nuevo_stock
             
@@ -280,12 +287,12 @@ class ProductoService:
             
             logger.info(f"Stock actualizado para producto {producto_id}: {stock_actual} -> {nuevo_stock} (restado {cantidad_a_restar})")
             
-            return True, nuevo_stock, f"Stock actualizado: {nuevo_stock}"
+            return True, nuevo_stock, f"Stock actualizado: {nuevo_stock}", None
             
         except Exception as e:
-            logger.error(f"Error actualizando stock para producto {producto_id}: {e}")
+            logger.error(f"Error actualizando stock para producto {producto_id}: {e}", exc_info=True)
             db.rollback()
-            return False, 0, f"Error al actualizar stock: {str(e)}"
+            return False, 0, f"Error al actualizar stock: {str(e)}", "INTERNAL_ERROR"
     
     @staticmethod
     def obtener_inventario_producto(db: Session, producto_id: str) -> Tuple[int, float, Optional[date]]:

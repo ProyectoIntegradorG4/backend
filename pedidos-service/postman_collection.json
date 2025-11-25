@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "pedidos-service-collection",
     "name": "Pedidos Service",
-    "description": "Colección completa de pruebas para el Pedidos Service - Incluye Pedidos, Entregas y Rutas de Logística",
+    "description": "Colección completa de pruebas para el Pedidos Service - Incluye Pedidos, Entregas, Rutas de Logística y Reportes",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -529,6 +529,65 @@
           }
         },
         {
+          "name": "Listar Rutas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "rol-usuario",
+                "value": "admin",
+                "description": "Requiere rol 'admin' o 'gerente_cuenta'"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/logistica/rutas?estado=confirmada&vehiculo_id=VEH-001&fecha_desde=2026-01-01&fecha_hasta=2026-12-31&limit=100",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "logistica",
+                "rutas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "confirmada",
+                  "description": "Filtrar por estado: borrador, confirmada, en_proceso, completada, cancelada"
+                },
+                {
+                  "key": "vehiculo_id",
+                  "value": "VEH-001",
+                  "description": "Filtrar por ID de vehículo específico"
+                },
+                {
+                  "key": "fecha_desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha desde (YYYY-MM-DD)"
+                },
+                {
+                  "key": "fecha_hasta",
+                  "value": "2026-12-31",
+                  "description": "Fecha hasta (YYYY-MM-DD)"
+                },
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "description": "Número máximo de resultados (default 100, max 500)"
+                }
+              ]
+            },
+            "description": "Lista todas las rutas de entrega con filtros opcionales. Retorna información resumida de cada ruta. Requiere rol admin o gerente_cuenta."
+          }
+        },
+        {
           "name": "Health Check - Rutas",
           "request": {
             "method": "GET",
@@ -552,6 +611,183 @@
         }
       ],
       "description": "Endpoints de gestión de rutas de entrega y vehículos (Supervisor de Logística)"
+    },
+    {
+      "name": "Reportes",
+      "item": [
+        {
+          "name": "Obtener KPI de Vendedor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/reportes/vendedores/kpi?vendedor_id=1&desde=2026-01-01&hasta=2026-03-31&territorio_id=TER-001&producto_id=550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "vendedores",
+                "kpi"
+              ],
+              "query": [
+                {
+                  "key": "vendedor_id",
+                  "value": "1",
+                  "description": "ID del vendedor (requerido, > 0)"
+                },
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha de inicio del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-03-31",
+                  "description": "Fecha de fin del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "territorio_id",
+                  "value": "TER-001",
+                  "description": "Filtrar por territorio específico (opcional)"
+                },
+                {
+                  "key": "producto_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000",
+                  "description": "Filtrar por producto específico (opcional)"
+                }
+              ]
+            },
+            "description": "Retorna los KPIs de un vendedor específico en un periodo. Incluye ventas totales, número de pedidos, metas y cumplimiento vs objetivos, y tendencia temporal. SLA: ≤2 segundos p95. RBAC: Supervisor de Ventas, Gerente de Cuenta."
+          }
+        },
+        {
+          "name": "Obtener Reporte por Región",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/reportes/vendedores/region?territorio_id=TER-001&desde=2026-01-01&hasta=2026-03-31&producto_id=550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "vendedores",
+                "region"
+              ],
+              "query": [
+                {
+                  "key": "territorio_id",
+                  "value": "TER-001",
+                  "description": "ID del territorio/región (requerido)"
+                },
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha de inicio del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-03-31",
+                  "description": "Fecha de fin del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "producto_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000",
+                  "description": "Filtrar por producto específico (opcional)"
+                }
+              ]
+            },
+            "description": "Retorna el reporte consolidado de una región con ranking de vendedores. Incluye resumen agregado de la región, ranking de vendedores por ventas, cumplimiento vs metas por vendedor y tendencia temporal. SLA: ≤2 segundos p95. RBAC: Supervisor de Ventas, Gerente de Cuenta."
+          }
+        },
+        {
+          "name": "Obtener Dashboard Consolidado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/reportes/vendedores/dashboard?desde=2026-01-01&hasta=2026-03-31",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "vendedores",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha de inicio del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-03-31",
+                  "description": "Fecha de fin del periodo (YYYY-MM-DD, requerido)"
+                }
+              ]
+            },
+            "description": "Retorna el dashboard ejecutivo con KPIs principales y gráficos. Incluye KPIs principales (ventas, pedidos, cumplimiento), gráfico de tendencia temporal (Chart.js LineChart), gráfico de ranking de vendedores (Chart.js BarChart), gráfico de distribución de cumplimiento (Chart.js DoughnutChart), top vendedores del periodo, y alertas y recomendaciones. Todos los gráficos incluyen datos formateados para Chart.js. SLA: ≤2 segundos p95. RBAC: Supervisor de Ventas, Gerente de Cuenta."
+          }
+        },
+        {
+          "name": "Resumen Rápido de KPIs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/reportes/vendedores/kpi/resumen?vendedor_id=1&desde=2026-01-01&hasta=2026-03-31",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "vendedores",
+                "kpi",
+                "resumen"
+              ],
+              "query": [
+                {
+                  "key": "vendedor_id",
+                  "value": "1",
+                  "description": "ID del vendedor (requerido, > 0)"
+                },
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha de inicio del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-03-31",
+                  "description": "Fecha de fin del periodo (YYYY-MM-DD, requerido)"
+                }
+              ]
+            },
+            "description": "Endpoint ligero para obtener solo las métricas principales de un vendedor sin tendencia. Útil para vistas rápidas o widgets. Retorna ventas valor, ventas unidades, número de pedidos y cumplimiento porcentaje."
+          }
+        }
+      ],
+      "description": "Endpoints de reportes de vendedores (HU-WEB-010) - KPIs, rankings y dashboard"
     },
     {
       "name": "Health & Status",
