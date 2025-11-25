@@ -291,6 +291,16 @@ jobs:
         elif [ "$SERVICE_NAME" = "visit-service" ]; then
           EXTRA_ENV_VARS=",{\"name\": \"FILES_BACKEND\", \"value\": \"${{ secrets.VISIT_FILES_BACKEND }}\"},{\"name\": \"FILES_DIR\", \"value\": \"/data/visits\"},{\"name\": \"S3_BUCKET\", \"value\": \"${{ secrets.S3_BUCKET }}\"},{\"name\": \"S3_PREFIX\", \"value\": \"visits-prod\"},{\"name\": \"FILES_BASE_URL\", \"value\": \"${{ secrets.FILES_BASE_URL }}\"},{\"name\": \"AWS_REGION\", \"value\": \"us-east-1\"},{\"name\": \"AWS_ACCESS_KEY_ID\", \"value\": \"${{ secrets.AWS_ACCESS_KEY_ID }}\"},{\"name\": \"AWS_SECRET_ACCESS_KEY\", \"value\": \"${{ secrets.AWS_SECRET_ACCESS_KEY }}\"},{\"name\": \"REQUIRED_ROLE\", \"value\": \"gerente_cuenta\"},{\"name\": \"MAX_UPLOAD_MB\", \"value\": \"15\"}"
         fi
+        
+        # Configure internal service URLs for inter-service traffic
+        # Default to API Gateway (ALB) for public exposure
+        CLIENTE_URL="${{ secrets.API_URL }}"
+        PRODUCT_URL="${{ secrets.API_URL }}"
+        # pedidos-service should call internal services directly to avoid ALB path/routing issues
+        if [ "$SERVICE_NAME" = "pedidos-service" ]; then
+          CLIENTE_URL="http://cliente-service:8013"
+          PRODUCT_URL="http://product-service:8005"
+        fi
 
         # Create task definition with proper variable substitution
         cat > task-definition.json <<EOFTASK
@@ -322,8 +332,8 @@ jobs:
                 {"name": "JWT_SECRET_KEY", "value": "${{ secrets.JWT_SECRET_KEY }}"},
                 {"name": "JWT_EXPIRE_MINUTES", "value": "60"},
                 {"name": "API_URL", "value": "${{ secrets.API_URL }}"},
-                {"name": "CLIENTE_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
-                {"name": "PRODUCT_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
+                {"name": "CLIENTE_SERVICE_URL", "value": "$CLIENTE_URL"},
+                {"name": "PRODUCT_SERVICE_URL", "value": "$PRODUCT_URL"},
                 {"name": "USER_SERVICE_URL", "value": "${{ secrets.API_URL }}"},
                 {"name": "VENDEDOR_SERVICE_URL", "value": "${{ secrets.API_URL }}"}$EXTRA_ENV_VARS
               ],
