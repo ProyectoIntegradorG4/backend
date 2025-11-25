@@ -2,295 +2,854 @@
   "info": {
     "_postman_id": "pedidos-service-collection",
     "name": "Pedidos Service",
-    "description": "Colección de pruebas para el Pedidos Service",
+    "description": "Colección completa de pruebas para el Pedidos Service - Incluye Pedidos, Entregas, Rutas de Logística y Reportes",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Crear Pedido - Gerente (Admin)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "usuario-id",
-            "value": "2"
-          },
-          {
-            "key": "rol-usuario",
-            "value": "admin"
+      "name": "Pedidos",
+      "item": [
+        {
+          "name": "Crear Pedido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}",
+                "description": "ID del usuario desde el token JWT"
+              },
+              {
+                "key": "rol-usuario",
+                "value": "usuario_institucional",
+                "description": "Rol: usuario_institucional, gerente_cuenta o admin"
+              },
+              {
+                "key": "nit-usuario",
+                "value": "{{nit_usuario}}",
+                "description": "NIT del usuario (requerido para usuario_institucional)"
+              },
+              {
+                "key": "cliente-id",
+                "value": "{{cliente_id}}",
+                "description": "ID del cliente (prioritario para usuario_institucional)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nit\": \"900123456\",\n  \"cliente_id\": 101,\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 5\n    },\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n      \"cantidad_solicitada\": 10\n    }\n  ],\n  \"observaciones\": \"Pedido urgente para entrega inmediata\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8007/api/v1/pedidos/",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "pedidos",
+                ""
+              ]
+            },
+            "description": "Crea un nuevo pedido con validación en tiempo real del inventario. Requiere headers de autenticación y rol válido."
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nit\": \"800654321\",\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 5\n    }\n  ],\n  \"observaciones\": \"Pedido de prueba por gerente\"\n}"
         },
-        "url": {
-          "raw": "http://localhost:8007/api/v1/pedidos/",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["api", "v1", "pedidos", ""]
-        }
-      }
-    },
-    {
-      "name": "Historial de Pedido",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8007/api/v1/pedidos/550e8400-e29b-41d4-a716-446655440000/historial",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["api", "v1", "pedidos", "550e8400-e29b-41d4-a716-446655440000", "historial"]
-        }
-      }
-    },
-    {
-      "name": "Listar Entregas por NIT",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8007/api/v1/entregas/900123456?estado=programada&pagina=1&por_pagina=25",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8007",
-          "path": [
-            "api",
-            "v1",
-            "entregas",
-            "900123456"
-          ],
-          "query": [
-            {
-              "key": "estado",
-              "value": "programada"
+        {
+          "name": "Crear Pedido - Gerente (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}"
+              },
+              {
+                "key": "rol-usuario",
+                "value": "admin",
+                "description": "Rol admin o gerente_cuenta"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nit\": \"800654321\",\n  \"cliente_id\": 102,\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 5\n    }\n  ],\n  \"observaciones\": \"Pedido de prueba por gerente\"\n}"
             },
-            {
-              "key": "pagina",
-              "value": "1"
+            "url": {
+              "raw": "http://localhost:8007/api/v1/pedidos/",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "pedidos",
+                ""
+              ]
             },
-            {
-              "key": "por_pagina",
-              "value": "25"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Tracking de Entrega",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8007/api/v1/entregas/550e8400-e29b-41d4-a716-446655440999/tracking",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8007",
-          "path": [
-            "api",
-            "v1",
-            "entregas",
-            "550e8400-e29b-41d4-a716-446655440999",
-            "tracking"
-          ]
-        }
-      }
-    },
-    {
-      "name": "Crear Pedido - Cliente Institucional",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "usuario-id",
-            "value": "1"
-          },
-          {
-            "key": "rol-usuario",
-            "value": "usuario_institucional"
+            "description": "Crea un pedido como gerente o admin. El NIT puede ser de cualquier cliente asignado."
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nit\": \"900123456\",\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 3\n    },\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440001\",\n      \"cantidad_solicitada\": 2\n    }\n  ]\n}"
         },
-        "url": {
-          "raw": "http://localhost:8007/api/v1/pedidos/",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["api", "v1", "pedidos", ""]
-        }
-      }
-    },
-    {
-      "name": "Obtener Pedido",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8007/api/v1/pedidos/550e8400-e29b-41d4-a716-446655440000",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["api", "v1", "pedidos", "550e8400-e29b-41d4-a716-446655440000"]
-        }
-      }
-    },
-    {
-      "name": "Listar Pedidos",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8007/api/v1/pedidos/?pagina=1&por_pagina=10",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["api", "v1", "pedidos", ""],
-          "query": [
-            {
-              "key": "pagina",
-              "value": "1"
+        {
+          "name": "Listar Pedidos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}",
+                "description": "ID del usuario desde el token JWT"
+              },
+              {
+                "key": "rol-usuario",
+                "value": "usuario_institucional",
+                "description": "Rol del usuario"
+              },
+              {
+                "key": "nit-usuario",
+                "value": "{{nit_usuario}}",
+                "description": "NIT del usuario (para filtrado automático)"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/pedidos/?pagina=1&por_pagina=10&nit=900123456&estado=pendiente&cliente_id=101",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "pedidos",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "pagina",
+                  "value": "1",
+                  "description": "Número de página"
+                },
+                {
+                  "key": "por_pagina",
+                  "value": "10",
+                  "description": "Registros por página (máx 100)"
+                },
+                {
+                  "key": "nit",
+                  "value": "900123456",
+                  "description": "Filtrar por NIT específico"
+                },
+                {
+                  "key": "estado",
+                  "value": "pendiente",
+                  "description": "Filtrar por estado: pendiente, enviado, entregado, cancelado"
+                },
+                {
+                  "key": "cliente_id",
+                  "value": "101",
+                  "description": "Filtrar por cliente_id"
+                },
+                {
+                  "key": "usuario_id",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filtrar por usuario_id (opcional)"
+                }
+              ]
             },
-            {
-              "key": "por_pagina",
-              "value": "10"
-            },
-            {
-              "key": "nit",
-              "value": "900123456",
-              "disabled": true
-            },
-            {
-              "key": "usuario_id",
-              "value": "1",
-              "disabled": true
-            },
-            {
-              "key": "estado",
-              "value": "pendiente",
-              "disabled": true
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Listar Pedidos por NIT",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8007/api/v1/pedidos/?nit=900123456&pagina=1&por_pagina=10",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["api", "v1", "pedidos", ""],
-          "query": [
-            {
-              "key": "nit",
-              "value": "900123456"
-            },
-            {
-              "key": "pagina",
-              "value": "1"
-            },
-            {
-              "key": "por_pagina",
-              "value": "10"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Validar Inventario",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "usuario-id",
-            "value": "1"
-          },
-          {
-            "key": "rol-usuario",
-            "value": "usuario_institucional"
+            "description": "Lista todos los pedidos con opciones de filtrado y paginación. El filtrado automático depende del rol del usuario."
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nit\": \"900123456\",\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 5\n    }\n  ]\n}"
         },
-        "url": {
-          "raw": "http://localhost:8007/api/v1/pedidos/validar-inventario",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["api", "v1", "pedidos", "validar-inventario"]
-        }
-      }
-    },
-    {
-      "name": "Actualizar Estado Pedido",
-      "request": {
-        "method": "PUT",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "rol-usuario",
-            "value": "admin"
+        {
+          "name": "Obtener Pedido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/pedidos/{{pedido_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "pedidos",
+                "{{pedido_id}}"
+              ]
+            },
+            "description": "Obtiene los detalles de un pedido específico. Endpoint público."
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"nuevo_estado\": \"enviado\",\n  \"observaciones\": \"Pedido enviado por logística\"\n}"
         },
-        "url": {
-          "raw": "http://localhost:8007/api/v1/pedidos/550e8400-e29b-41d4-a716-446655440000/estado",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["api", "v1", "pedidos", "550e8400-e29b-41d4-a716-446655440000", "estado"]
+        {
+          "name": "Historial de Pedido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/pedidos/{{pedido_id}}/historial",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "pedidos",
+                "{{pedido_id}}",
+                "historial"
+              ]
+            },
+            "description": "Obtiene el historial de cambios de estado de un pedido. Endpoint público."
+          }
+        },
+        {
+          "name": "Actualizar Estado Pedido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "rol-usuario",
+                "value": "admin",
+                "description": "Solo usuarios con rol 'admin' pueden actualizar estado"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nuevo_estado\": \"enviado\",\n  \"observaciones\": \"Pedido enviado por logística\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8007/api/v1/pedidos/{{pedido_id}}/estado",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "pedidos",
+                "{{pedido_id}}",
+                "estado"
+              ]
+            },
+            "description": "Actualiza el estado de un pedido. Solo usuarios con rol 'admin' pueden actualizar el estado. Estados válidos: pendiente, enviado, entregado, cancelado."
+          }
+        },
+        {
+          "name": "Validar Inventario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}"
+              },
+              {
+                "key": "rol-usuario",
+                "value": "usuario_institucional",
+                "description": "Rol: usuario_institucional, gerente_cuenta o admin"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nit\": \"900123456\",\n  \"cliente_id\": 101,\n  \"productos\": [\n    {\n      \"producto_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"cantidad_solicitada\": 5\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8007/api/v1/pedidos/validar-inventario",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "pedidos",
+                "validar-inventario"
+              ]
+            },
+            "description": "Valida el inventario de los productos sin crear el pedido. Útil para validación previa en el frontend."
+          }
         }
-      }
+      ],
+      "description": "Endpoints de gestión de pedidos"
     },
     {
-      "name": "Health Check",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8007/health",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "8007",
-          "path": ["health"]
+      "name": "Entregas",
+      "item": [
+        {
+          "name": "Listar Entregas por NIT",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/entregas/{{nit}}?estado=programada&pagina=1&por_pagina=25",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "entregas",
+                "{{nit}}"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "programada",
+                  "description": "Estado de la entrega (opcional)"
+                },
+                {
+                  "key": "pagina",
+                  "value": "1",
+                  "description": "Número de página"
+                },
+                {
+                  "key": "por_pagina",
+                  "value": "25",
+                  "description": "Registros por página (máx 100)"
+                }
+              ]
+            },
+            "description": "Lista entregas asociadas a un NIT, con filtro opcional por estado. Endpoint público."
+          }
+        },
+        {
+          "name": "Tracking de Entrega",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/entregas/{{entrega_id}}/tracking",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "entregas",
+                "{{entrega_id}}",
+                "tracking"
+              ]
+            },
+            "description": "Retorna tracking de una entrega: última posición, ETA y últimos eventos. Endpoint público."
+          }
         }
-      }
+      ],
+      "description": "Endpoints de gestión de entregas"
+    },
+    {
+      "name": "Rutas de Logística",
+      "item": [
+        {
+          "name": "Generar Rutas Optimizadas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "rol-usuario",
+                "value": "admin",
+                "description": "Requiere rol 'admin' o 'gerente_cuenta'"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objetivo\": \"min_distancia\",\n  \"vehiculos\": [\n    {\n      \"id\": \"VEH-001\",\n      \"capacidad_volumen\": 50.0,\n      \"capacidad_peso\": 2000.0,\n      \"cadena_frio\": true,\n      \"depot\": {\n        \"lat\": 4.6097,\n        \"lon\": -74.0817\n      },\n      \"duracion_maxima_minutos\": 480\n    },\n    {\n      \"id\": \"VEH-002\",\n      \"capacidad_volumen\": 30.0,\n      \"capacidad_peso\": 1500.0,\n      \"cadena_frio\": false,\n      \"depot\": {\n        \"lat\": 4.6097,\n        \"lon\": -74.0817\n      }\n    }\n  ],\n  \"pedidos\": [\n    {\n      \"id\": \"PED-001\",\n      \"lat\": 4.6533,\n      \"lon\": -74.0836,\n      \"ventana_inicio\": \"08:00\",\n      \"ventana_fin\": \"12:00\",\n      \"tiempo_servicio_minutos\": 15,\n      \"requiere_frio\": true,\n      \"volumen\": 5.0,\n      \"peso\": 200.0\n    },\n    {\n      \"id\": \"PED-002\",\n      \"lat\": 4.7110,\n      \"lon\": -74.0721,\n      \"ventana_inicio\": \"09:00\",\n      \"ventana_fin\": \"13:00\",\n      \"tiempo_servicio_minutos\": 10,\n      \"requiere_frio\": false,\n      \"volumen\": 3.0,\n      \"peso\": 150.0\n    }\n  ],\n  \"limites\": {\n    \"duracion_maxima_minutos\": 480,\n    \"considerar_trafico\": false\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8007/api/v1/logistica/rutas/generar",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "logistica",
+                "rutas",
+                "generar"
+              ]
+            },
+            "description": "Genera rutas optimizadas para los pedidos y vehículos especificados. Restricciones MVP: máximo 10 vehículos, máximo 100 pedidos. SLA: ≤ 3 segundos. Requiere rol admin o gerente_cuenta."
+          }
+        },
+        {
+          "name": "Recalcular Ruta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "rol-usuario",
+                "value": "admin",
+                "description": "Requiere rol 'admin' o 'gerente_cuenta'"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ruta_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"nueva_secuencia\": [\n    \"PED-002\",\n    \"PED-001\",\n    \"PED-003\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8007/api/v1/logistica/rutas/recalcular",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "logistica",
+                "rutas",
+                "recalcular"
+              ]
+            },
+            "description": "Recalcula una ruta existente tras ajuste manual de la secuencia de pedidos. La nueva secuencia debe contener exactamente los mismos pedidos. SLA: ≤ 1 segundo. Requiere rol admin o gerente_cuenta."
+          }
+        },
+        {
+          "name": "Crear Vehículo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "rol-usuario",
+                "value": "admin",
+                "description": "Requiere rol 'admin' o 'gerente_cuenta'"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehiculo_id\": \"VEH-001\",\n  \"nombre\": \"Camión Refrigerado 1\",\n  \"capacidad_volumen\": 50.0,\n  \"capacidad_peso\": 2000.0,\n  \"cadena_frio\": true,\n  \"depot_latitud\": 4.6097,\n  \"depot_longitud\": -74.0817,\n  \"depot_direccion\": \"Calle 123 #45-67, Bogotá\",\n  \"duracion_maxima_minutos\": 480\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8007/api/v1/logistica/vehiculos",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "logistica",
+                "vehiculos"
+              ]
+            },
+            "description": "Registra un nuevo vehículo en el sistema para planificación de rutas. Requiere rol admin o gerente_cuenta."
+          }
+        },
+        {
+          "name": "Listar Vehículos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "rol-usuario",
+                "value": "admin",
+                "description": "Requiere rol 'admin' o 'gerente_cuenta'"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/logistica/vehiculos?solo_activos=true",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "logistica",
+                "vehiculos"
+              ],
+              "query": [
+                {
+                  "key": "solo_activos",
+                  "value": "true",
+                  "description": "Filtrar solo vehículos activos"
+                }
+              ]
+            },
+            "description": "Lista todos los vehículos disponibles. Requiere rol admin o gerente_cuenta."
+          }
+        },
+        {
+          "name": "Listar Rutas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "rol-usuario",
+                "value": "admin",
+                "description": "Requiere rol 'admin' o 'gerente_cuenta'"
+              },
+              {
+                "key": "usuario-id",
+                "value": "{{usuario_id}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/logistica/rutas?estado=confirmada&vehiculo_id=VEH-001&fecha_desde=2026-01-01&fecha_hasta=2026-12-31&limit=100",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "logistica",
+                "rutas"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "confirmada",
+                  "description": "Filtrar por estado: borrador, confirmada, en_proceso, completada, cancelada"
+                },
+                {
+                  "key": "vehiculo_id",
+                  "value": "VEH-001",
+                  "description": "Filtrar por ID de vehículo específico"
+                },
+                {
+                  "key": "fecha_desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha desde (YYYY-MM-DD)"
+                },
+                {
+                  "key": "fecha_hasta",
+                  "value": "2026-12-31",
+                  "description": "Fecha hasta (YYYY-MM-DD)"
+                },
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "description": "Número máximo de resultados (default 100, max 500)"
+                }
+              ]
+            },
+            "description": "Lista todas las rutas de entrega con filtros opcionales. Retorna información resumida de cada ruta. Requiere rol admin o gerente_cuenta."
+          }
+        },
+        {
+          "name": "Health Check - Rutas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/logistica/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "logistica",
+                "health"
+              ]
+            },
+            "description": "Verifica que el módulo de rutas está operativo. Endpoint público."
+          }
+        }
+      ],
+      "description": "Endpoints de gestión de rutas de entrega y vehículos (Supervisor de Logística)"
+    },
+    {
+      "name": "Reportes",
+      "item": [
+        {
+          "name": "Obtener KPI de Vendedor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/reportes/vendedores/kpi?vendedor_id=1&desde=2026-01-01&hasta=2026-03-31&territorio_id=TER-001&producto_id=550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "vendedores",
+                "kpi"
+              ],
+              "query": [
+                {
+                  "key": "vendedor_id",
+                  "value": "1",
+                  "description": "ID del vendedor (requerido, > 0)"
+                },
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha de inicio del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-03-31",
+                  "description": "Fecha de fin del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "territorio_id",
+                  "value": "TER-001",
+                  "description": "Filtrar por territorio específico (opcional)"
+                },
+                {
+                  "key": "producto_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000",
+                  "description": "Filtrar por producto específico (opcional)"
+                }
+              ]
+            },
+            "description": "Retorna los KPIs de un vendedor específico en un periodo. Incluye ventas totales, número de pedidos, metas y cumplimiento vs objetivos, y tendencia temporal. SLA: ≤2 segundos p95. RBAC: Supervisor de Ventas, Gerente de Cuenta."
+          }
+        },
+        {
+          "name": "Obtener Reporte por Región",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/reportes/vendedores/region?territorio_id=TER-001&desde=2026-01-01&hasta=2026-03-31&producto_id=550e8400-e29b-41d4-a716-446655440000",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "vendedores",
+                "region"
+              ],
+              "query": [
+                {
+                  "key": "territorio_id",
+                  "value": "TER-001",
+                  "description": "ID del territorio/región (requerido)"
+                },
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha de inicio del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-03-31",
+                  "description": "Fecha de fin del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "producto_id",
+                  "value": "550e8400-e29b-41d4-a716-446655440000",
+                  "description": "Filtrar por producto específico (opcional)"
+                }
+              ]
+            },
+            "description": "Retorna el reporte consolidado de una región con ranking de vendedores. Incluye resumen agregado de la región, ranking de vendedores por ventas, cumplimiento vs metas por vendedor y tendencia temporal. SLA: ≤2 segundos p95. RBAC: Supervisor de Ventas, Gerente de Cuenta."
+          }
+        },
+        {
+          "name": "Obtener Dashboard Consolidado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/reportes/vendedores/dashboard?desde=2026-01-01&hasta=2026-03-31",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "vendedores",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha de inicio del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-03-31",
+                  "description": "Fecha de fin del periodo (YYYY-MM-DD, requerido)"
+                }
+              ]
+            },
+            "description": "Retorna el dashboard ejecutivo con KPIs principales y gráficos. Incluye KPIs principales (ventas, pedidos, cumplimiento), gráfico de tendencia temporal (Chart.js LineChart), gráfico de ranking de vendedores (Chart.js BarChart), gráfico de distribución de cumplimiento (Chart.js DoughnutChart), top vendedores del periodo, y alertas y recomendaciones. Todos los gráficos incluyen datos formateados para Chart.js. SLA: ≤2 segundos p95. RBAC: Supervisor de Ventas, Gerente de Cuenta."
+          }
+        },
+        {
+          "name": "Resumen Rápido de KPIs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/api/v1/reportes/vendedores/kpi/resumen?vendedor_id=1&desde=2026-01-01&hasta=2026-03-31",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "vendedores",
+                "kpi",
+                "resumen"
+              ],
+              "query": [
+                {
+                  "key": "vendedor_id",
+                  "value": "1",
+                  "description": "ID del vendedor (requerido, > 0)"
+                },
+                {
+                  "key": "desde",
+                  "value": "2026-01-01",
+                  "description": "Fecha de inicio del periodo (YYYY-MM-DD, requerido)"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-03-31",
+                  "description": "Fecha de fin del periodo (YYYY-MM-DD, requerido)"
+                }
+              ]
+            },
+            "description": "Endpoint ligero para obtener solo las métricas principales de un vendedor sin tendencia. Útil para vistas rápidas o widgets. Retorna ventas valor, ventas unidades, número de pedidos y cumplimiento porcentaje."
+          }
+        }
+      ],
+      "description": "Endpoints de reportes de vendedores (HU-WEB-010) - KPIs, rankings y dashboard"
+    },
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8007/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8007",
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Verifica el estado del servicio. Endpoint público."
+          }
+        }
+      ],
+      "description": "Endpoints de estado y salud del servicio"
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8007",
+      "type": "string"
+    },
+    {
+      "key": "usuario_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "nit_usuario",
+      "value": "900123456",
+      "type": "string"
+    },
+    {
+      "key": "cliente_id",
+      "value": "101",
+      "type": "string"
+    },
+    {
+      "key": "pedido_id",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string"
+    },
+    {
+      "key": "entrega_id",
+      "value": "550e8400-e29b-41d4-a716-446655440999",
+      "type": "string"
+    },
+    {
+      "key": "nit",
+      "value": "900123456",
+      "type": "string"
     }
   ]
 }

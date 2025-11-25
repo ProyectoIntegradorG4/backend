@@ -12,6 +12,7 @@ El servicio `pedidos-service` (puerto **8007**) gestiona la creación, consulta 
 - ✅ **Generación de números únicos**: PED-000001, PED-000002, etc.
 - ✅ **Seguimiento de estado**: 4 estados posibles (pendiente, enviado, entregado, cancelado)
 - ✅ **Snapshots de datos**: precios y disponibilidad se capturan al momento del pedido
+- ✅ **Gestión de stock con compensación**: validación y actualización de stock con patrón de compensación entre microservicios
 
 ---
 
@@ -290,6 +291,120 @@ Verifica que el servicio esté saludable.
   "service": "pedidos-service"
 }
 ```
+
+---
+
+## 🔒 Gestión de Stock con Patrón de Compensación
+
+### Arquitectura de Microservicios
+
+**IMPORTANTE**: `pedidos-service` y `product-service` son microservicios independientes con bases de datos separadas. No podemos hacer transacciones distribuidas reales. El servicio implementa un **patrón de compensación (Saga simplificado)** para minimizar inconsistencias.
+
+### Flujo de Creación de Pedido
+
+#### 1. Validación de Stock (Vía HTTP a product-service)
+
+```python
+# Se valida el stock de TODOS los productos ANTES de crear el pedido
+# Llamada HTTP: GET /api/productos/{producto_id}/inventario
+productos_validados, validaciones = await _validar_stock_antes_de_pedido(
+    productos, db
+)
+```
+
+**Características:**
+- Valida stock vía HTTP al `product-service` (puerto 8005)
+- Si algún producto no tiene stock suficiente, se rechaza el pedido completo
+- Retorna información detallada de cada producto (precio, nombre, stock disponible)
+
+#### 2. Creación del Pedido (En Transacción Local)
+
+```python
+# Se crea el pedido en la BD local de pedidos-service (pero NO se hace commit aún)
+pedido = Pedido(...)
+db.add(pedido)
+db.flush()  # Asigna IDs pero no confirma
+```
+
+#### 3. Actualización de Stock (Vía HTTP a product-service)
+
+```python
+# Se actualiza el stock en product-service ANTES de confirmar el pedido
+# Llamada HTTP: PATCH /api/v1/productos/{producto_id}/stock?cantidad_a_restar=X
+await _actualizar_stock_con_compensacion(productos_validados, db)
+```
+
+**Características:**
+- Actualiza stock vía HTTP al `product-service`
+- El `product-service` usa `SELECT FOR UPDATE` para bloquear filas durante la actualización
+- Si alguna actualización falla, se hace rollback completo del pedido en `pedidos-service`
+- **Patrón de compensación**: Si falla, se revierte el pedido
+
+#### 4. Commit de la Transacción Local
+
+```python
+# Solo si todo está bien, se confirma la transacción en pedidos-service
+db.commit()
+```
+
+### Limitaciones y Consideraciones
+
+**No es una transacción distribuida real:**
+- Entre la validación (paso 1) y la actualización (paso 3) puede haber una pequeña ventana donde otro pedido consume stock
+- El `product-service` usa `SELECT FOR UPDATE` para minimizar esta ventana dentro de su propio servicio
+- Si falla la actualización de stock después de crear el pedido, se hace rollback del pedido
+
+**Ventajas del enfoque:**
+1. **Minimiza condiciones de carrera**: Validación y actualización ocurren en secuencia rápida
+2. **Consistencia eventual**: Si falla actualización, se revierte el pedido
+3. **Mensajes de error específicos**: Retorna información detallada por producto
+4. **Escalable**: Cada microservicio maneja su propia BD independientemente
+
+### Manejo de Errores
+
+#### Error: Stock Insuficiente
+
+```json
+{
+  "error": "INVENTARIO_INSUFICIENTE",
+  "mensaje": "Inventario insuficiente para uno o más productos",
+  "validaciones": [
+    {
+      "producto_id": "PROD-001",
+      "disponible": false,
+      "cantidad_disponible": 5,
+      "cantidad_solicitada": 10,
+      "mensaje": "Inventario insuficiente. Disponible: 5"
+    }
+  ]
+}
+```
+
+#### Códigos de Error de Product-Service
+
+- `OUT_OF_STOCK`: Producto sin stock disponible (stock = 0)
+- `STOCK_INSUFICIENT`: Producto tiene stock pero no suficiente para la cantidad solicitada
+- `PRODUCT_NOT_FOUND`: El producto no existe
+- `INVALID_QUANTITY`: La cantidad a restar es inválida (<= 0)
+
+### Bloqueo de Filas en Product-Service
+
+El `product-service` utiliza `SELECT FOR UPDATE` para bloquear filas durante la actualización de stock:
+
+```python
+# En product-service/app/service/product_service.py
+stmt = select(Producto).where(Producto.productoId == producto_id).with_for_update()
+producto = db.execute(stmt).scalar_one_or_none()
+```
+
+**Esto garantiza:**
+- Atomicidad dentro del `product-service` (su propia BD)
+- Previene que múltiples pedidos actualicen el mismo producto simultáneamente en ese servicio
+- **NO garantiza** atomicidad entre `pedidos-service` y `product-service` (son servicios diferentes)
+
+### Tests de Concurrencia
+
+El servicio incluye tests que simulan dos pedidos simultáneos del mismo producto para verificar que solo uno se crea cuando el stock es limitado. Ver `tests/test_services_pedidos_atomic_stock.py`.
 
 ---
 

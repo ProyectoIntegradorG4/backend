@@ -172,9 +172,10 @@ class TestPedidosServiceActualizarStockProducto:
         mock_response.status_code = 200
         
         with patch("httpx.AsyncClient.patch", return_value=mock_response):
-            resultado = await PedidosService.actualizar_stock_producto("PROD-001", 10)
+            exito, mensaje = await PedidosService.actualizar_stock_producto("PROD-001", 10)
         
-        assert resultado is True
+        assert exito is True
+        assert mensaje is None
     
     @pytest.mark.asyncio
     async def test_actualizar_stock_error(self):
@@ -184,9 +185,10 @@ class TestPedidosServiceActualizarStockProducto:
         mock_response.text = "Error"
         
         with patch("httpx.AsyncClient.patch", return_value=mock_response):
-            resultado = await PedidosService.actualizar_stock_producto("PROD-001", 10)
+            exito, mensaje = await PedidosService.actualizar_stock_producto("PROD-001", 10)
         
-        assert resultado is False
+        assert exito is False
+        assert mensaje is not None
 
 
 class TestPedidosServiceObtenerInfoProducto:

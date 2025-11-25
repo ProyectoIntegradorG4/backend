@@ -203,19 +203,39 @@ def actualizar_stock_producto(
 ):
     """
     Actualiza el stock de un producto restando la cantidad especificada.
+    Usa SELECT FOR UPDATE para bloquear la fila y evitar condiciones de carrera.
     Usado internamente por pedidos-service al confirmar pedidos.
     
     Nota: Este endpoint permite llamadas sin autenticación estricta para servicios internos.
+    
+    Códigos de error:
+    - OUT_OF_STOCK: El producto no tiene stock disponible (stock = 0)
+    - STOCK_INSUFFICIENT: El producto tiene stock pero no suficiente para la cantidad solicitada
+    - PRODUCT_NOT_FOUND: El producto no existe
+    - INVALID_QUANTITY: La cantidad a restar es inválida (<= 0)
+    - INTERNAL_ERROR: Error interno del servidor
     """
     try:
-        exito, stock_actualizado, mensaje = ProductoService.actualizar_stock_producto(
+        exito, stock_actualizado, mensaje, codigo_error = ProductoService.actualizar_stock_producto(
             db, producto_id, cantidad_a_restar
         )
         
         if not exito:
+            # Construir respuesta de error estructurada
+            error_detail = {
+                "error": codigo_error or "STOCK_UPDATE_FAILED",
+                "mensaje": mensaje,
+                "producto_id": producto_id,
+                "stock_disponible": stock_actualizado,
+                "cantidad_solicitada": cantidad_a_restar
+            }
+            
+            # Usar 400 para errores de validación, 404 para producto no encontrado
+            status_code = status.HTTP_404_NOT_FOUND if codigo_error == "PRODUCT_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
+            
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=mensaje
+                status_code=status_code,
+                detail=error_detail
             )
         
         return {
@@ -228,10 +248,13 @@ def actualizar_stock_producto(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error actualizando stock: {e}")
+        logger.error(f"Error actualizando stock: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al actualizar stock: {str(e)}"
+            detail={
+                "error": "INTERNAL_ERROR",
+                "mensaje": f"Error al actualizar stock: {str(e)}"
+            }
         )
 
 

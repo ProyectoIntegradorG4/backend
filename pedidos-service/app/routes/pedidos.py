@@ -80,32 +80,39 @@ async def crear_pedido(
                 pedido=pedido_response
             )
         else:
-            # Hay inventario insuficiente
+            # Error en la creación del pedido (validación de NIT, cliente, o inventario)
             # Convertir ValidacionInventarioResult a diccionarios para serialización JSON
-            validaciones_dict = [
-                {
-                    "producto_id": v.producto_id,
-                    "disponible": v.disponible,
-                    "cantidad_disponible": v.cantidad_disponible,
-                    "cantidad_solicitada": v.cantidad_solicitada,
-                    "mensaje": v.mensaje
-                }
-                for v in validaciones
-            ]
+            validaciones_dict = []
+            if validaciones:
+                validaciones_dict = [
+                    {
+                        "producto_id": v.producto_id,
+                        "disponible": v.disponible,
+                        "cantidad_disponible": v.cantidad_disponible,
+                        "cantidad_solicitada": v.cantidad_solicitada,
+                        "mensaje": v.mensaje
+                    }
+                    for v in validaciones
+                ]
             
-            sugerencias = [
-                {
-                    "producto_id": v.producto_id,
-                    "cantidad_maxima": v.cantidad_disponible,
-                    "cantidad_solicitada": v.cantidad_solicitada
-                }
-                for v in validaciones if not v.disponible
-            ]
+            sugerencias = []
+            if validaciones:
+                sugerencias = [
+                    {
+                        "producto_id": v.producto_id,
+                        "cantidad_maxima": v.cantidad_disponible,
+                        "cantidad_solicitada": v.cantidad_solicitada
+                    }
+                    for v in validaciones if not v.disponible
+                ]
+            
+            # Determinar el tipo de error
+            error_type = "INVENTARIO_INSUFICIENTE" if validaciones_dict else "VALIDACION_FALLIDA"
             
             raise HTTPException(
                 status_code=400,
                 detail={
-                    "error": "INVENTARIO_INSUFICIENTE",
+                    "error": error_type,
                     "mensaje": mensaje,
                     "validaciones": validaciones_dict,
                     "sugerencias": sugerencias

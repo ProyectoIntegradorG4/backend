@@ -18,6 +18,14 @@ from app.models.entrega import Entrega, EstadoEntrega
 
 logger = logging.getLogger(__name__)
 
+
+class StockInsufficientError(Exception):
+    """Excepción lanzada cuando no hay stock suficiente para crear el pedido"""
+    def __init__(self, mensaje: str, validaciones: List[ValidacionInventarioResult]):
+        self.mensaje = mensaje
+        self.validaciones = validaciones
+        super().__init__(self.mensaje)
+
 class PedidosService:
     """Servicio para gestionar pedidos y validar inventario"""
     
@@ -173,13 +181,41 @@ class PedidosService:
         try:
             async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
                 url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/productos/{producto_id}/inventario"
+                logger.info(f"Consultando inventario para producto {producto_id} en {url}")
                 response = await client.get(url)
                 
+                # Verificar el Content-Type antes de intentar parsear JSON
+                content_type = response.headers.get("content-type", "").lower()
+                logger.debug(f"Response status: {response.status_code}, Content-Type: {content_type}")
+                
                 if response.status_code == 200:
-                    data = response.json()
+                    # Verificar que la respuesta sea JSON válido
+                    if "application/json" not in content_type:
+                        response_text = response.text[:500]  # Limitar a 500 caracteres para logging
+                        logger.error(
+                            f"Respuesta no es JSON para producto {producto_id}. "
+                            f"Content-Type: {content_type}, Response: {response_text}"
+                        )
+                        return False, 0, 0.0, f"Error: El servicio retornó un formato no válido (Content-Type: {content_type})"
+                    
+                    try:
+                        data = response.json()
+                    except ValueError as json_error:
+                        response_text = response.text[:500]
+                        logger.error(
+                            f"Error parseando JSON para producto {producto_id}. "
+                            f"Response text: {response_text}, Error: {json_error}"
+                        )
+                        return False, 0, 0.0, f"Error: Respuesta del servicio no es JSON válido"
+                    
                     cantidad_disponible = data.get("cantidad_disponible", 0)
                     precio = data.get("precio", 0.0)
                     disponible = cantidad_disponible >= cantidad_solicitada
+                    
+                    logger.debug(
+                        f"Inventario para {producto_id}: disponible={cantidad_disponible}, "
+                        f"solicitado={cantidad_solicitada}, suficiente={disponible}"
+                    )
                     
                     if disponible:
                         return True, cantidad_disponible, precio, "Inventario disponible"
@@ -187,43 +223,242 @@ class PedidosService:
                         return False, cantidad_disponible, precio, f"Inventario insuficiente. Disponible: {cantidad_disponible}"
                 
                 elif response.status_code == 404:
+                    logger.warning(f"Producto {producto_id} no encontrado en product-service")
                     return False, 0, 0.0, "Producto no encontrado"
                 else:
-                    logger.warning(f"Error al validar producto {producto_id}: {response.status_code}")
-                    return False, 0, 0.0, "Error al consultar inventario"
+                    # Intentar obtener el mensaje de error si está en JSON
+                    error_msg = f"Error al consultar inventario (HTTP {response.status_code})"
+                    try:
+                        if "application/json" in content_type:
+                            error_data = response.json()
+                            if "detail" in error_data:
+                                error_msg = error_data["detail"]
+                            elif "mensaje" in error_data:
+                                error_msg = error_data["mensaje"]
+                    except:
+                        pass
+                    
+                    response_text = response.text[:500] if hasattr(response, 'text') else str(response.content[:500])
+                    logger.warning(
+                        f"Error al validar producto {producto_id}: {response.status_code}. "
+                        f"Response: {response_text}"
+                    )
+                    return False, 0, 0.0, error_msg
                     
         except httpx.TimeoutException:
-            logger.error(f"Timeout al consultar inventario para {producto_id}")
+            logger.error(f"Timeout al consultar inventario para {producto_id} en {PedidosService.PRODUCT_SERVICE_URL}")
             return False, 0, 0.0, "Timeout al consultar inventario"
+        except httpx.ConnectError as e:
+            logger.error(f"Error de conexión al consultar inventario para {producto_id}: {e}")
+            return False, 0, 0.0, f"Error de conexión con product-service: {str(e)}"
         except Exception as e:
-            logger.error(f"Error validando inventario: {e}")
+            logger.error(f"Error validando inventario para {producto_id}: {e}", exc_info=True)
             return False, 0, 0.0, f"Error: {str(e)}"
     
     @staticmethod
-    async def actualizar_stock_producto(producto_id: str, cantidad_a_restar: int) -> bool:
+    async def actualizar_stock_producto(producto_id: str, cantidad_a_restar: int) -> Tuple[bool, Optional[str]]:
         """
         Actualiza el stock de un producto en product-service restando la cantidad especificada.
         
-        Retorna: True si se actualizó correctamente, False en caso contrario
+        Retorna: (exito, mensaje_error)
+        - exito: True si se actualizó correctamente, False en caso contrario
+        - mensaje_error: Mensaje descriptivo del error (None si éxito)
         """
         try:
             async with httpx.AsyncClient(timeout=PedidosService.REQUEST_TIMEOUT) as client:
                 url = f"{PedidosService.PRODUCT_SERVICE_URL}/api/v1/productos/{producto_id}/stock"
-                response = await client.patch(url, params={"cantidad_a_restar": cantidad_a_restar})
+                logger.debug(f"Actualizando stock: {url} con cantidad_a_restar={cantidad_a_restar}")
+                
+                # Agregar header Authorization básico para llamadas internas entre servicios
+                # (JWT está deshabilitado en desarrollo, pero el endpoint requiere el header)
+                headers = {
+                    "Authorization": "Bearer internal-service-call",
+                    "Content-Type": "application/json"
+                }
+                
+                response = await client.patch(url, params={"cantidad_a_restar": cantidad_a_restar}, headers=headers)
                 
                 if response.status_code == 200:
-                    logger.info(f"Stock actualizado para producto {producto_id}: restado {cantidad_a_restar}")
-                    return True
+                    logger.info(f"✅ Stock actualizado para producto {producto_id}: restado {cantidad_a_restar}")
+                    return True, None
                 else:
-                    logger.error(f"Error actualizando stock para {producto_id}: {response.status_code} - {response.text}")
-                    return False
+                    # Parsear respuesta de error estructurada
+                    error_detail = {}
+                    try:
+                        response_json = response.json()
+                        if isinstance(response_json, dict):
+                            # FastAPI devuelve errores en "detail"
+                            error_detail = response_json.get("detail", {})
+                            if not error_detail or not isinstance(error_detail, dict):
+                                error_detail = response_json
+                        else:
+                            error_detail = {"mensaje": str(response_json)}
+                    except Exception as parse_error:
+                        logger.warning(f"Error parseando respuesta de error: {parse_error}, status={response.status_code}, text={response.text[:200]}")
+                        error_detail = {"mensaje": response.text or f"Error HTTP {response.status_code}"}
+                    
+                    codigo_error = error_detail.get("error_code") or error_detail.get("error", "UNKNOWN_ERROR")
+                    mensaje_error = error_detail.get("mensaje") or error_detail.get("message", f"Error HTTP {response.status_code}")
+                    
+                    # Log específico según el tipo de error
+                    if codigo_error in ["OUT_OF_STOCK", "STOCK_INSUFFICIENT"]:
+                        logger.warning(f"⚠️ Stock insuficiente para producto {producto_id}: {mensaje_error}")
+                    else:
+                        logger.error(f"❌ Error actualizando stock para {producto_id} (HTTP {response.status_code}): {codigo_error} - {mensaje_error}")
+                    
+                    return False, f"{codigo_error}: {mensaje_error}"
                     
         except httpx.TimeoutException:
-            logger.error(f"Timeout al actualizar stock para {producto_id}")
-            return False
+            mensaje = f"Timeout al actualizar stock para producto {producto_id}"
+            logger.error(mensaje)
+            return False, mensaje
+        except httpx.ConnectError as e:
+            mensaje = f"Error de conexión con product-service para producto {producto_id}: {str(e)}"
+            logger.error(mensaje)
+            return False, mensaje
         except Exception as e:
-            logger.error(f"Error actualizando stock para {producto_id}: {e}")
-            return False
+            mensaje = f"Error inesperado actualizando stock para producto {producto_id}: {str(e)}"
+            logger.error(mensaje, exc_info=True)
+            return False, mensaje
+    
+    @staticmethod
+    async def _validar_stock_antes_de_pedido(
+        productos: List[Dict],
+        db: Session
+    ) -> Tuple[List[Dict], List[ValidacionInventarioResult]]:
+        """
+        Valida stock de todos los productos ANTES de crear el pedido.
+        
+        IMPORTANTE: Como pedidos-service y product-service son microservicios independientes
+        con bases de datos separadas, NO podemos hacer transacciones distribuidas reales.
+        Este método valida stock vía HTTP al product-service antes de crear el pedido.
+        
+        El product-service usa SELECT FOR UPDATE para bloquear filas durante la actualización,
+        lo que minimiza condiciones de carrera dentro de ese servicio.
+        
+        Args:
+            productos: Lista de diccionarios con producto_id y cantidad_solicitada
+            db: Sesión de base de datos (no se usa directamente, solo para mantener contexto)
+        
+        Returns:
+            Tuple[List[Dict], List[ValidacionInventarioResult]]: 
+            - Lista de productos validados con información completa (precio, nombre, etc.)
+            - Lista de validaciones de inventario
+        
+        Raises:
+            StockInsufficientError: Si algún producto no tiene stock suficiente
+        """
+        productos_validados = []
+        validaciones = []
+        productos_con_error = []
+        
+        # Validar stock de todos los productos
+        for producto in productos:
+            producto_id = producto["producto_id"]
+            cantidad_solicitada = producto["cantidad_solicitada"]
+            
+            # Validar inventario
+            disponible, cantidad_disp, precio, mensaje = await PedidosService.validar_inventario_producto(
+                producto_id, cantidad_solicitada
+            )
+            
+            # Obtener información del producto
+            info_producto = await PedidosService.obtener_info_producto(producto_id)
+            nombre_producto = info_producto.get("nombre", "Producto desconocido") if info_producto else "Producto desconocido"
+            
+            validacion = ValidacionInventarioResult(
+                producto_id=producto_id,
+                disponible=disponible,
+                cantidad_disponible=cantidad_disp,
+                cantidad_solicitada=cantidad_solicitada,
+                mensaje=mensaje
+            )
+            validaciones.append(validacion)
+            
+            if not disponible:
+                productos_con_error.append({
+                    "producto_id": producto_id,
+                    "nombre": nombre_producto,
+                    "cantidad_solicitada": cantidad_solicitada,
+                    "cantidad_disponible": cantidad_disp
+                })
+            else:
+                # Producto válido, agregar información completa
+                productos_validados.append({
+                    "producto_id": producto_id,
+                    "cantidad_solicitada": cantidad_solicitada,
+                    "precio": precio,
+                    "nombre_producto": nombre_producto,
+                    "info_producto": info_producto or {},
+                    "cantidad_disponible": cantidad_disp
+                })
+        
+        # Si hay productos con stock insuficiente, lanzar excepción
+        if productos_con_error:
+            mensaje_error = "Inventario insuficiente para uno o más productos"
+            logger.warning(f"Validación de stock fallida: {len(productos_con_error)} productos sin stock suficiente")
+            raise StockInsufficientError(mensaje_error, validaciones)
+        
+        return productos_validados, validaciones
+    
+    @staticmethod
+    async def _actualizar_stock_con_compensacion(
+        productos_validados: List[Dict],
+        db: Session
+    ) -> Tuple[List[Dict], List[Dict]]:
+        """
+        Actualiza el stock de todos los productos en product-service ANTES del commit del pedido.
+        
+        IMPORTANTE: Patrón de compensación (Saga simplificado):
+        - Si la actualización de stock falla, se lanza excepción para hacer rollback del pedido
+        - El product-service usa SELECT FOR UPDATE para garantizar atomicidad en su propia BD
+        - No es una transacción distribuida real, pero minimiza inconsistencias
+        
+        Args:
+            productos_validados: Lista de productos validados con cantidad_solicitada
+            db: Sesión de base de datos (para mantener contexto y hacer rollback si falla)
+        
+        Returns:
+            Tuple[List[Dict], List[Dict]]: (productos_actualizados_exitosamente, productos_con_error)
+        
+        Raises:
+            Exception: Si alguna actualización de stock falla (para hacer rollback del pedido)
+        """
+        productos_actualizados = []
+        productos_con_error = []
+        
+        for producto in productos_validados:
+            producto_id = producto["producto_id"]
+            cantidad_a_restar = producto["cantidad_solicitada"]
+            nombre_producto = producto.get("nombre_producto", "Producto desconocido")
+            
+            exito, mensaje_error = await PedidosService.actualizar_stock_producto(
+                producto_id, cantidad_a_restar
+            )
+            
+            if not exito:
+                productos_con_error.append({
+                    "producto_id": producto_id,
+                    "nombre": nombre_producto,
+                    "cantidad_solicitada": cantidad_a_restar,
+                    "cantidad_disponible": producto.get("cantidad_disponible", 0),
+                    "mensaje_error": mensaje_error or "Error desconocido al actualizar stock"
+                })
+                logger.error(f"Error actualizando stock para producto {producto_id} ({nombre_producto}): {mensaje_error}")
+            else:
+                productos_actualizados.append(producto)
+        
+        # Si hay errores, lanzar excepción para hacer rollback
+        if productos_con_error:
+            nombres_productos = [p["nombre"] for p in productos_con_error]
+            mensaje = f"Error actualizando stock para productos: {', '.join(nombres_productos)}"
+            # Crear excepción con información detallada
+            error = Exception(mensaje)
+            error.productos_con_error = productos_con_error  # type: ignore
+            error.productos_actualizados = productos_actualizados  # type: ignore
+            raise error
+        
+        return productos_actualizados, productos_con_error
     
     @staticmethod
     async def obtener_info_producto(producto_id: str) -> Optional[Dict]:
@@ -430,29 +665,43 @@ class PedidosService:
         try:
             # Validar NIT según el rol del usuario
             if rol_usuario == 'usuario_institucional':
-                nit_valido, error_msg = await PedidosService.validar_nit_usuario_institucional(
-                    request.nit, nit_usuario
-                )
-                if not nit_valido:
-                    logger.warning(f"Validación NIT fallida para usuario_institucional {usuario_id}: {error_msg}")
-                    return False, None, error_msg, []
+                # IMPORTANTE: Normalizar solo para comparación, mantener formato original para búsquedas
+                # El backend normaliza internamente para comparar, pero mantiene el formato original en DB
+                if not nit_usuario:
+                    msg = f"NIT de usuario no proporcionado en los headers. Usuario: {usuario_id}"
+                    logger.warning(msg)
+                    return False, None, msg, []
+                
+                # Comparar NITs normalizados (para manejar diferencias de formato)
+                # pero mantener formato original en el request para búsquedas
+                if not PedidosService._nit_equals(request.nit, nit_usuario):
+                    msg = f"El NIT proporcionado ({request.nit}) no coincide con el NIT del usuario ({nit_usuario})"
+                    logger.warning(f"Validación NIT fallida para usuario_institucional {usuario_id}: {msg}")
+                    return False, None, msg, []
+                
                 # Para usuario_institucional, exigir cliente_id en header y priorizarlo
                 if cliente_id_header is None:
-                    msg = "cliente_id es requerido en el header para usuario_institucional"
+                    msg = f"cliente_id es requerido en el header 'cliente-id' para usuario_institucional. Usuario: {usuario_id}, NIT: {nit_usuario}"
                     logger.warning(msg)
                     return False, None, msg, []
+                
                 effective_cliente_id = cliente_id_header
+                
                 # Validar que el cliente_id corresponda con el NIT indicado verificando por ID
+                # El cliente viene con su NIT en formato original de la base de datos
                 cliente = await PedidosService.obtener_cliente_por_id(effective_cliente_id)
                 if not cliente:
-                    msg = f"Cliente {effective_cliente_id} no encontrado"
+                    msg = f"Cliente {effective_cliente_id} no encontrado en cliente-service. Verifique que el cliente existe y que cliente-service está disponible."
                     logger.warning(msg)
                     return False, None, msg, []
+                
+                # Comparar NITs normalizados (el cliente puede tener formato diferente pero ser el mismo)
                 cliente_nit = cliente.get("nit")
                 if not cliente_nit or not PedidosService._nit_equals(cliente_nit, request.nit):
-                    msg = f"El cliente_id {effective_cliente_id} no pertenece al NIT {request.nit}"
+                    msg = f"El cliente_id {effective_cliente_id} (NIT: {cliente_nit}) no pertenece al NIT {request.nit} del pedido"
                     logger.warning(msg)
                     return False, None, msg, []
+                
                 # Forzar el cliente_id efectivo en el request para persistir
                 request.cliente_id = effective_cliente_id
             
@@ -475,13 +724,18 @@ class PedidosService:
                     logger.warning(msg)
                     return False, None, msg, []
             
-            # Validar el pedido
-            valido, validaciones, error_msg = await PedidosService.validar_pedido(
-                request, usuario_id, rol_usuario
-            )
-            
-            if not valido:
-                return False, None, error_msg, validaciones
+            # Validar stock ANTES de crear el pedido (vía HTTP a product-service)
+            # Como son microservicios independientes, usamos patrón de compensación
+            try:
+                productos_validados, validaciones = await PedidosService._validar_stock_antes_de_pedido(
+                    [{"producto_id": p.producto_id, "cantidad_solicitada": p.cantidad_solicitada} 
+                     for p in request.productos],
+                    db
+                )
+            except StockInsufficientError as e:
+                # Si hay stock insuficiente, retornar error sin crear pedido
+                logger.warning(f"Stock insuficiente al crear pedido: {e.mensaje}")
+                return False, None, e.mensaje, e.validaciones
             
             # Generar número de pedido
             numero_pedido = PedidosService.generar_numero_pedido(db)
@@ -500,35 +754,28 @@ class PedidosService:
             
             monto_total = 0.0
             
-            # Agregar detalles del pedido
-            for producto in request.productos:
-                # Obtener info del producto para el nombre
-                info_producto = await PedidosService.obtener_info_producto(producto.producto_id)
-                nombre_producto = info_producto.get("nombre", "Producto desconocido") if info_producto else "Producto desconocido"
-                
-                # Validar inventario nuevamente (snapshot)
-                disponible, cantidad_disp, precio, _ = await PedidosService.validar_inventario_producto(
-                    producto.producto_id,
-                    producto.cantidad_solicitada
-                )
-                
-                if not disponible:
-                    logger.error(f"Inventario insuficiente para {producto.producto_id}")
-                    raise Exception(f"Inventario insuficiente para {nombre_producto}")
+            # Agregar detalles del pedido usando productos ya validados
+            for producto_validado in productos_validados:
+                producto_id = producto_validado["producto_id"]
+                cantidad_solicitada = producto_validado["cantidad_solicitada"]
+                precio = producto_validado["precio"]
+                nombre_producto = producto_validado["nombre_producto"]
+                info_producto = producto_validado["info_producto"]
+                cantidad_disp = producto_validado["cantidad_disponible"]
                 
                 # Seleccionar lote FEFO (opcional)
-                lote = await PedidosService.seleccionar_lote_fefo(producto.producto_id)
+                lote = await PedidosService.seleccionar_lote_fefo(producto_id)
                 
-                subtotal = producto.cantidad_solicitada * precio
+                subtotal = cantidad_solicitada * precio
                 monto_total += subtotal
                 
                 detalle = DetallePedido(
-                    producto_id=producto.producto_id,
+                    producto_id=producto_id,
                     nombre_producto=nombre_producto,
                     sku=info_producto.get("sku") if info_producto else None,
-                    cantidad_solicitada=producto.cantidad_solicitada,
+                    cantidad_solicitada=cantidad_solicitada,
                     cantidad_disponible_al_momento=cantidad_disp,
-                    cantidad_confirmada=producto.cantidad_solicitada,
+                    cantidad_confirmada=cantidad_solicitada,
                     precio_unitario=precio,
                     subtotal=subtotal,
                     lote_id=(lote or {}).get("loteId"),
@@ -542,7 +789,7 @@ class PedidosService:
             
             pedido.monto_total = monto_total
             
-            # Guardar en base de datos
+            # Guardar en base de datos (pero NO hacer commit aún)
             db.add(pedido)
             # Asegurar que se asignen IDs (pedido_id) antes de registrar historial
             db.flush()
@@ -554,31 +801,50 @@ class PedidosService:
                 estado_nuevo=EstadoPedido.PENDIENTE,
                 comentario="Creación de pedido"
             )
+            
+            # Actualizar stock en product-service ANTES del commit del pedido
+            # Si falla, se hace rollback del pedido (patrón de compensación)
+            try:
+                productos_actualizados, productos_con_error = await PedidosService._actualizar_stock_con_compensacion(
+                    productos_validados, db
+                )
+            except Exception as stock_error:
+                # Si falla la actualización de stock, hacer rollback y retornar error
+                logger.error(f"❌ Error actualizando stock durante creación de pedido: {stock_error}")
+                db.rollback()
+                
+                # Obtener información detallada de productos que fallaron desde la excepción
+                productos_fallidos = getattr(stock_error, 'productos_con_error', productos_validados)
+                
+                # Crear validaciones de error usando la información que ya tenemos
+                error_validaciones = []
+                for p in productos_fallidos:
+                    # Usar la información que ya tenemos del producto validado
+                    producto_validado = next(
+                        (pv for pv in productos_validados if pv["producto_id"] == p["producto_id"]),
+                        p
+                    )
+                    
+                    cantidad_disponible = p.get("cantidad_disponible") or producto_validado.get("cantidad_disponible", 0)
+                    cantidad_solicitada = p.get("cantidad_solicitada") or producto_validado.get("cantidad_solicitada", 0)
+                    mensaje_error_detallado = p.get("mensaje_error", str(stock_error))
+                    
+                    # Determinar si es problema de stock o de conexión/servicio
+                    disponible = cantidad_disponible >= cantidad_solicitada if cantidad_disponible > 0 else False
+                    
+                    error_validaciones.append(ValidacionInventarioResult(
+                        producto_id=p["producto_id"],
+                        disponible=disponible,
+                        cantidad_disponible=cantidad_disponible,
+                        cantidad_solicitada=cantidad_solicitada,
+                        mensaje=mensaje_error_detallado
+                    ))
+                
+                return False, None, str(stock_error), error_validaciones
+            
+            # Si todo está bien, hacer commit de la transacción completa
             db.commit()
             db.refresh(pedido)
-            
-            # Actualizar stock de los productos después de confirmar el pedido
-            productos_con_error = []
-            for producto in request.productos:
-                exito_actualizacion = await PedidosService.actualizar_stock_producto(
-                    producto.producto_id,
-                    producto.cantidad_solicitada
-                )
-                
-                if not exito_actualizacion:
-                    productos_con_error.append(producto.producto_id)
-                    logger.warning(f"Error actualizando stock para producto {producto.producto_id}")
-            
-            # Si hay errores al actualizar stock, registrar pero no fallar el pedido
-            # (el pedido ya está creado con estado 'pendiente')
-            if productos_con_error:
-                logger.error(f"Pedido {numero_pedido} creado pero error actualizando stock para productos: {productos_con_error}")
-                # Opcional: Podrías marcar el pedido con un estado especial o agregar una observación
-                if pedido.observaciones:
-                    pedido.observaciones += f"\n[ADVERTENCIA] Error actualizando stock para productos: {', '.join(productos_con_error)}"
-                else:
-                    pedido.observaciones = f"[ADVERTENCIA] Error actualizando stock para productos: {', '.join(productos_con_error)}"
-                db.commit()
             
             # Convertir a response
             pedido_response = PedidoResponse(
@@ -609,8 +875,13 @@ class PedidosService:
             
             return True, pedido_response, f"Pedido creado exitosamente con número #{numero_pedido}", validaciones
             
+        except StockInsufficientError as e:
+            # Stock insuficiente: ya se manejó arriba, pero por si acaso
+            logger.warning(f"Stock insuficiente al crear pedido: {e.mensaje}")
+            db.rollback()
+            return False, None, e.mensaje, e.validaciones
         except Exception as e:
-            logger.error(f"Error creando pedido: {e}")
+            logger.error(f"Error creando pedido: {e}", exc_info=True)
             db.rollback()
             return False, None, str(e), []
     
