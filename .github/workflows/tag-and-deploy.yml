@@ -292,17 +292,14 @@ jobs:
           EXTRA_ENV_VARS=",{\"name\": \"FILES_BACKEND\", \"value\": \"${{ secrets.VISIT_FILES_BACKEND }}\"},{\"name\": \"FILES_DIR\", \"value\": \"/data/visits\"},{\"name\": \"S3_BUCKET\", \"value\": \"${{ secrets.S3_BUCKET }}\"},{\"name\": \"S3_PREFIX\", \"value\": \"visits-prod\"},{\"name\": \"FILES_BASE_URL\", \"value\": \"${{ secrets.FILES_BASE_URL }}\"},{\"name\": \"AWS_REGION\", \"value\": \"us-east-1\"},{\"name\": \"AWS_ACCESS_KEY_ID\", \"value\": \"${{ secrets.AWS_ACCESS_KEY_ID }}\"},{\"name\": \"AWS_SECRET_ACCESS_KEY\", \"value\": \"${{ secrets.AWS_SECRET_ACCESS_KEY }}\"},{\"name\": \"REQUIRED_ROLE\", \"value\": \"gerente_cuenta\"},{\"name\": \"MAX_UPLOAD_MB\", \"value\": \"15\"}"
         fi
         
-        # Configure internal service URLs for inter-service traffic
-        # Default to API Gateway (ALB) for public exposure
+        # Configure service URLs for inter-service communication
+        # Usar ALB para todos los servicios (evita problemas de DNS/Service Discovery)
+        # Requiere que el ALB tenga reglas configuradas para todos los paths necesarios
         CLIENTE_URL="${{ secrets.API_URL }}"
         PRODUCT_URL="${{ secrets.API_URL }}"
-        # pedidos-service should call internal services directly to avoid ALB path/routing issues
-        if [ "$SERVICE_NAME" = "pedidos-service" ]; then
-          # Cliente vía ALB (rutas ya configuradas y probadas)
-          CLIENTE_URL="${{ secrets.API_URL }}"
-          # Producto vía interno (evita HTML del ALB en /api/productos/*)
-          PRODUCT_URL="http://product-service:8005"
-        fi
+        
+        # Nota: Si se habilita Service Discovery (Cloud Map) en el futuro,
+        # se puede cambiar a URLs internas como http://product-service:8005
 
         # Create task definition with proper variable substitution
         cat > task-definition.json <<EOFTASK
