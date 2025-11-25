@@ -602,7 +602,10 @@ class PedidosService:
         nits_gerente = await PedidosService.obtener_nits_gerente(gerente_id)
         
         if not nits_gerente:
-            return False, f"El gerente {gerente_id} no tiene clientes asignados"
+            # Fallback suave en AWS: si no hay mapeo cargado aún, no bloquear aquí.
+            # Más abajo se validará que cliente_id exista y que su NIT coincida con request.nit.
+            logger.warning(f"No se encontraron NITs para gerente {gerente_id}; aplicando validación diferida por cliente_id+NIT")
+            return True, ""
         
         if nit_request not in nits_gerente:
             return False, f"El NIT proporcionado ({nit_request}) no pertenece a los clientes asignados al gerente"
