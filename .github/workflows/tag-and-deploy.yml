@@ -298,7 +298,9 @@ jobs:
         PRODUCT_URL="${{ secrets.API_URL }}"
         # pedidos-service should call internal services directly to avoid ALB path/routing issues
         if [ "$SERVICE_NAME" = "pedidos-service" ]; then
-          CLIENTE_URL="http://cliente-service:8013"
+          # Cliente vía ALB (rutas ya configuradas y probadas)
+          CLIENTE_URL="${{ secrets.API_URL }}"
+          # Producto vía interno (evita HTML del ALB en /api/productos/*)
           PRODUCT_URL="http://product-service:8005"
         fi
 
