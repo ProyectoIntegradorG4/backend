@@ -337,7 +337,6 @@ class TestCrearPedidoConcurrencia:
         stock_disponible = stock_inicial
         
         async def mock_validar_inventario(producto_id, cantidad):
-            nonlocal stock_disponible
             disponible = stock_disponible >= cantidad
             return disponible, stock_disponible, 1000.0, "Inventario disponible" if disponible else "Stock insuficiente"
         
