@@ -42,7 +42,7 @@ class TestValidarStockAntesDePedido:
                 "precio": 1000.0 if producto_id == "PROD-001" else 2000.0
             }
         
-            with patch.object(PedidosService, 'validar_inventario_producto', side_effect=mock_validar_inventario), \
+        with patch.object(PedidosService, 'validar_inventario_producto', side_effect=mock_validar_inventario), \
              patch.object(PedidosService, 'obtener_info_producto', side_effect=mock_obtener_info):
             
             productos_validados, validaciones = await PedidosService._validar_stock_antes_de_pedido(
